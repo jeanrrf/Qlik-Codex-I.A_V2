@@ -9,6 +9,13 @@ class ScriptService {
   async optimizeScript(payload: OptimizeScriptRequestBody) {
     logger.info("Starting optimization", { mode: payload.mode });
 
+    // ✨ FREE TIER DEBUG: Log truncamento
+    logger.debug("[FREE TIER] ScriptService recebeu", {
+      applySmartTruncation: payload.applySmartTruncation,
+      lineLimit: payload.lineLimit,
+      scriptLines: payload.script.split(/\r?\n/).length
+    });
+
     try {
       // The UI can send the logical agent name 'ainex' to indicate the AINEX pipeline.
       // Map 'ainex' to undefined so the llmClient will use the configured external providers.
@@ -35,7 +42,8 @@ class ScriptService {
         },
         true, // generateConsultancy
         payload.applySmartTruncation, // Vem do middleware authMiddleware
-        payload.lineLimit // Vem do middleware authMiddleware
+        payload.lineLimit, // Vem do middleware authMiddleware
+        abortSignal // Signal de cancelamento
       );
       const durationMs = Date.now() - startTime;
 

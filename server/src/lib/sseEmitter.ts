@@ -49,6 +49,27 @@ export class SSEEmitter {
   }
 
   /**
+   * Verifica se o cliente atual ainda está conectado
+   */
+  isCurrentClientConnected(): boolean {
+    if (!this.currentClient) {
+      return false;
+    }
+
+    // Verifica se a resposta ainda está aberta
+    // @ts-ignore - accessing internal property
+    const isOpen = !this.currentClient.writableEnded && !this.currentClient.destroyed;
+
+    if (!isOpen) {
+      logger.warn('[SSE] Current client disconnected during processing');
+      this.currentClient = null;
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
    * Envia evento para todos os clientes
    */
   sendToAll(data: any): void {

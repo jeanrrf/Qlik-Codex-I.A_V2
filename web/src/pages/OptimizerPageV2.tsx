@@ -214,6 +214,17 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
   // Check if user is OWNER (has full features)
   const isOwner = user?.role === UserRole.OWNER;
 
+  // FREE TIER: Cálculo de linhas e limites
+  const scriptLineCount = script ? script.split(/\r?\n/).length : 0;
+  const FREE_TIER_LINE_LIMIT = 200;
+  const exceedsLineLimit = !isOwner && scriptLineCount > FREE_TIER_LINE_LIMIT;
+  const willBeTruncated = exceedsLineLimit;
+
+  // FREE TIER: Contador de exceções Ultra Expert (1 por arquivo para USER)
+  const [ultraExpertUsageCount, setUltraExpertUsageCount] = useState(0);
+  const MAX_ULTRA_EXPERT_RUNS = isOwner ? -1 : 1; // -1 = ilimitado
+  const hasUltraExpertQuotaLeft = isOwner || ultraExpertUsageCount < MAX_ULTRA_EXPERT_RUNS;
+
   // Sincroniza mudança de modo com o hook de progresso
   const handleModeChange = (newMode: OptimizeMode) => {
     setMode(newMode);
@@ -251,10 +262,8 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
     }
   }, [script, uploadMeta, scriptInfo]);
 
-  // === AUTO VALIDATION ON MOUNT ===
+  // === AUTO RESTORE SESSION ON MOUNT ===
   useEffect(() => {
-    validation.validate();
-
     // Tenta recuperar sessão ativa ao carregar
     const restoreActiveSession = async () => {
       try {
@@ -451,20 +460,49 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
       {/* Header Minimalista */}
       <header className="opt-header-minimal">
         <div className="header-brand-minimal">
-          <button className="back-btn-minimal" onClick={onBackToLanding} title="Voltar para landing page">
-            <Icons.Back />
+          <button className="back-btn-minimal" onClick={onBackToLanding} title="Voltar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
           </button>
-          <div className="brand-separator" />
-          <div className="brand-icon-pulse">⚡</div>
-          <span className="brand-text">SENTINNEL IA</span>
+          <div className="brand-logo">
+            <div className="brand-icon">⚡</div>
+            <div className="brand-info">
+              <span className="brand-name">SENTINNEL IA</span>
+              <span className="brand-product">Qlik Codex</span>
+            </div>
+          </div>
         </div>
 
-        <h1 className="header-title-center">QLIK CODEX I.A</h1>
+        <div className="header-center">
+          <div className="header-title-badge">
+            <span className="badge-dot"></span>
+            <span>QLIK CODEX I.A</span>
+          </div>
+        </div>
 
         <div className="header-user">
           <UserMenu />
         </div>
       </header>
+
+      {/* FREE TIER WARNING BANNER */}
+      {!isOwner && willBeTruncated && (
+        <div className="free-tier-warning-banner">
+          <div className="warning-icon">⚠️</div>
+          <div className="warning-content">
+            <strong>FREE TIER - Limite de Linhas Excedido</strong>
+            <p>
+              Seu script tem <strong>{scriptLineCount} linhas</strong>, mas o FREE TIER limita a <strong>{FREE_TIER_LINE_LIMIT} linhas</strong>.
+              O script será automaticamente truncado com <strong>corte inteligente</strong> (até +30 linhas extras para completar blocos).
+            </p>
+          </div>
+          <button className="warning-dismiss" onClick={() => setError(null)} title="Entendi">
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Control Panel Master - Layout Grid Redesigned */}
       <div className={`control-panel-master-compact ${mode === 'ultra-expert' ? 'expert-mode' : ''}`}>
         {/* Coluna Esquerda: Modo + Status */}
@@ -502,6 +540,14 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                 <div className="mode-card-text-compact">
                   <h4>Ultra Expert</h4>
                   <p>Otimização máxima</p>
+                  {!isOwner && (
+                    <div className="ultra-expert-quota">
+                      <span className="quota-icon">🎟️</span>
+                      <span className="quota-text">
+                        {MAX_ULTRA_EXPERT_RUNS - ultraExpertUsageCount} de {MAX_ULTRA_EXPERT_RUNS} execuções
+                      </span>
+                    </div>
+                  )}
                 </div>
                 {mode === 'ultra-expert' && (
                   <>
@@ -645,8 +691,22 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                     </div>
                     <div className="admin-row">
                       <span className="admin-label">LINHAS</span>
-                      <span className="admin-value lines-value">{uploadMeta?.lineCount ?? scriptLineCount}</span>
+                      <span className={`admin-value lines-value ${exceedsLineLimit ? 'warning' : ''}`}>
+                        {uploadMeta?.lineCount ?? scriptLineCount}
+                      </span>
+                      {exceedsLineLimit && (
+                        <span className="admin-warning-badge">⚠️ Limite FREE TIER</span>
+                      )}
                     </div>
+                    {exceedsLineLimit && (
+                      <div className="admin-row truncation-notice">
+                        <span className="truncation-icon">✂️</span>
+                        <div className="truncation-text">
+                          <strong>Será truncado para {FREE_TIER_LINE_LIMIT} linhas</strong>
+                          <small>(+até 30 linhas extras para blocos completos)</small>
+                        </div>
+                      </div>
+                    )}
                     <div className="admin-row">
                       <span className="admin-label">CARREGADO EM</span>
                       <div className="admin-value-row">
@@ -3817,23 +3877,47 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
 
         .code-line {
           display: flex;
-          min-height: 21px;
-          padding: 0 12px;
-          transition: background 0.1s;
+          min-height: 22px;
+          padding: 1px 14px;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          border-left: 2px solid transparent;
         }
 
         .code-line:hover {
-          background: rgba(255, 255, 255, 0.03);
+          background: rgba(0, 242, 255, 0.04);
+          border-left-color: rgba(0, 242, 255, 0.5);
+          box-shadow: inset 0 0 20px rgba(0, 242, 255, 0.05);
+        }
+
+        /* EXTREME MODE - Enhanced Line Hover */
+        .control-panel-master-compact.expert-mode ~ * .code-line:hover {
+          background: rgba(255, 140, 0, 0.06);
+          border-left-color: rgba(255, 140, 0, 0.7);
+          box-shadow: 
+            inset 0 0 25px rgba(255, 140, 0, 0.08),
+            inset 2px 0 10px rgba(255, 200, 0, 0.15);
         }
 
         .line-number {
           flex-shrink: 0;
-          width: 50px;
+          width: 52px;
           text-align: right;
-          padding-right: 16px;
-          color: rgba(255, 255, 255, 0.3);
+          padding-right: 18px;
+          color: rgba(255, 255, 255, 0.35);
           user-select: none;
           font-size: 12px;
+          font-weight: 600;
+          transition: all 0.2s;
+        }
+
+        .code-line:hover .line-number {
+          color: rgba(0, 242, 255, 0.7);
+          text-shadow: 0 0 6px rgba(0, 242, 255, 0.3);
+        }
+
+        .control-panel-master-compact.expert-mode ~ * .code-line:hover .line-number {
+          color: rgba(255, 184, 0, 0.9);
+          text-shadow: 0 0 8px rgba(255, 140, 0, 0.4);
         }
 
         .line-content {
@@ -3842,31 +3926,114 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
           word-break: break-all;
         }
 
-        /* Syntax Highlighting Colors */
+        /* Syntax Highlighting Premium - Base Colors */
         .syntax-keyword {
-          color: #ff79c6;
-          font-weight: 600;
+          color: #00e5ff;
+          font-weight: 700;
+          text-shadow: 0 0 8px rgba(0, 229, 255, 0.4);
+          letter-spacing: 0.02em;
+          transition: all 0.2s;
+        }
+
+        .syntax-keyword:hover {
+          color: #00f2ff;
+          text-shadow: 0 0 12px rgba(0, 242, 255, 0.6);
         }
 
         .syntax-string {
-          color: #f1fa8c;
+          color: #ffd700;
+          font-weight: 500;
+          text-shadow: 0 0 6px rgba(255, 215, 0, 0.3);
         }
 
         .syntax-number {
-          color: #bd93f9;
+          color: #c792ea;
+          font-weight: 600;
+          text-shadow: 0 0 6px rgba(199, 146, 234, 0.3);
         }
 
         .syntax-comment {
-          color: #6272a4;
+          color: #546e7a;
           font-style: italic;
+          opacity: 0.7;
+          transition: opacity 0.2s;
+        }
+
+        .syntax-comment:hover {
+          opacity: 1;
         }
 
         .syntax-function {
-          color: #50fa7b;
+          color: #69f0ae;
+          font-weight: 600;
+          text-shadow: 0 0 6px rgba(105, 240, 174, 0.3);
         }
 
         .syntax-operator {
-          color: #ff5555;
+          color: #ff6b9d;
+          font-weight: 700;
+          text-shadow: 0 0 6px rgba(255, 107, 157, 0.3);
+        }
+
+        /* EXTREME MODE - Enhanced Syntax Highlighting */
+        .control-panel-master-compact.expert-mode ~ * .syntax-keyword {
+          color: #ff9100;
+          font-weight: 800;
+          text-shadow: 
+            0 0 10px rgba(255, 145, 0, 0.5),
+            0 0 20px rgba(255, 145, 0, 0.3);
+          animation: extreme-keyword-pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes extreme-keyword-pulse {
+          0%, 100% { 
+            text-shadow: 0 0 10px rgba(255, 145, 0, 0.5), 0 0 20px rgba(255, 145, 0, 0.3);
+          }
+          50% { 
+            text-shadow: 0 0 15px rgba(255, 200, 0, 0.7), 0 0 30px rgba(255, 200, 0, 0.4);
+          }
+        }
+
+        .control-panel-master-compact.expert-mode ~ * .syntax-string {
+          color: #ffeb3b;
+          font-weight: 600;
+          text-shadow: 
+            0 0 8px rgba(255, 235, 59, 0.5),
+            0 0 16px rgba(255, 235, 59, 0.3);
+        }
+
+        .control-panel-master-compact.expert-mode ~ * .syntax-function {
+          color: #76ff03;
+          font-weight: 700;
+          text-shadow: 
+            0 0 8px rgba(118, 255, 3, 0.5),
+            0 0 16px rgba(118, 255, 3, 0.3);
+          animation: extreme-function-glow 2.5s ease-in-out infinite;
+        }
+
+        @keyframes extreme-function-glow {
+          0%, 100% { 
+            filter: brightness(1);
+          }
+          50% { 
+            filter: brightness(1.3);
+          }
+        }
+
+        .control-panel-master-compact.expert-mode ~ * .syntax-operator {
+          color: #ff1744;
+          font-weight: 800;
+          text-shadow: 
+            0 0 10px rgba(255, 23, 68, 0.6),
+            0 0 20px rgba(255, 23, 68, 0.4);
+        }
+
+        .control-panel-master-compact.expert-mode ~ * .syntax-number {
+          color: #e040fb;
+          font-weight: 700;
+          text-shadow: 
+            0 0 8px rgba(224, 64, 251, 0.5),
+            0 0 16px rgba(224, 64, 251, 0.3);
         }
 
         /* Custom Scrollbar */
@@ -4133,103 +4300,360 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
           position: relative;
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 8px 12px;
-          background: rgba(10, 14, 23, 0.6);
-          border: 1.5px solid rgba(255, 255, 255, 0.06);
-          border-radius: 8px;
+          gap: 10px;
+          padding: 10px 14px;
+          background: rgba(10, 14, 23, 0.7);
+          border: 2px solid rgba(255, 255, 255, 0.08);
+          border-radius: 10px;
           cursor: pointer;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
           font-family: inherit;
           overflow: hidden;
+          box-shadow: 
+            0 4px 12px rgba(0, 0, 0, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        }
+
+        .mode-card-compact::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.03) 100%);
+          opacity: 0;
+          transition: opacity 0.3s;
+        }
+
+        .mode-card-compact:hover::before {
+          opacity: 1;
         }
 
         .mode-card-compact:hover {
-          border-color: rgba(255, 255, 255, 0.12);
-          background: rgba(10, 14, 23, 0.8);
-          transform: scale(1.02);
+          border-color: rgba(255, 255, 255, 0.15);
+          background: rgba(15, 20, 30, 0.85);
+          transform: scale(1.03) translateY(-2px);
+          box-shadow: 
+            0 6px 20px rgba(0, 0, 0, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08);
         }
 
         .mode-card-compact.active {
           border-color: var(--primary);
-          background: rgba(0, 242, 255, 0.1);
-          box-shadow: 0 0 16px rgba(0, 242, 255, 0.2);
+          background: linear-gradient(135deg, 
+            rgba(0, 242, 255, 0.12) 0%, 
+            rgba(0, 200, 220, 0.08) 100%);
+          box-shadow: 
+            0 0 24px rgba(0, 242, 255, 0.3),
+            0 6px 20px rgba(0, 0, 0, 0.4),
+            inset 0 1px 0 rgba(0, 242, 255, 0.2);
         }
 
+        .mode-card-compact.active::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border: 1px solid rgba(0, 242, 255, 0.3);
+          border-radius: 10px;
+          animation: analysis-border-flow 3s linear infinite;
+        }
+
+        @keyframes analysis-border-flow {
+          0% { opacity: 0.5; }
+          50% { opacity: 1; }
+          100% { opacity: 0.5; }
+        }
+
+        /* EXTREME MODE - Visual Premium Supremo */
         .mode-card-compact.active.expert {
-          border-color: var(--warning);
-          background: rgba(255, 184, 0, 0.1);
-          box-shadow: 0 0 20px rgba(255, 140, 0, 0.3);
+          border-color: #ff6d00;
+          background: linear-gradient(135deg, 
+            rgba(255, 109, 0, 0.18) 0%, 
+            rgba(255, 140, 0, 0.12) 50%,
+            rgba(255, 184, 0, 0.08) 100%);
+          box-shadow: 
+            0 0 32px rgba(255, 109, 0, 0.5),
+            0 0 48px rgba(255, 140, 0, 0.3),
+            0 8px 24px rgba(0, 0, 0, 0.5),
+            inset 0 1px 0 rgba(255, 200, 0, 0.3),
+            inset 0 -1px 20px rgba(255, 109, 0, 0.2);
+          animation: extreme-card-master-glow 2s ease-in-out infinite;
+        }
+
+        @keyframes extreme-card-master-glow {
+          0%, 100% {
+            box-shadow: 
+              0 0 32px rgba(255, 109, 0, 0.5),
+              0 0 48px rgba(255, 140, 0, 0.3),
+              0 8px 24px rgba(0, 0, 0, 0.5),
+              inset 0 1px 0 rgba(255, 200, 0, 0.3),
+              inset 0 -1px 20px rgba(255, 109, 0, 0.2);
+            transform: scale(1);
+          }
+          50% {
+            box-shadow: 
+              0 0 40px rgba(255, 140, 0, 0.7),
+              0 0 60px rgba(255, 184, 0, 0.4),
+              0 10px 30px rgba(0, 0, 0, 0.6),
+              inset 0 2px 0 rgba(255, 235, 59, 0.4),
+              inset 0 -2px 30px rgba(255, 140, 0, 0.3);
+            transform: scale(1.01);
+          }
+        }
+
+        .mode-card-compact.active.expert::after {
+          content: '';
+          position: absolute;
+          inset: -2px;
+          border: 2px solid rgba(255, 140, 0, 0.6);
+          border-radius: 10px;
+          animation: extreme-border-rotation 3s linear infinite;
+          background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 140, 0, 0.4) 25%,
+            rgba(255, 200, 0, 0.6) 50%,
+            rgba(255, 140, 0, 0.4) 75%,
+            transparent 100%);
+          background-size: 200% 100%;
+        }
+
+        @keyframes extreme-border-rotation {
+          0% { background-position: 200% 0; opacity: 0.6; }
+          50% { opacity: 1; }
+          100% { background-position: -200% 0; opacity: 0.6; }
+        }
+
+        .mode-card-compact.active.expert::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(ellipse at center,
+            rgba(255, 200, 0, 0.15) 0%,
+            rgba(255, 140, 0, 0.08) 40%,
+            transparent 70%);
+          animation: extreme-radial-expand 2.5s ease-in-out infinite;
+        }
+
+        @keyframes extreme-radial-expand {
+          0%, 100% { 
+            opacity: 0.5; 
+            transform: scale(0.95);
+          }
+          50% { 
+            opacity: 1; 
+            transform: scale(1.05);
+          }
         }
 
         .mode-card-icon-compact {
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 32px;
-          height: 32px;
-          border-radius: 8px;
-          background: rgba(255, 255, 255, 0.05);
+          width: 36px;
+          height: 36px;
+          border-radius: 9px;
+          background: rgba(255, 255, 255, 0.06);
           color: var(--text-secondary);
           flex-shrink: 0;
-          transition: all 0.3s;
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .mode-card-icon-compact::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.1) 0%, 
+            transparent 100%);
+          opacity: 0;
+          transition: opacity 0.3s;
+        }
+
+        .mode-card-compact:hover .mode-card-icon-compact::before {
+          opacity: 1;
         }
 
         .mode-card-compact.active .mode-card-icon-compact {
-          background: var(--primary);
+          background: linear-gradient(135deg, 
+            var(--primary) 0%, 
+            rgba(0, 200, 220, 0.9) 100%);
           color: #000;
+          box-shadow: 
+            0 0 16px rgba(0, 242, 255, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+          transform: scale(1.05);
         }
 
+        /* EXTREME MODE ICON - Premium Visual Effects */
         .mode-card-compact.active.expert .mode-card-icon-compact {
-          background: var(--warning);
+          background: linear-gradient(135deg, 
+            #ff6d00 0%, 
+            #ff8c00 50%,
+            #ffa726 100%);
           color: #000;
-          animation: flame-pulse-mini 2s ease-in-out infinite;
+          box-shadow: 
+            0 0 20px rgba(255, 109, 0, 0.7),
+            0 0 40px rgba(255, 140, 0, 0.4),
+            inset 0 2px 0 rgba(255, 235, 59, 0.4),
+            inset 0 -2px 8px rgba(255, 69, 0, 0.3);
+          animation: extreme-icon-mega-pulse 2s ease-in-out infinite;
+          transform: scale(1.08);
         }
 
-        @keyframes flame-pulse-mini {
+        @keyframes extreme-icon-mega-pulse {
           0%, 100% {
-            box-shadow: 0 0 10px rgba(255, 140, 0, 0.6);
+            box-shadow: 
+              0 0 20px rgba(255, 109, 0, 0.7),
+              0 0 40px rgba(255, 140, 0, 0.4),
+              inset 0 2px 0 rgba(255, 235, 59, 0.4),
+              inset 0 -2px 8px rgba(255, 69, 0, 0.3);
+            filter: brightness(1) saturate(1.2);
           }
           50% {
-            box-shadow: 0 0 20px rgba(255, 100, 0, 0.8);
+            box-shadow: 
+              0 0 30px rgba(255, 140, 0, 0.9),
+              0 0 60px rgba(255, 184, 0, 0.6),
+              inset 0 3px 0 rgba(255, 255, 100, 0.6),
+              inset 0 -3px 12px rgba(255, 100, 0, 0.5);
+            filter: brightness(1.3) saturate(1.5);
           }
+        }
+
+        .mode-card-compact.active.expert .mode-card-icon-compact::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(circle at center,
+            rgba(255, 255, 255, 0.3) 0%,
+            transparent 70%);
+          animation: extreme-icon-flash 1.5s ease-in-out infinite;
+        }
+
+        @keyframes extreme-icon-flash {
+          0%, 100% { opacity: 0; transform: scale(0.8); }
+          50% { opacity: 1; transform: scale(1.2); }
         }
 
         .mode-card-text-compact h4 {
-          font-size: 0.85rem;
-          font-weight: 700;
+          font-size: 0.9rem;
+          font-weight: 800;
           color: var(--text-main);
           margin: 0;
           line-height: 1.2;
+          letter-spacing: 0.03em;
+          transition: all 0.3s;
+          position: relative;
+          z-index: 1;
+        }
+
+        .mode-card-compact.active h4 {
+          color: var(--primary);
+          text-shadow: 0 0 10px rgba(0, 242, 255, 0.4);
+        }
+
+        .mode-card-compact.active.expert h4 {
+          color: #ffa726;
+          font-weight: 900;
+          letter-spacing: 0.05em;
+          text-shadow: 
+            0 0 12px rgba(255, 140, 0, 0.6),
+            0 0 24px rgba(255, 140, 0, 0.3);
+          animation: extreme-text-intensity 2s ease-in-out infinite;
+        }
+
+        @keyframes extreme-text-intensity {
+          0%, 100% {
+            text-shadow: 
+              0 0 12px rgba(255, 140, 0, 0.6),
+              0 0 24px rgba(255, 140, 0, 0.3);
+            filter: brightness(1);
+          }
+          50% {
+            text-shadow: 
+              0 0 18px rgba(255, 184, 0, 0.8),
+              0 0 36px rgba(255, 184, 0, 0.4);
+            filter: brightness(1.2);
+          }
         }
 
         .mode-card-text-compact p {
-          font-size: 0.7rem;
+          font-size: 0.72rem;
           color: var(--text-secondary);
           margin: 0;
-          line-height: 1.2;
+          line-height: 1.3;
+          font-weight: 500;
+          transition: all 0.3s;
+          position: relative;
+          z-index: 1;
+        }
+
+        .mode-card-compact.active p {
+          color: rgba(0, 242, 255, 0.8);
+        }
+
+        .mode-card-compact.active.expert p {
+          color: rgba(255, 200, 100, 0.9);
+          font-weight: 600;
         }
 
         .mode-active-dot {
           position: absolute;
-          top: 6px;
-          right: 6px;
-          width: 6px;
-          height: 6px;
+          top: 8px;
+          right: 8px;
+          width: 7px;
+          height: 7px;
           background: var(--primary);
           border-radius: 50%;
-          box-shadow: 0 0 8px var(--primary);
-          animation: blink-dot 2s ease-in-out infinite;
+          box-shadow: 
+            0 0 10px var(--primary),
+            0 0 20px rgba(0, 242, 255, 0.4);
+          animation: analysis-dot-pulse 2s ease-in-out infinite;
+          z-index: 2;
+        }
+
+        @keyframes analysis-dot-pulse {
+          0%, 100% { 
+            opacity: 1; 
+            transform: scale(1);
+            box-shadow: 
+              0 0 10px var(--primary),
+              0 0 20px rgba(0, 242, 255, 0.4);
+          }
+          50% { 
+            opacity: 0.6; 
+            transform: scale(0.85);
+            box-shadow: 
+              0 0 6px var(--primary),
+              0 0 12px rgba(0, 242, 255, 0.3);
+          }
         }
 
         .mode-active-dot.expert {
-          background: var(--warning);
-          box-shadow: 0 0 10px var(--warning);
+          background: #ff6d00;
+          box-shadow: 
+            0 0 14px #ff8c00,
+            0 0 28px rgba(255, 140, 0, 0.5),
+            0 0 42px rgba(255, 140, 0, 0.3);
+          animation: extreme-dot-mega-pulse 1.5s ease-in-out infinite;
         }
 
-        @keyframes blink-dot {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
+        @keyframes extreme-dot-mega-pulse {
+          0%, 100% { 
+            opacity: 1; 
+            transform: scale(1);
+            box-shadow: 
+              0 0 14px #ff8c00,
+              0 0 28px rgba(255, 140, 0, 0.5),
+              0 0 42px rgba(255, 140, 0, 0.3);
+          }
+          50% { 
+            opacity: 0.8; 
+            transform: scale(0.9);
+            box-shadow: 
+              0 0 20px #ffa726,
+              0 0 40px rgba(255, 184, 0, 0.7),
+              0 0 60px rgba(255, 184, 0, 0.4);
+          }
         }
 
         .expert-flame-mini {
@@ -4728,115 +5152,409 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
         /* Header Minimalista */
         .opt-header-minimal {
           position: relative;
-          z-index: 10;
+          z-index: 100;
           display: grid;
           grid-template-columns: 1fr auto 1fr;
           align-items: center;
-          padding: 6px 32px;
-          background: linear-gradient(180deg, rgba(3, 5, 8, 0.98) 0%, rgba(3, 5, 8, 0.92) 100%);
-          backdrop-filter: blur(24px);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5),
-                      0 2px 0 rgba(0, 242, 255, 0.1);
+          padding: 14px 32px;
+          background: rgba(3, 5, 8, 0.96);
+          backdrop-filter: blur(24px) saturate(180%);
+          border-bottom: 1px solid rgba(0, 242, 255, 0.1);
+          box-shadow: 
+            0 4px 24px rgba(0, 0, 0, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.05);
         }
 
         .opt-header-minimal::after {
           content: '';
           position: absolute;
-          bottom: -1px;
-          left: 0;
-          right: 0;
+          bottom: 0;
+          left: 10%;
+          right: 10%;
           height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(0, 242, 255, 0.5) 50%, transparent);
-          animation: header-line-pulse 3s ease-in-out infinite;
+          background: linear-gradient(90deg, transparent, rgba(0, 242, 255, 0.6) 50%, transparent);
+          filter: blur(0.5px);
+          animation: header-glow 3s ease-in-out infinite;
         }
 
-        @keyframes header-line-pulse {
-          0%, 100% { opacity: 0.3; }
-          50% { opacity: 0.8; }
+        @keyframes header-glow {
+          0%, 100% { opacity: 0.3; transform: scaleX(0.8); }
+          50% { opacity: 1; transform: scaleX(1); }
         }
 
         .header-brand-minimal {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 14px;
         }
 
         .back-btn-minimal {
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 36px;
-          height: 36px;
-          background: rgba(255, 255, 255, 0.05);
+          width: 38px;
+          height: 38px;
+          padding: 0;
+          background: rgba(255, 255, 255, 0.04);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 8px;
+          border-radius: 10px;
           color: var(--text-secondary);
           cursor: pointer;
-          transition: all 0.3s;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           font-family: inherit;
         }
 
+        .back-btn-minimal svg {
+          transition: transform 0.3s;
+        }
+
         .back-btn-minimal:hover {
-          background: rgba(255, 255, 255, 0.08);
-          border-color: var(--primary);
+          background: rgba(0, 242, 255, 0.12);
+          border-color: rgba(0, 242, 255, 0.35);
           color: var(--primary);
+          box-shadow: 
+            0 4px 16px rgba(0, 242, 255, 0.25),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
           transform: translateX(-2px);
         }
 
-        .brand-separator {
-          width: 1px;
-          height: 24px;
-          background: rgba(255, 255, 255, 0.15);
+        .back-btn-minimal:hover svg {
+          transform: translateX(-2px);
         }
 
-        .brand-icon-pulse {
-          font-size: 1.8rem;
-          animation: pulse-glow 2s ease-in-out infinite;
+        .back-btn-minimal:active {
+          transform: translateX(-1px) scale(0.96);
         }
 
-        @keyframes pulse-glow {
-          0%, 100% {
-            filter: drop-shadow(0 0 4px var(--primary)) brightness(1);
+        .brand-logo {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .brand-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 42px;
+          height: 42px;
+          border-radius: 11px;
+          background: linear-gradient(135deg, rgba(0, 242, 255, 0.18) 0%, rgba(0, 200, 212, 0.1) 100%);
+          border: 1px solid rgba(0, 242, 255, 0.25);
+          font-size: 1.4rem;
+          box-shadow: 
+            0 4px 16px rgba(0, 242, 255, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.15);
+          animation: icon-pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes icon-pulse {
+          0%, 100% { 
+            box-shadow: 0 4px 16px rgba(0, 242, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            transform: scale(1);
           }
-          50% {
-            filter: drop-shadow(0 0 12px var(--primary)) brightness(1.3);
+          50% { 
+            box-shadow: 0 6px 24px rgba(0, 242, 255, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transform: scale(1.02);
           }
         }
 
-        .brand-text {
-          font-size: 1.1rem;
-          font-weight: 800;
+        .brand-info {
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+        }
+
+        .brand-name {
+          font-size: 1rem;
+          font-weight: 700;
+          letter-spacing: 0.03em;
+          color: var(--text-primary);
+          line-height: 1;
+        }
+
+        .brand-product {
+          font-size: 0.7rem;
+          font-weight: 600;
+          color: var(--text-muted);
           letter-spacing: 0.08em;
-          color: var(--text-main);
+          text-transform: uppercase;
+          opacity: 0.8;
         }
 
-        .header-title-center {
-          text-align: center;
-          font-size: 1.1rem;
-          font-weight: 800;
-          letter-spacing: 0.1em;
-          background: linear-gradient(135deg, var(--primary), var(--secondary));
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
+        .header-center {
+          display: flex;
+          justify-content: center;
+        }
+
+        .header-title-badge {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 9px 24px;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(0, 242, 255, 0.2);
+          border-radius: 12px;
+          font-size: 0.92rem;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          color: var(--text-primary);
+          box-shadow: 
+            0 2px 12px rgba(0, 0, 0, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .badge-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;\n          background: var(--primary);
+          box-shadow: 0 0 10px var(--primary), 0 0 20px rgba(0, 242, 255, 0.4);
+          animation: badge-pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes badge-pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.7; transform: scale(0.88); }
         }
 
         .header-user {
           display: flex;
           justify-content: flex-end;
         }
-        /* Responsividade do Header Minimal */
+
+        /* ================ */
+        /* FREE TIER VISUAL WARNINGS */
+        /* ================ */
+        
+        /* Banner de aviso FREE TIER */
+        .free-tier-warning-banner {
+          position: relative;
+          z-index: 8;
+          display: flex;
+          align-items: flex-start;
+          gap: 16px;
+          padding: 16px 24px;
+          background: linear-gradient(135deg, rgba(255, 184, 0, 0.12) 0%, rgba(255, 140, 0, 0.08) 100%);
+          border-bottom: 2px solid rgba(255, 184, 0, 0.3);
+          border-top: 1px solid rgba(255, 184, 0, 0.15);
+          backdrop-filter: blur(10px);
+          animation: banner-slide-down 0.4s ease-out;
+        }
+
+        @keyframes banner-slide-down {
+          from {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .warning-icon {
+          font-size: 1.5rem;
+          flex-shrink: 0;
+          filter: drop-shadow(0 0 8px rgba(255, 184, 0, 0.5));
+          animation: warning-pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes warning-pulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.1); opacity: 0.9; }
+        }
+
+        .warning-content {
+          flex: 1;
+        }
+
+        .warning-content strong {
+          display: block;
+          font-size: 0.95rem;
+          font-weight: 700;
+          color: var(--warning);
+          margin-bottom: 6px;
+          letter-spacing: 0.02em;
+        }
+
+        .warning-content p {
+          margin: 0;
+          font-size: 0.85rem;
+          color: var(--text-main);
+          line-height: 1.5;
+        }
+
+        .warning-content p strong {
+          display: inline;
+          color: var(--warning);
+          font-weight: 700;
+        }
+
+        .warning-dismiss {
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 8px;
+          color: var(--text-main);
+          font-size: 1.2rem;
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s;
+          font-family: inherit;
+          padding: 0;
+          flex-shrink: 0;
+        }
+
+        .warning-dismiss:hover {
+          background: rgba(255, 42, 109, 0.2);
+          border-color: var(--danger);
+          color: var(--danger);
+          transform: rotate(90deg);
+        }
+
+        /* Badge de quota Ultra Expert */
+        .ultra-expert-quota {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-top: 6px;
+          padding: 4px 8px;
+          background: rgba(255, 184, 0, 0.12);
+          border: 1px solid rgba(255, 184, 0, 0.25);
+          border-radius: 6px;
+          font-size: 0.65rem;
+          font-weight: 600;
+          color: var(--warning);
+          animation: quota-glow 2s ease-in-out infinite;
+        }
+
+        @keyframes quota-glow {
+          0%, 100% {
+            box-shadow: 0 0 8px rgba(255, 184, 0, 0.2);
+          }
+          50% {
+            box-shadow: 0 0 16px rgba(255, 184, 0, 0.4);
+          }
+        }
+
+        .quota-icon {
+          font-size: 0.9rem;
+          filter: drop-shadow(0 0 4px currentColor);
+        }
+
+        .quota-text {
+          font-family: 'JetBrains Mono', monospace;
+          letter-spacing: 0.02em;
+        }
+
+        /* Aviso de linhas excedidas no admin */
+        .admin-value.warning {
+          color: var(--warning) !important;
+          font-weight: 800 !important;
+          animation: value-warning-pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes value-warning-pulse {
+          0%, 100% {
+            text-shadow: 0 0 8px rgba(255, 184, 0, 0.4);
+          }
+          50% {
+            text-shadow: 0 0 16px rgba(255, 184, 0, 0.6);
+          }
+        }
+
+        .admin-warning-badge {
+          display: inline-block;
+          margin-left: 8px;
+          padding: 3px 8px;
+          background: rgba(255, 184, 0, 0.15);
+          border: 1px solid rgba(255, 184, 0, 0.3);
+          border-radius: 4px;
+          font-size: 0.6rem;
+          font-weight: 700;
+          color: var(--warning);
+          letter-spacing: 0.5px;
+        }
+
+        /* Notice de truncamento */
+        .admin-row.truncation-notice {
+          display: flex;
+          flex-direction: row;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 12px;
+          background: rgba(255, 184, 0, 0.08);
+          border: 1px solid rgba(255, 184, 0, 0.2);
+          border-radius: 8px;
+          margin-top: 4px;
+        }
+
+        .truncation-icon {
+          font-size: 1.2rem;
+          flex-shrink: 0;
+          filter: drop-shadow(0 0 6px rgba(255, 184, 0, 0.5));
+        }
+
+        .truncation-text {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .truncation-text strong {
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: var(--warning);
+          line-height: 1.3;
+        }
+
+        .truncation-text small {
+          font-size: 0.65rem;
+          color: var(--text-secondary);
+          line-height: 1.3;
+        }
+
+        /* Responsividade do Header */
         @media (max-width: 768px) {
           .opt-header-minimal {
             grid-template-columns: 1fr;
             gap: 12px;
-            text-align: center;
+            padding: 12px 20px;
           }
 
           .header-brand-minimal,
           .header-user {
             justify-content: center;
+          }
+
+          .header-center {
+            order: -1;
+          }
+
+          .header-title-badge {
+            font-size: 0.8rem;
+            padding: 7px 18px;
+          }
+
+          .free-tier-warning-banner {
+            padding: 12px 16px;
+            gap: 12px;
+          }
+
+          .warning-icon {
+            font-size: 1.2rem;
+          }
+
+          .warning-content strong {
+            font-size: 0.85rem;
+          }
+
+          .warning-content p {
+            font-size: 0.8rem;
           }
         }
       `}</style>

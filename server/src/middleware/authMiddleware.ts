@@ -269,8 +269,15 @@ export function checkUsageLimits(req: AuthRequest, res: Response, next: NextFunc
 
   const limits = RoleUsageLimits[req.user.role];
 
+  logger.debug("[FREE TIER] checkUsageLimits iniciado", {
+    userId: req.user.id,
+    userRole: req.user.role,
+    limits: limits
+  });
+
   // Owner tem limites ilimitados
   if (req.user.role === UserRole.OWNER) {
+    logger.debug("[FREE TIER] Owner detectado - bypass de limites");
     next();
     return;
   }
@@ -289,6 +296,12 @@ export function checkUsageLimits(req: AuthRequest, res: Response, next: NextFunc
   if (req.body.script && limits.maxScriptLines > 0) {
     const scriptLines = req.body.script.split(/\r?\n/).length;
 
+    logger.debug("[FREE TIER] Verificando limite de linhas", {
+      scriptLines,
+      maxScriptLines: limits.maxScriptLines,
+      excedeu: scriptLines > limits.maxScriptLines
+    });
+
     if (scriptLines > limits.maxScriptLines) {
       // Não bloqueia - apenas marca para truncamento inteligente
       logger.warn(`FREE TIER: Script excede ${limits.maxScriptLines} linhas (${scriptLines} linhas). Aplicando truncamento inteligente.`, {
@@ -300,6 +313,11 @@ export function checkUsageLimits(req: AuthRequest, res: Response, next: NextFunc
       // Marca no request para processamento inteligente
       req.body.applySmartTruncation = true;
       req.body.lineLimit = limits.maxScriptLines;
+
+      logger.info("[FREE TIER] Campos de truncamento definidos", {
+        applySmartTruncation: req.body.applySmartTruncation,
+        lineLimit: req.body.lineLimit
+      });
     }
   }
 

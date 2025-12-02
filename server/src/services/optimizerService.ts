@@ -41,14 +41,26 @@ export interface FullOptimizeResult extends OptimizeResult {
 }
 
 /**
+ * Helper: Verifica se a operação foi cancelada
+ */
+function checkAborted(signal?: AbortSignal, context?: string): void {
+  if (signal?.aborted) {
+    logger.warn(`⛔ Optimization aborted${context ? ` at ${context}` : ''}`);
+    throw new Error(`Optimization aborted${context ? ` at ${context}` : ''}`);
+  }
+}
+
+/**
  * MODO 1: ANÁLISE (Read-Only)
  * Analisa profundamente sem modificar nada
  */
 async function runAnalysisMode(
   script: string,
   llmOptions?: GenerateStructuredJsonOptions,
-  isTruncated = false
+  isTruncated = false,
+  abortSignal?: AbortSignal
 ): Promise<FullOptimizeResult> {
+  checkAborted(abortSignal, 'Analysis mode start');
   logger.info("🔍 MODO ANÁLISE - Sem modificações no código");
 
   // ═══════════════════════════════════════════════════════════════
@@ -90,6 +102,7 @@ async function runAnalysisMode(
   // ═══════════════════════════════════════════════════════════════
   // ETAPA 1: PARSE E ANÁLISE ESTRUTURAL PROFUNDA
   // ═══════════════════════════════════════════════════════════════
+  checkAborted(abortSignal, 'Before structural analysis');
   logger.info("═══ ETAPA 1/3: ANÁLISE ESTRUTURAL ═══");
 
   const parsed = await stepTimingService.executeWithTiming(
@@ -97,6 +110,7 @@ async function runAnalysisMode(
     "ana_001_main",
     "Análise Estrutural Completa",
     async () => {
+      checkAborted(abortSignal, 'Inside structural analysis');
       // Sub 1.1: Parse do Script
       const parsedData = await stepTimingService.executeWithTiming(
         "analysis",
@@ -109,6 +123,7 @@ async function runAnalysisMode(
         "Parser proprietário: extrair tabelas, campos, variáveis, joins"
       );
 
+      checkAborted(abortSignal, 'After parse');
       // Sub 1.2: Detecção de Anti-patterns
       await stepTimingService.executeWithTiming(
         "analysis",
@@ -123,6 +138,7 @@ async function runAnalysisMode(
         "Detectar SELECT *, Cartesian Products, Synthetic Keys"
       );
 
+      checkAborted(abortSignal, 'After anti-patterns');
       // Sub 1.3: Cálculo de Métricas
       const metrics = await stepTimingService.executeWithTiming(
         "analysis",
@@ -143,6 +159,7 @@ async function runAnalysisMode(
   // ═══════════════════════════════════════════════════════════════
   // ETAPA 2: ANÁLISE LLM (SEM MODIFICAÇÃO)
   // ═══════════════════════════════════════════════════════════════
+  checkAborted(abortSignal, 'Before LLM analysis');
   logger.info("═══ ETAPA 2/3: ANÁLISE INTELIGENTE (LLM) ═══");
 
   const analysis = await stepTimingService.executeWithTiming(
@@ -150,6 +167,7 @@ async function runAnalysisMode(
     "ana_002_main",
     "Análise LLM Read-Only",
     async () => {
+      checkAborted(abortSignal, 'Inside LLM analysis');
       // Sub 2.1: Contexto para LLM
       await stepTimingService.executeWithTiming(
         "analysis",
@@ -165,6 +183,7 @@ async function runAnalysisMode(
         "Preparar contexto estruturado com métricas calculadas"
       );
 
+      checkAborted(abortSignal, 'Before LLM call');
       // Sub 2.2: LLM Analysis (sem modificação)
       return await stepTimingService.executeWithTiming(
         "analysis",
@@ -184,6 +203,7 @@ async function runAnalysisMode(
   // ═══════════════════════════════════════════════════════════════
   // ETAPA 3: RELATÓRIO DE ANÁLISE COM MÉTRICAS REAIS
   // ═══════════════════════════════════════════════════════════════
+  checkAborted(abortSignal, 'Before real metrics');
   logger.info("═══ ETAPA 3/4: CÁLCULO DE MÉTRICAS REAIS ═══");
 
   const realMetrics = await stepTimingService.executeWithTiming(
@@ -264,8 +284,10 @@ async function runUltraExpertMode(
   script: string,
   llmOptions?: GenerateStructuredJsonOptions,
   generateConsultancy = true,
-  isTruncated = false
+  isTruncated = false,
+  abortSignal?: AbortSignal
 ): Promise<FullOptimizeResult> {
+  checkAborted(abortSignal, 'Ultra Expert mode start');
   logger.info("⚡ MODO ULTRA EXPERT - Otimização Máxima Ativada");
 
   // ═══════════════════════════════════════════════════════════════
@@ -275,10 +297,11 @@ async function runUltraExpertMode(
   logger.info(`📊 Características: ${characteristics.fileType.toUpperCase()} | ${characteristics.size} | ${characteristics.complexity} complexity`);
   logger.info(`📊 Tokens estimados: ${characteristics.estimatedTokens.toLocaleString()} | Linhas: ${characteristics.lineCount}`);
 
+  checkAborted(abortSignal, 'After characteristic analysis');
   // Estratégia adaptativa para arquivos grandes
   if (characteristics.recommendedStrategy === 'chunked') {
     logger.info("⚡ Estratégia: CHUNKED - Otimização por blocos com consolidação");
-    return await runUltraExpertModeChunked(script, characteristics, llmOptions, generateConsultancy);
+    return await runUltraExpertModeChunked(script, characteristics, llmOptions, generateConsultancy, abortSignal);
   } else if (characteristics.recommendedStrategy === 'optimized') {
     logger.info("⚡ Estratégia: OPTIMIZED - Prompt compactado para melhor performance");
   } else {
@@ -288,6 +311,7 @@ async function runUltraExpertMode(
   // ═══════════════════════════════════════════════════════════════
   // ETAPA 1: ANÁLISE PROFUNDA COM PARSE REAL
   // ═══════════════════════════════════════════════════════════════
+  checkAborted(abortSignal, 'Before deep analysis');
   logger.info("═══ ETAPA 1/4: ANÁLISE PROFUNDA ═══");
 
   const optimized = await stepTimingService.executeWithTiming(
@@ -295,6 +319,7 @@ async function runUltraExpertMode(
     "opt_001_main",
     "Análise e Otimização Ultra Expert",
     async () => {
+      checkAborted(abortSignal, 'Inside optimization main');
       // Sub 1.1: Parse Real
       const parsedData = await stepTimingService.executeWithTiming(
         "optimization",
@@ -578,7 +603,8 @@ export async function optimizeScript(
   llmOptions?: GenerateStructuredJsonOptions,
   generateConsultancy = true,
   shouldTruncate?: boolean,
-  lineLimit?: number
+  lineLimit?: number,
+  abortSignal?: AbortSignal
 ): Promise<FullOptimizeResult> {
   stepTimingService.reset();
 
@@ -590,6 +616,11 @@ export async function optimizeScript(
     shouldTruncate,
     lineLimit
   });
+
+  // Verifica cancelamento logo no início
+  if (abortSignal?.aborted) {
+    throw new Error('Optimization aborted by client');
+  }
 
   let finalScript = script;
   let truncationInfo: SmartTruncationResult | null = null;

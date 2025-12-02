@@ -25,7 +25,25 @@ router.post(
   checkUsageLimits,
   apiLimiter, // Rate limiting aplicado
   asyncHandler(async (req: AuthRequest, res) => {
+    // ✨ FREE TIER FIX: Preserva campos adicionados pelo middleware antes do parse
+    const applySmartTruncation = req.body.applySmartTruncation;
+    const lineLimit = req.body.lineLimit;
+
     const payload = optimizeScriptSchema.parse(req.body);
+
+    // ✨ FREE TIER FIX: Restaura campos de truncamento após parse
+    if (applySmartTruncation !== undefined) {
+      payload.applySmartTruncation = applySmartTruncation;
+    }
+    if (lineLimit !== undefined) {
+      payload.lineLimit = lineLimit;
+    }
+
+    logger.debug("[FREE TIER] Payload final", {
+      applySmartTruncation: payload.applySmartTruncation,
+      lineLimit: payload.lineLimit,
+      scriptLines: payload.script.split(/\r?\n/).length
+    });
 
     // Setup SSE headers
     res.setHeader('Content-Type', 'text/event-stream');
@@ -40,8 +58,18 @@ router.post(
     // Limpa steps anteriores
     stepTimingService.reset();
 
+    // Cria AbortController para cancelamento
+    const abortController = new AbortController();
+
+    // Monitora desconexão do cliente
+    req.on('close', () => {
+      logger.warn('[SSE] Client disconnected - aborting optimization');
+      abortController.abort();
+      sseEmitter.setCurrentClient(null);
+    });
+
     try {
-      const result = await scriptService.optimizeScript(payload);
+      const result = await scriptService.optimizeScript(payload, abortController.signal);
 
       // Coleta os sub-steps do modo correto
       const stepSource = payload.mode === "analysis" ? "analysis" : "optimization";
