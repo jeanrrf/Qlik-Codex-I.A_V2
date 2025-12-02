@@ -61,25 +61,25 @@ function runMigrations() {
     throw new Error("Database not initialized");
   }
 
-  // Migration 1: Adicionar colunas de script storage na optimization_history
-  const needsScriptColumns = !columnExists("optimization_history", "original_script");
+  // Migration 1: REMOVER colunas de script (se existirem) por segurança
+  const hasScriptColumns = columnExists("optimization_history", "original_script");
 
-  if (needsScriptColumns) {
+  if (hasScriptColumns) {
     try {
+      logger.info("Migrando tabela optimization_history para REMOVER colunas de scripts...");
+
       // Verificar se tabela antiga existe
       const tableCheck = db.prepare(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='optimization_history'"
       ).get();
 
       if (tableCheck) {
-        // Criar tabela temporária com nova estrutura
+        // Criar tabela temporária SEM colunas de script
         db.exec(`
           CREATE TABLE optimization_history_new (
             id TEXT PRIMARY KEY,
             user_id TEXT,
             mode TEXT NOT NULL,
-            original_script TEXT NOT NULL DEFAULT '-- Script not saved --',
-            optimized_script TEXT,
             original_lines INTEGER NOT NULL DEFAULT 0,
             optimized_lines INTEGER,
             breaking_risk TEXT,
@@ -95,6 +95,7 @@ function runMigrations() {
 
         // Tentar copiar dados antigos
         try {
+          // Migra apenas metadados, scripts são descartados por segurança
           db.exec(`
             INSERT INTO optimization_history_new (
               id, user_id, mode, original_lines, optimized_lines,
@@ -126,10 +127,80 @@ function runMigrations() {
         `);
       }
     } catch (err) {
-      logger.error("Migration failed", err);
+      logger.error("Migration de optimization_history falhou", err);
       // Se falhar, dropar tabela e deixar CREATE TABLE IF NOT EXISTS recriar
       try {
         db.exec("DROP TABLE IF EXISTS optimization_history");
+      } catch {
+        // Ignore
+      }
+    }
+  }
+
+  // Migration 2: REMOVER coluna script de active_sessions (se existir)
+  const sessionsHasScript = columnExists("active_sessions", "script");
+
+  if (sessionsHasScript) {
+    try {
+      logger.info("Migrando tabela active_sessions para REMOVER coluna script...");
+
+      const sessionTableCheck = db.prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='active_sessions'"
+      ).get();
+
+      if (sessionTableCheck) {
+        // Criar tabela temporária SEM coluna script
+        db.exec(`
+          CREATE TABLE active_sessions_new (
+            id TEXT PRIMARY KEY,
+            user_id TEXT,
+            mode TEXT NOT NULL,
+            llm_provider TEXT,
+            llm_model TEXT,
+            progress_data TEXT,
+            status TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL
+          );
+        `);
+
+        // Copiar dados (sem o campo script)
+        try {
+          db.exec(`
+            INSERT INTO active_sessions_new (
+              id, user_id, mode, llm_provider, llm_model,
+              progress_data, status, created_at, updated_at, expires_at
+            )
+            SELECT 
+              id, user_id, mode, llm_provider, llm_model,
+              progress_data, status, created_at, updated_at, expires_at
+            FROM active_sessions;
+          `);
+        } catch (copyErr) {
+          logger.warn("Could not copy active_sessions data, creating fresh table");
+        }
+
+        // Remover tabela antiga
+        db.exec("DROP TABLE active_sessions");
+
+        // Renomear nova tabela
+        db.exec("ALTER TABLE active_sessions_new RENAME TO active_sessions");
+
+        // Recriar índices
+        db.exec(`
+          CREATE INDEX idx_session_user ON active_sessions(user_id, updated_at DESC);
+          CREATE INDEX idx_session_expires ON active_sessions(expires_at);
+          CREATE INDEX idx_session_status ON active_sessions(status, updated_at DESC);
+        `);
+
+        logger.info("Migration de active_sessions concluída com sucesso");
+      }
+    } catch (err) {
+      logger.error("Migration de active_sessions falhou", err);
+      // Se falhar, dropar tabela e deixar CREATE TABLE IF NOT EXISTS recriar
+      try {
+        db.exec("DROP TABLE IF EXISTS active_sessions");
       } catch {
         // Ignore
       }
@@ -161,13 +232,12 @@ function createTables() {
   `);
 
   // Tabela de histórico de otimizações
+  // IMPORTANTE: Scripts NÃO são salvos por segurança/privacidade
   db.exec(`
     CREATE TABLE IF NOT EXISTS optimization_history (
       id TEXT PRIMARY KEY,
       user_id TEXT,
       mode TEXT NOT NULL,
-      original_script TEXT NOT NULL,
-      optimized_script TEXT,
       original_lines INTEGER NOT NULL,
       optimized_lines INTEGER,
       breaking_risk TEXT,
@@ -253,12 +323,12 @@ function createTables() {
   `);
 
   // Tabela de sessões ativas de otimização
+  // IMPORTANTE: Scripts NÃO são salvos, apenas metadados da sessão
   db.exec(`
     CREATE TABLE IF NOT EXISTS active_sessions (
       id TEXT PRIMARY KEY,
       user_id TEXT,
       mode TEXT NOT NULL,
-      script TEXT NOT NULL,
       llm_provider TEXT,
       llm_model TEXT,
       progress_data TEXT,

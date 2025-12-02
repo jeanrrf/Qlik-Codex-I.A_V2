@@ -30,7 +30,7 @@ describe("sessionService", () => {
         saveActiveSession({
           id: testSessionId,
           mode: "ultra-expert",
-          script: "LOAD * FROM test;",
+          // script: REMOVIDO - não é mais persistido
           progressData: null as any,
           status: "running"
         });
@@ -42,7 +42,7 @@ describe("sessionService", () => {
         saveActiveSession({
           id: testSessionId + "-undefined",
           mode: "analysis",
-          script: "LOAD * FROM test;",
+          // script: REMOVIDO
           progressData: undefined,
           status: "running"
         });
@@ -57,7 +57,7 @@ describe("sessionService", () => {
         saveActiveSession({
           id: testSessionId + "-valid",
           mode: "ultra-expert",
-          script: "LOAD * FROM test;",
+          // script: REMOVIDO
           progressData: { step: 1, progress: 50 },
           status: "running"
         });
@@ -74,7 +74,7 @@ describe("sessionService", () => {
       saveActiveSession({
         id: testSessionId,
         mode: "ultra-expert",
-        script: "LOAD * FROM test;",
+        // script: REMOVIDO
         progressData: null as any,
         status: "running"
       });
@@ -91,7 +91,7 @@ describe("sessionService", () => {
       saveActiveSession({
         id: testSessionId + "-with-data",
         mode: "ultra-expert",
-        script: "LOAD * FROM test;",
+        // script: REMOVIDO
         progressData,
         status: "running"
       });
@@ -112,7 +112,7 @@ describe("sessionService", () => {
         id: testSessionId + "-list-1",
         userId: "test-user",
         mode: "analysis",
-        script: "LOAD * FROM test1;",
+        // script: REMOVIDO
         progressData: null as any,
         status: "running"
       });
@@ -121,7 +121,7 @@ describe("sessionService", () => {
         id: testSessionId + "-list-2",
         userId: "test-user",
         mode: "ultra-expert",
-        script: "LOAD * FROM test2;",
+        // script: REMOVIDO
         progressData: { step: 1 },
         status: "paused"
       });

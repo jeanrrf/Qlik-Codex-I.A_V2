@@ -15,12 +15,12 @@ import {
 
 const router = Router();
 
-// Schema de validação
+// Schema de validação (script NÃO é mais aceito)
 const SaveSessionSchema = z.object({
   sessionId: z.string(),
   userId: z.string().optional(),
   mode: z.enum(["analysis", "ultra-expert"]),
-  script: z.string(),
+  // script: REMOVIDO - não persistimos scripts no servidor
   llmProvider: z.enum(["ainex", "google", "nvidia"]).optional(),
   llmModel: z.string().optional(),
   progressData: z.any().optional(),
@@ -29,7 +29,7 @@ const SaveSessionSchema = z.object({
 
 /**
  * POST /api/sessions/save
- * Salva ou atualiza uma sessão ativa
+ * Salva ou atualiza uma sessão ativa (sem o script)
  */
 router.post(
   "/save",
@@ -40,7 +40,7 @@ router.post(
       id: data.sessionId,
       userId: data.userId,
       mode: data.mode,
-      script: data.script,
+      // script: NÃO é mais persistido
       llmProvider: data.llmProvider,
       llmModel: data.llmModel,
       progressData: data.progressData,

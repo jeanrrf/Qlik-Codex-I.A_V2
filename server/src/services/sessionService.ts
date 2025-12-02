@@ -13,7 +13,7 @@ export interface ActiveSession {
   id: string;
   userId?: string;
   mode: OptimizeMode;
-  script: string;
+  // REMOVIDO: script não é mais persistido por segurança
   llmProvider?: LLMProviderName;
   llmModel?: string;
   progressData?: any; // JSON do progresso completo (opcional até iniciar)
@@ -35,11 +35,12 @@ export function saveActiveSession(session: Omit<ActiveSession, "createdAt" | "up
   const expiresAt = new Date(Date.now() + SESSION_EXPIRY_HOURS * 60 * 60 * 1000).toISOString();
 
   try {
+    // Scripts NÃO são persistidos, apenas metadados da sessão
     const stmt = db.prepare(`
       INSERT INTO active_sessions (
-        id, user_id, mode, script, llm_provider, llm_model,
+        id, user_id, mode, llm_provider, llm_model,
         progress_data, status, created_at, updated_at, expires_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         progress_data = excluded.progress_data,
         status = excluded.status,
@@ -50,7 +51,6 @@ export function saveActiveSession(session: Omit<ActiveSession, "createdAt" | "up
       session.id,
       session.userId || null,
       session.mode,
-      session.script,
       session.llmProvider || null,
       session.llmModel || null,
       JSON.stringify(session.progressData ?? {}),
@@ -89,7 +89,7 @@ export function getActiveSession(sessionId: string): ActiveSession | null {
       id: row.id,
       userId: row.user_id,
       mode: row.mode,
-      script: row.script,
+      // script não retornado (não é mais persistido)
       llmProvider: row.llm_provider,
       llmModel: row.llm_model,
       progressData: row.progress_data ? JSON.parse(row.progress_data) : {},

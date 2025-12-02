@@ -59,7 +59,7 @@ async function getDB(): Promise<IDBDatabase> {
 export interface LocalSessionData {
   sessionId: string;
   mode: string;
-  script: string;
+  // REMOVIDO: script não é mais persistido localmente
   llmProvider?: string;
   llmModel?: string;
   progressData: ProgressData;

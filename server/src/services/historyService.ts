@@ -42,7 +42,7 @@ class HistoryService {
 
     try {
       transaction((db) => {
-        // Inserir registro de otimização
+        // Inserir registro de otimização (SEM salvar scripts por segurança)
         const stmt = db.prepare(`
           INSERT INTO optimization_history (
             id, mode, original_lines, optimized_lines, breaking_risk,

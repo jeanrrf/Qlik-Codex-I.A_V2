@@ -24,7 +24,6 @@ import type { ConsultancyDocument } from "../types/consultancy";
 import { UploadedFileMeta, UploadedFilePayload } from "../types/ui";
 import ScriptCaptureModal from "../components/ScriptCaptureModal";
 import DownloadModal from "../components/DownloadModal";
-import { useSystemValidation, ValidationStage } from "../hooks/useSystemValidation";
 import { useOptimizationProgress } from "../hooks/useOptimizationProgress";
 import { useSessionPersistence } from "../hooks/useSessionPersistence";
 
@@ -203,14 +202,12 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
   const [showResultViewer, setShowResultViewer] = useState(false);
   const [consultancyDoc, setConsultancyDoc] = useState<ConsultancyDocument | null>(null);
   const [showConsultancy, setShowConsultancy] = useState(false);
-  const [showValidationPanel, setShowValidationPanel] = useState(false);
   const [showScriptInfo, setShowScriptInfo] = useState(false);
   const [scriptInfo, setScriptInfo] = useState<ScriptInfo | null>(null);
   const [dismissOnboarding, setDismissOnboarding] = useState(false);
 
   // === HOOKS ===
   const { user } = useAuth();
-  const validation = useSystemValidation();
   const optimization = useOptimizationProgress();
   const session = useSessionPersistence();
 
@@ -228,7 +225,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
   // === AUTO SHOW SCRIPT INFO WHEN SCRIPT IS LOADED ===
   useEffect(() => {
     // Se há script carregado mas o modal não foi exibido ainda, exibe
-    if (script && script.trim().length > 50 && !scriptInfo && uploadMeta) {
+    if (script && script?.trim().length > 50 && !scriptInfo && uploadMeta) {
       const lines = script.split(/\r?\n/).length;
       const size = new Blob([script]).size;
       const estimatedTokens = Math.ceil(script.length / 4);
@@ -303,12 +300,12 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
 
   // === AUTO-SAVE SESSION DURING OPTIMIZATION ===
   useEffect(() => {
-    if (optimization.isRunning && script.trim()) {
+    if (optimization.isRunning && script?.trim()) {
       // Salva sessão automaticamente a cada mudança de progresso
       session.saveSessionDebounced({
         sessionId: session.sessionId,
         mode,
-        script: script.trim(),
+        script: script?.trim() || '',
         llmProvider: selectedLLM.provider,
         llmModel: selectedLLM.model,
         progressData: optimization.progress,
@@ -323,7 +320,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
     setResult(null);
     setConsultancyDoc(null);
 
-    const trimmed = script.trim();
+    const trimmed = script?.trim() || '';
     if (!trimmed) {
       setError("Cole um script Qlik ou importe um arquivo antes de otimizar.");
       return;
@@ -423,7 +420,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
     return script.split(/\r?\n/).length;
   }, [script]);
 
-  const canOptimize = script.trim().length > 0 && !optimization.isRunning && validation.isSystemReady;
+  const canOptimize = script?.trim().length > 0 && !optimization.isRunning;
 
   const modeInfo = {
     analysis: {
@@ -515,37 +512,6 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
               </button>
             </div>
           </div>
-
-          {/* Status */}
-          <div className="control-section-compact status-section-compact">
-            <div className="section-icon-compact">🔧</div>
-            <button
-              className={`status-card-compact ${validation.isSystemReady ? 'ready' : validation.isValidating ? 'checking' : 'error'}`}
-              onClick={() => setShowValidationPanel(!showValidationPanel)}
-            >
-              <div className="status-indicator-compact">
-                {validation.isValidating ? (
-                  <Spinner size={18} />
-                ) : validation.isSystemReady ? (
-                  <Icons.Check />
-                ) : (
-                  <Icons.X />
-                )}
-              </div>
-              <div className="status-text-compact">
-                <h4>
-                  {validation.isValidating
-                    ? "Validando..."
-                    : validation.isSystemReady
-                      ? "Operacional"
-                      : "Indisponível"}
-                </h4>
-                {validation.result && (
-                  <p>{formatDuration(validation.result.totalDuration)}</p>
-                )}
-              </div>
-            </button>
-          </div>
         </div>
 
         {/* Coluna Central: Executar + Stop (Grande e Destacado) */}
@@ -636,69 +602,6 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
       </div>
 
 
-      {/* Validation Panel (expandable) */}
-      {
-        showValidationPanel && (
-          <div className="validation-panel">
-            <div className="validation-header">
-              <h3>🔍 Validação do Sistema</h3>
-              <button className="revalidate-btn" onClick={() => validation.validate()} disabled={validation.isValidating}>
-                <Icons.Refresh />
-                <span>Revalidar</span>
-              </button>
-            </div>
-
-            {validation.isValidating && (
-              <div className="validation-progress">
-                <div className="progress-bar">
-                  <div className="progress-fill" style={{ width: `${validation.progress}%` }} />
-                </div>
-                <span className="progress-text">{validation.currentStage}</span>
-              </div>
-            )}
-
-            {validation.result && (
-              <div className="validation-stages">
-                {validation.result.stages.map((stage: ValidationStage) => (
-                  <div key={stage.id} className={`v-stage ${stage.status}`}>
-                    <div className="v-stage-icon">
-                      {stage.status === "success" ? <Icons.Check /> : stage.status === "error" ? <Icons.X /> : <Spinner size={12} />}
-                    </div>
-                    <span className="v-stage-name">{stage.name}</span>
-                    <span className="v-stage-msg">{stage.message}</span>
-                    {stage.duration !== undefined && <span className="v-stage-time">{formatDuration(stage.duration)}</span>}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {validation.result && (
-              <div className="validation-info">
-                <div className="info-item">
-                  <span className="info-label">Versão</span>
-                  <span className="info-value">{validation.result.systemInfo.version}</span>
-                </div>
-                <div className="info-item">
-                  <span className="info-label">Memória</span>
-                  <span className="info-value">{validation.result.systemInfo.memoryUsage}MB</span>
-                </div>
-                <div className="info-item">
-                  <span className="info-label">Motor IA Padrão</span>
-                  <span className="info-value">{validation.result.modelsAvailable.defaultProvider}</span>
-                </div>
-              </div>
-            )}
-
-            {validation.error && (
-              <div className="validation-error">
-                <Icons.X />
-                <span>{validation.error}</span>
-              </div>
-            )}
-          </div>
-        )
-      }
-
       {/* Main Content */}
       <div className="opt-content">
         {/* Left Panel - Controls */}
@@ -709,10 +612,10 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
               <Icons.File />
               <span>Script</span>
               <button className="ctrl-btn" onClick={() => setCaptureOpen(true)}>
-                {uploadMeta || script.trim() ? "Trocar" : "Carregar"}
+                {uploadMeta || script?.trim() ? "Trocar" : "Carregar"}
               </button>
             </div>
-            {(uploadMeta || script.trim()) ? (
+            {(uploadMeta || script?.trim()) ? (
               <>
                 <div className="script-filename">
                   <span className="filename-text">{uploadMeta?.name || "Input Manual"}</span>
@@ -761,7 +664,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
           </div>
 
           {/* Análise do Script - Sidebar */}
-          {(script.trim() || uploadMeta) && (
+          {(script?.trim() || uploadMeta) && (
             <div className="ctrl-card analysis-card">
               <div className="ctrl-header">
                 <Icons.Analytics />
@@ -999,7 +902,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
           </div>
 
           {/* Onboarding Tooltip - Shows where to start */}
-          {!script.trim() && !uploadMeta && !optimization.isRunning && !dismissOnboarding && (
+          {!script?.trim() && !uploadMeta && !optimization.isRunning && !dismissOnboarding && (
             <div className="onboarding-overlay" onClick={() => setDismissOnboarding(true)}>
               <div className="onboarding-spotlight" onClick={(e) => e.stopPropagation()} />
               <div className="onboarding-tooltip" onClick={(e) => e.stopPropagation()}>

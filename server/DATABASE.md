@@ -4,11 +4,13 @@
 
 O **Qlik Codex I.A** utiliza **SQLite** como banco de dados local para armazenar:
 
-- ✅ Histórico de otimizações
+- ✅ Histórico de otimizações (metadados apenas)
 - ✅ Métricas de performance
 - ✅ Mensagens de contato
 - ✅ Logs de auditoria
 - ✅ Cache de respostas LLM
+
+⚠️ **IMPORTANTE:** Scripts Qlik **NÃO** são salvos no banco de dados por questões de segurança e privacidade.
 
 ## 📍 Localização
 
@@ -37,13 +39,14 @@ CREATE TABLE contact_messages (
 
 ### 2. `optimization_history`
 
-Histórico completo de todas as otimizações realizadas.
+Histórico de otimizações (apenas metadados, **sem scripts**).
 
 ```sql
 CREATE TABLE optimization_history (
   id TEXT PRIMARY KEY,
   user_id TEXT,
   mode TEXT NOT NULL,
+  -- Scripts NÃO são salvos (segurança/privacidade)
   original_lines INTEGER NOT NULL,
   optimized_lines INTEGER NOT NULL,
   breaking_risk TEXT NOT NULL,
@@ -51,7 +54,9 @@ CREATE TABLE optimization_history (
   duration_ms INTEGER NOT NULL,
   llm_provider TEXT NOT NULL,
   success INTEGER NOT NULL DEFAULT 1,
-  created_at TEXT NOT NULL
+  error_message TEXT,
+  created_at TEXT NOT NULL,
+  completed_at TEXT
 );
 ```
 
