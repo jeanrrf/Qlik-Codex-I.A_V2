@@ -1,7 +1,6 @@
 ﻿import React, { useState, useRef } from "react";
 
 import { requestQlikFormatterStream } from "../lib/apiClient";
-import { formatQlikScript } from "../lib/qlikFormatter";
 
 type FormatterSource = "ainex" | "fallback";
 
@@ -73,17 +72,7 @@ const QlikFormatterTool: React.FC<QlikFormatterToolProps> = ({ isOpen, onClose }
       setActions(response.actions ?? []);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Falha ao acionar a AINEX.";
-      const fallbackScript = formatQlikScript(input);
-      setOutput(fallbackScript);
-      setStyleNotes([
-        "Formatter local aplicado porque a requisição à IA falhou."
-      ]);
-      setResultMeta({
-        source: "fallback",
-        providerLabel: "Formatter local (fallback)"
-      });
-      setShowResults(true);
-      setError(`${message} • Aplicamos o formatter local de segurança.`);
+      setError(`${message} • Tente novamente.`);
     } finally {
       setLoading(false);
       setProgress(100);

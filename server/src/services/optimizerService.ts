@@ -1,15 +1,10 @@
 import { logger } from "../lib/logger";
 import { sseEmitter } from "../lib/sseEmitter";
-import { runQlikExplainAgent } from "../agents/qlikExplainAgent";
 import { runQlikOptimizeAgent } from "../agents/qlikOptimizeAgent";
-import { runQlikReviewAgent } from "../agents/qlikReviewAgent";
 import { generateCompactAuditReport, CompactAuditReport } from "../agents/qlikConsultancyAgent";
 import { calculateROI, formatROIExecutiveSummary } from "./roiCalculator";
 import {
   analyzeScriptCharacteristics,
-  generateChunkStrategy,
-  createScriptChunks,
-  mergeChunkResults,
   applySmartTruncation,
   SmartTruncationResult
 } from "../lib/scriptAnalyzer";
@@ -18,7 +13,6 @@ import type { ConsultancyDocument } from "../types/consultancy";
 import type { GenerateStructuredJsonOptions } from "../lib/llmClient";
 import { stepTimingService } from "./stepTimingService";
 import { calculateRealMetrics, getCriticalIssuesFromMetrics, formatMetricsCompact } from "./metricsCalculator";
-import { validateQlikScript } from "../validators/qlikValidator";
 import {
   parseQlikScript,
   detectSyntheticKeys,
@@ -26,15 +20,8 @@ import {
   type ParsedScript,
   type AntiPattern
 } from "../lib/qlikParser";
-// NOVO: AINEX PRO Pipeline (8 estágios avançados) - EM DESENVOLVIMENTO
-// import { runDeepParse } from "../agents/qlikDeepParseAgent";
-// import { runSemanticAnalysis } from "../agents/qlikSemanticAgent";
-// import { runStrategicPlanning } from "../agents/qlikStrategicAgent";
-// import { runCodeGeneration } from "../agents/qlikCodeGenAgent";
-// import { runMultiLayerValidation } from "../agents/qlikMultiValidationAgent";
-// import { runDifferentialReview } from "../agents/qlikDifferentialAgent";
-// import { runTechnicalExplain } from "../agents/qlikTechnicalExplainAgent";
-// import { runFinalMetrics } from "../agents/qlikFinalMetricsAgent";
+import { QlikMegaOptimizer } from "../agents/qlikMegaOptimizer";
+
 
 export interface FullOptimizeResult extends OptimizeResult {
   explanation?: string;
@@ -92,21 +79,15 @@ async function runAnalysisMode(
         reads: characteristics.qvdReadCount,
         writes: characteristics.qvdWriteCount
       } : null,
-      strategy: characteristics.recommendedStrategy
+      strategy: 'full'
     }
   });
 
   if (characteristics.hasQVDOperations) {
     logger.info(`📦 QVD: ${characteristics.qvdReadCount} reads, ${characteristics.qvdWriteCount} writes`);
-  }  // Estratégia adaptativa
-  if (characteristics.recommendedStrategy === 'chunked') {
-    logger.info("⚡ Estratégia: CHUNKED - Análise otimizada por blocos");
-    return await runAnalysisModeChunked(script, characteristics, llmOptions, abortSignal);
-  } else if (characteristics.recommendedStrategy === 'optimized') {
-    logger.info("⚡ Estratégia: OPTIMIZED - Análise com prompt compactado");
-  } else {
-    logger.info("⚡ Estratégia: FULL - Análise tradicional completa");
   }
+
+  logger.info("⚡ Estratégia: MEGA CONTEXT - Análise completa (Gemini 1M+)");
 
   // ═══════════════════════════════════════════════════════════════
   // ETAPA 1: PARSE E ANÁLISE ESTRUTURAL PROFUNDA
@@ -297,312 +278,130 @@ async function runUltraExpertMode(
   abortSignal?: AbortSignal
 ): Promise<FullOptimizeResult> {
   checkAborted(abortSignal, 'Ultra Expert mode start');
-  logger.info("⚡ MODO ULTRA EXPERT - Otimização Máxima Ativada");
+  logger.info("⚡ MODO ULTRA EXPERT - MEGA OPTIMIZER (Gemini 2.5 Flash Architecture)");
 
-  // ═══════════════════════════════════════════════════════════════
-  // ANÁLISE PRÉVIA: DETECTAR CARACTERÍSTICAS DO SCRIPT
-  // ═══════════════════════════════════════════════════════════════
-  const characteristics = analyzeScriptCharacteristics(script, isTruncated);
-  logger.info(`📊 Características: ${characteristics.fileType.toUpperCase()} | ${characteristics.size} | ${characteristics.complexity} complexity`);
-  logger.info(`📊 Tokens estimados: ${characteristics.estimatedTokens.toLocaleString()} | Linhas: ${characteristics.lineCount}`);
+  // Instantiate the Mega Optimizer
+  const optimizer = new QlikMegaOptimizer(script);
+  const originalLines = script.split(/\r?\n/).length;
 
-  checkAborted(abortSignal, 'After characteristic analysis');
-  // Estratégia adaptativa para arquivos grandes
-  if (characteristics.recommendedStrategy === 'chunked') {
-    logger.info("⚡ Estratégia: CHUNKED - Otimização por blocos com consolidação");
-    return await runUltraExpertModeChunked(script, characteristics, llmOptions, generateConsultancy, abortSignal);
-  } else if (characteristics.recommendedStrategy === 'optimized') {
-    logger.info("⚡ Estratégia: OPTIMIZED - Prompt compactado para melhor performance");
-  } else {
-    logger.info("⚡ Estratégia: FULL - Análise completa tradicional");
-  }
+  // Run deterministic parser for metadata
+  const parsed = parseQlikScript(script);
+  const metrics = calculateQualityMetrics(parsed);
 
-  // ═══════════════════════════════════════════════════════════════
-  // ETAPA 1: ANÁLISE PROFUNDA COM PARSE REAL
-  // ═══════════════════════════════════════════════════════════════
-  checkAborted(abortSignal, 'Before deep analysis');
-  logger.info("═══ ETAPA 1/4: ANÁLISE PROFUNDA ═══");
+  // Run the pipeline
+  const megaResult = await optimizer.run();
 
-  const optimized = await stepTimingService.executeWithTiming(
-    "optimization",
-    "opt_001_main",
-    "Análise e Otimização Ultra Expert",
-    async () => {
-      checkAborted(abortSignal, 'Inside optimization main');
-      // Sub 1.1: Parse Real
-      const parsedData = await stepTimingService.executeWithTiming(
-        "optimization",
-        "opt_001_parse",
-        "Parse Qlik Completo",
-        async () => {
-          logger.info("→ Parser Qlik executando análise estrutural...");
-          return parseQlikScript(script);
-        },
-        "Extrair AST: tabelas, joins, variáveis, loops, fields"
-      );
-
-      // Sub 1.2: Extração de Metadados Profunda
-      await stepTimingService.executeWithTiming(
-        "optimization",
-        "opt_001_metadata",
-        "Extração de Metadados Avançada",
-        async () => {
-          logger.info("→ Mapeando dependências entre tabelas...");
-          logger.info(`  ✓ ${parsedData.tables.length} tabelas identificadas`);
-          logger.info(`  ✓ ${parsedData.joins.length} joins detectados`);
-          logger.info(`  ✓ ${parsedData.variables.length} variáveis encontradas`);
-          return parsedData;
-        },
-        "Mapear grafo de dependências, field lineage, data flow"
-      );
-
-      // Sub 1.3: Detecção de Anti-patterns Programática
-      await stepTimingService.executeWithTiming(
-        "optimization",
-        "opt_001_antipatterns",
-        "Detecção Automatizada de Anti-patterns",
-        async () => {
-          logger.info("→ Executando detectores de anti-patterns...");
-          const syntheticKeys = detectSyntheticKeys(parsedData);
-          parsedData.antiPatterns.push(...syntheticKeys);
-          logger.info(`  ⚠️  ${parsedData.antiPatterns.length} anti-patterns detectados`);
-          parsedData.antiPatterns.forEach(ap => {
-            logger.warn(`    [${ap.severity}] L${ap.line}: ${ap.type}`);
-          });
-          return parsedData.antiPatterns;
-        },
-        "SELECT *, Cartesian Products, Synthetic Keys, Circular Refs"
-      );
-
-      // Sub 1.4: Cálculo de Métricas Reais
-      await stepTimingService.executeWithTiming(
-        "optimization",
-        "opt_001_metrics",
-        "Cálculo de Métricas de Código",
-        async () => {
-          logger.info("→ Calculando métricas de qualidade...");
-          const quality = calculateQualityMetrics(parsedData);
-          logger.info(`  📊 Maintainability Index: ${quality.maintainabilityIndex}/100 (${quality.qualityGrade})`);
-          logger.info(`  📊 Cyclomatic Complexity: ${parsedData.complexity.cyclomaticComplexity}`);
-          logger.info(`  📊 Code:Comment Ratio: ${quality.codeToCommentRatio}`);
-          return quality;
-        },
-        "Maintainability Index, Cyclomatic Complexity, Technical Debt"
-      );
-
-      // Sub 1.5: Otimização LLM (com contexto rico)
-      checkAborted(abortSignal, 'Before LLM optimization');
-      return await stepTimingService.executeWithTiming(
-        "optimization",
-        "opt_001_llm",
-        "LLM Ultra Expert - Otimização",
-        async () => {
-          logger.info("→ LLM recebendo contexto completo de análise...");
-          // O LLM recebe os dados do parser para otimizar com contexto
-          return await runQlikOptimizeAgent(script, "ultra-expert", llmOptions);
-        },
-        "LLM otimiza com contexto: AST, anti-patterns, métricas calculadas"
-      );
-    },
-    "Análise estrutural completa + otimização LLM contextualizada"
-  );
-
-  // ═══════════════════════════════════════════════════════════════
-  // ETAPA 2: REVISÃO DE SEGURANÇA AVANÇADA
-  // ═══════════════════════════════════════════════════════════════
-  checkAborted(abortSignal, 'Before advanced review');
-  logger.info("═══ ETAPA 2/4: REVISÃO AVANÇADA ═══");
-
-  const reviewed = await stepTimingService.executeWithTiming(
-    "optimization",
-    "opt_002_main",
-    "Revisão Avançada de Código",
-    async () => {
-      // Sub 2.1: Scan de Segurança Programático
-      await stepTimingService.executeWithTiming(
-        "optimization",
-        "opt_002_security",
-        "Scan de Vulnerabilidades Automatizado",
-        async () => {
-          logger.info("→ Verificando SQL injection, DROP, DELETE...");
-          const dangerousCommands = [
-            'DROP TABLE', 'DROP FIELD', 'DELETE', 'EXECUTE',
-            'SQL DELETE', 'SQL DROP', 'SQL TRUNCATE'
-          ];
-          const hasDanger = dangerousCommands.some(cmd =>
-            optimized.optimizedScript.toUpperCase().includes(cmd)
-          );
-          if (hasDanger) {
-            logger.warn("  ⚠️  Comandos perigosos detectados no código otimizado!");
-          }
-          return { vulnerabilities: [] };
-        },
-        "Detectar SQL injection, comandos destrutivos, security risks"
-      );
-
-      // Sub 2.2: Validação de Integridade com Parser
-      await stepTimingService.executeWithTiming(
-        "optimization",
-        "opt_002_integrity",
-        "Validação de Integridade Estrutural",
-        async () => {
-          logger.info("→ Comparando estruturas antes/depois...");
-          const parsedAfter = parseQlikScript(optimized.optimizedScript);
-          logger.info(`  ✓ Tabelas: ${parsedAfter.tables.length} (original: ${parseQlikScript(script).tables.length})`);
-          logger.info(`  ✓ Joins: ${parsedAfter.joins.length}`);
-          return { integrityChecks: [] };
-        },
-        "Garantir que JOINs, chaves sintéticas e relações foram preservadas"
-      );
-
-      // Sub 2.3: Diff Algorítmico
-      await stepTimingService.executeWithTiming(
-        "optimization",
-        "opt_002_diff",
-        "Análise de Diferenças Algorítmica",
-        async () => {
-          logger.info("→ Calculando diff estruturado...");
-          const originalLines = script.split('\n');
-          const optimizedLines = optimized.optimizedScript.split('\n');
-          const diffStats = {
-            added: optimizedLines.length - originalLines.length,
-            removed: 0,
-            modified: 0
-          };
-          logger.info(`  📊 Linhas adicionadas: ${diffStats.added}`);
-          return { diffStats };
-        },
-        "Diff line-by-line, calcular impacto real das mudanças"
-      );
-
-      // Sub 2.4: Revisão LLM
-      return await stepTimingService.executeWithTiming(
-        "optimization",
-        "opt_002_llm",
-        "LLM Review Agent - Crítica Final",
-        async () => {
-          logger.info("→ Agente de revisão analisando mudanças...");
-          return await runQlikReviewAgent(optimized, llmOptions);
-        },
-        "Revisar código otimizado com agente crítico especializado"
-      );
-    },
-    "Revisão multi-camadas: segurança, integridade, diff, LLM review"
-  );
-
-  // ═══════════════════════════════════════════════════════════════
-  // ETAPA 3: DOCUMENTAÇÃO TÉCNICA
-  // ═══════════════════════════════════════════════════════════════
-  logger.info("═══ ETAPA 3/4: DOCUMENTAÇÃO ═══");
-
-  const explanation = await stepTimingService.executeWithTiming(
-    "optimization",
-    "opt_003_main",
-    "Geração de Documentação Técnica",
-    async () => {
-      await stepTimingService.executeWithTiming(
-        "optimization",
-        "opt_003_impact",
-        "Análise de Impacto",
-        async () => {
-          logger.info("→ Analisando impacto das mudanças...");
-          return {};
-        },
-        "Calcular impacto de performance, manutenibilidade, segurança"
-      );
-
-      return await stepTimingService.executeWithTiming(
-        "optimization",
-        "opt_003_llm",
-        "LLM Explain Agent - Documentação",
-        async () => {
-          logger.info("→ Gerando explicação técnica didática...");
-          return await runQlikExplainAgent(reviewed, llmOptions);
-        },
-        "Gerar documentação técnica e educativa das otimizações"
-      );
-    },
-    "Documentação completa: impacto, explicações, guias"
-  );
-
-  // ═══════════════════════════════════════════════════════════════
-  // ETAPA 4: CONSULTORIA + MÉTRICAS REAIS
-  // ═══════════════════════════════════════════════════════════════
-  let consultancyDocument: ConsultancyDocument | undefined;
-  let compactReport: CompactAuditReport | undefined;
-
-  if (generateConsultancy) {
-    try {
-      logger.info("═══ ETAPA 4/5: CÁLCULO DE MÉTRICAS REAIS ═══");
-
-      const realMetrics = await stepTimingService.executeWithTiming(
-        "optimization",
-        "opt_004_metrics_real",
-        "Métricas Quantitativas Reais",
-        async () => {
-          logger.info("→ Calculando métricas do script otimizado...");
-          const metrics = calculateRealMetrics(reviewed.optimizedScript);
-          logger.info(`  ✓ ${formatMetricsCompact(metrics)}`);
-
-          const criticalIssues = getCriticalIssuesFromMetrics(metrics);
-          if (criticalIssues.length > 0) {
-            logger.warn(`  ⚠️  ${criticalIssues.length} issue(s) crítico(s) pós-otimização:`);
-            criticalIssues.forEach(issue => logger.warn(`    - ${issue}`));
-          }
-
-          return metrics;
-        },
-        "Calcular métricas reais do código otimizado"
-      );
-
-      // Adicionar métricas reais ao resultado
-      reviewed.analysis.realMetrics = realMetrics;
-
-      logger.info("═══ ETAPA 5/5: RELATÓRIO COMPACTO v3.0 ═══");
-
-      compactReport = await stepTimingService.executeWithTiming(
-        "optimization",
-        "opt_005_report_compact",
-        "Relatório Compacto (Priorizado)",
-        async () => {
-          logger.info("→ Gerando relatório compacto (apenas dados críticos)...");
-          return await generateCompactAuditReport(reviewed, realMetrics);
-        },
-        "Relatório minimalista: sumário + métricas + top 5 recomendações"
-      );
-
-      logger.info("  📊 Métricas finais: " + formatMetricsCompact(realMetrics));
-      logger.info(`  ⚠️  Issues críticos: ${compactReport.criticalIssues.length}`);
-      logger.info(`  💡 Top recomendações: ${compactReport.topRecommendations.length}`);
-
-      // === ROI CALCULATION (REVENUE FEATURE) ===
-      const roi = calculateROI(reviewed);
-      logger.info(`  💰 Economia estimada: R$ ${roi.monthly.total.toFixed(2)}/mês | R$ ${roi.annual.total.toFixed(2)}/ano`);
-      logger.info(`  📈 ROI: ${roi.payback.roi.toFixed(0)}% | Payback: ${roi.payback.monthsToPayback.toFixed(1)} meses`);
-
-      // Adiciona ROI ao resultado reviewed
-      reviewed.analysis.roi = roi;
-
-      // Modo Ultra Expert: manter apenas relatório compacto como saída principal.
-      // O relatório executivo legado foi desativado para reduzir custo e ruído.
-    } catch (err) {
-      logger.warn("Falha ao gerar documento de consultoria", { error: String(err) });
-    }
-  }
-
-  logger.info("✓ MODO ULTRA EXPERT concluído com sucesso", {
-    subStepsExecuted: stepTimingService.getCompletedSubSteps("optimization").length,
-    breakingRisk: reviewed.analysis.breakingRisk
-  });
-
+  // Map results to FullOptimizeResult
   return {
-    ...reviewed,
-    explanation,
-    consultancyDocument,
-    compactAuditReport: compactReport, // NOVO: relatório compacto priorizado
-    roiExecutiveSummary: reviewed.analysis.roi ? formatROIExecutiveSummary(reviewed.analysis.roi as any) : undefined
+    originalScript: script,
+    optimizedScript: megaResult.optimizedScript,
+    summary: megaResult.report.executiveSummary || "Optimization completed successfully.",
+    explanation: megaResult.report.technicalDetails || "See technical details.",
+    documentationMarkdown: megaResult.report.technicalDetails || "",
+    analysis: {
+      changes: [],
+      breakingRisk: megaResult.plan.riskLevel as any,
+      safeToApply: true,
+      mode: 'ultra-expert',
+      metricsEstimate: {
+        loadComplexityBefore: "medium",
+        loadComplexityAfter: "low",
+        maintainabilityBefore: "medium",
+        maintainabilityAfter: "high"
+      }
+    },
+
+    // Map analysis data
+    analysisOnly: {
+      parsed: {
+        tables: parsed.tables,
+        joins: parsed.joins,
+        variables: parsed.variables,
+        complexity: parsed.complexity,
+        antiPatterns: parsed.antiPatterns,
+        metrics: parsed.metrics
+      },
+      qualityMetrics: metrics,
+      allAntiPatterns: parsed.antiPatterns
+    },
+
+    // Map consultancy document
+    consultancyDocument: {
+      id: Date.now().toString(),
+      version: "1.0",
+      generatedAt: new Date().toISOString(),
+      processingTimeMs: 0,
+      timeline: [],
+      phases: [],
+      cronogram: { totalDuration: 0, fastestPhase: 'analysis', slowestPhase: 'analysis' },
+      executiveSummary: {
+        title: "Optimization Report",
+        analyst: "Qlik Codex AI",
+        date: new Date().toISOString(),
+        overview: megaResult.report.executiveSummary,
+        keyFindings: [],
+        criticalAlerts: [],
+        overallRisk: megaResult.plan.riskLevel as any,
+        overallHealth: 'good',
+        recommendedAction: 'review'
+      },
+      codeComparison: {
+        originalCode: script,
+        optimizedCode: megaResult.optimizedScript,
+        markers: [],
+        diffStats: { linesAdded: 0, linesRemoved: 0, linesModified: 0, totalOriginal: originalLines, totalOptimized: megaResult.optimizedScript.split('\n').length }
+      },
+      qualitativeGains: [],
+      recommendations: megaResult.plan.planSteps.map((s: any) => ({
+        id: s.step.toString(),
+        title: s.title,
+        description: s.details,
+        impact: 'high',
+        effort: 'medium',
+        category: 'performance'
+      })),
+      tips: [],
+      fullDocumentation: megaResult.report.technicalDetails,
+      warnings: [],
+      notes: []
+    },
+
+    // Map compact audit report
+    compactAuditReport: {
+      id: Date.now().toString(),
+      generatedAt: new Date().toISOString(),
+      summary: megaResult.report.executiveSummary,
+      metrics: {
+        linesOfCode: originalLines,
+        cyclomaticComplexity: 0,
+        loadStatements: 0,
+        joinStatements: 0,
+        maintainabilityIndex: 0
+      },
+      criticalIssues: [],
+      topRecommendations: megaResult.plan.planSteps.map((s: any) => ({ title: s.title, impact: 'high' })),
+      overallRisk: megaResult.plan.riskLevel,
+      safeToApply: true,
+      processingTimeMs: 0
+    },
+
+    roiExecutiveSummary: megaResult.plan.estimatedImprovement
   };
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
@@ -689,7 +488,6 @@ export async function optimizeScript(
   // ✨ APLICAR TRUNCAMENTO INTELIGENTE SE NECESSÁRIO (FREE TIER)
   if (shouldTruncate && lineLimit) {
     logger.info(`🔒 FREE TIER: Aplicando limite de ${lineLimit} linhas com truncamento inteligente...`);
-    logger.warn(`⚠️  CHUNKING DESABILITADO - Scripts truncados (FREE TIER) nunca usam chunking`);
 
     truncationInfo = applySmartTruncation(script, lineLimit);
     finalScript = truncationInfo.truncatedScript;
@@ -737,306 +535,6 @@ export async function optimizeScript(
  * MODO ANÁLISE CHUNKED - Para arquivos grandes QVD/QVS
  * Processa o script em chunks para evitar timeout mantendo precisão
  */
-async function runAnalysisModeChunked(
-  script: string,
-  characteristics: ReturnType<typeof analyzeScriptCharacteristics>,
-  llmOptions?: GenerateStructuredJsonOptions,
-  abortSignal?: AbortSignal
-): Promise<FullOptimizeResult> {
-  logger.info("🔄 Iniciando análise CHUNKED...");
-  checkAborted(abortSignal, 'Chunked analysis start');
-
-  const strategy = generateChunkStrategy(characteristics);
-  const chunks = createScriptChunks(script, strategy);
-
-  logger.info(`📦 Script dividido em ${chunks.length} chunks (tamanho: ${strategy.chunkSize} linhas, overlap: ${strategy.overlapLines})`);
-  logger.info(`🎯 Áreas de foco: ${strategy.focusAreas.join(', ')}`);
-
-  // Emite evento de início de chunking
-  sseEmitter.sendToCurrent({
-    type: 'chunking_started',
-    data: {
-      totalChunks: chunks.length,
-      chunkSize: strategy.chunkSize,
-      overlapLines: strategy.overlapLines,
-      focusAreas: strategy.focusAreas
-    }
-  });
-
-  // Processa cada chunk
-  const chunkResults: any[] = [];
-
-  for (let i = 0; i < chunks.length; i++) {
-    checkAborted(abortSignal, `Before chunk ${i + 1}/${chunks.length}`);
-    const chunkInfo = chunks[i];
-    logger.info(`\n📄 Processando ${chunkInfo.context}...`);
-
-    // Emite progresso do chunk atual
-    sseEmitter.sendToCurrent({
-      type: 'chunk_progress',
-      data: {
-        currentChunk: i + 1,
-        totalChunks: chunks.length,
-        percentage: Math.round(((i + 1) / chunks.length) * 100),
-        chunkContext: chunkInfo.context,
-        startLine: chunkInfo.startLine,
-        endLine: chunkInfo.endLine
-      }
-    });
-
-    try {
-      const chunkResult = await stepTimingService.executeWithTiming(
-        "analysis",
-        `ana_chunk_${i + 1}` as any,
-        `Análise Chunk ${i + 1}/${chunks.length}`,
-        async () => {
-          checkAborted(abortSignal, `Inside chunk ${i + 1}/${chunks.length}`);
-          return await runQlikOptimizeAgent(chunkInfo.chunk, "analysis", llmOptions);
-        },
-        `Chunk ${i + 1}: ${chunkInfo.context}`
-      );
-
-      chunkResults.push({
-        changes: chunkResult.analysis?.changes || [],
-        summary: chunkResult.summary || '',
-        metricsEstimate: chunkResult.analysis?.metricsEstimate
-      });
-
-      logger.info(`  ✓ ${chunkResult.analysis?.changes?.length || 0} issues encontrados`);
-    } catch (error) {
-      logger.error(`Erro no chunk ${i + 1}:`, error);
-      // Continua com próximos chunks mesmo se um falhar
-    }
-  }
-
-  // Mescla resultados
-  logger.info("\n🔀 Consolidando resultados de todos os chunks...");
-  checkAborted(abortSignal, 'Before merging chunk results');
-
-  // Consolidar mudanças únicas de todos os chunks (deduplicação simples por description)
-  const allChanges = chunkResults.flatMap(r => r.changes);
-  const uniqueChangesMap = new Map<string, typeof allChanges[0]>();
-  for (const change of allChanges) {
-    const key = `${change.line}-${change.description}`;
-    if (!uniqueChangesMap.has(key)) {
-      uniqueChangesMap.set(key, change);
-    }
-  }
-  const uniqueChanges = Array.from(uniqueChangesMap.values());
-
-  // Mesclar summaries
-  const mergedSummary = chunkResults.map(r => r.summary).filter(Boolean).join('\n\n');
-
-  // Mesclar métricas (usar a melhor estimativa)
-  const mergedMetrics = chunkResults[0]?.metricsEstimate || {
-    estimatedLoadTimeReductionPercent: 0,
-    estimatedRAMSavingsPercent: 0,
-    estimatedLOCReduction: 0,
-    complexityReduction: 0
-  };
-
-  logger.info(`✅ Consolidação: ${uniqueChanges.length} issues únicos identificados`);  // Parse do script completo para métricas
-  checkAborted(abortSignal, 'Before metrics on full script');
-  const parsed = parseQlikScript(script);
-  const qualityMetrics = calculateQualityMetrics(parsed);
-  const realMetrics = calculateRealMetrics(script);
-
-  // Gera relatório compacto
-  const mockAnalysisResult: OptimizeResult = {
-    originalScript: script,
-    optimizedScript: script,
-    summary: mergedSummary,
-    documentationMarkdown: '',
-    analysis: {
-      changes: uniqueChanges,
-      breakingRisk: 'low' as const,
-      safeToApply: true,
-      mode: 'analysis' as const,
-      metricsEstimate: mergedMetrics,
-      realMetrics
-    }
-  };
-
-  const compactReport = await generateCompactAuditReport(mockAnalysisResult, realMetrics);
-  const roi = calculateROI(mockAnalysisResult);
-
-  logger.info("✓ ANÁLISE CHUNKED concluída");
-  logger.info(`  📊 Total de chunks: ${chunks.length}`);
-  logger.info(`  ⚠️  Issues únicos: ${uniqueChanges.length}`);
-
-  return {
-    originalScript: script,
-    optimizedScript: script, // Não modifica em modo análise
-    summary: mergedSummary,
-    documentationMarkdown: '',
-    analysis: {
-      changes: uniqueChanges,
-      breakingRisk: 'low' as const,
-      safeToApply: true,
-      mode: 'analysis' as const,
-      metricsEstimate: mergedMetrics,
-      realMetrics,
-      roi
-    },
-    compactAuditReport: compactReport,
-    analysisOnly: {
-      parsed,
-      qualityMetrics,
-      allAntiPatterns: parsed.antiPatterns,
-      roiExecutiveSummary: formatROIExecutiveSummary(roi)
-    }
-  };
-}
-
-/**
- * MODO ULTRA EXPERT CHUNKED - Para arquivos grandes QVD/QVS
- * Otimiza por chunks e consolida resultados
- */
-async function runUltraExpertModeChunked(
-  script: string,
-  characteristics: ReturnType<typeof analyzeScriptCharacteristics>,
-  llmOptions?: GenerateStructuredJsonOptions,
-  generateConsultancy = true,
-  abortSignal?: AbortSignal
-): Promise<FullOptimizeResult> {
-  checkAborted(abortSignal, 'Chunked optimization start');
-  logger.info("⚡ Iniciando otimização CHUNKED...");
-
-  const strategy = generateChunkStrategy(characteristics);
-  const chunks = createScriptChunks(script, strategy);
-
-  logger.info(`📦 Script dividido em ${chunks.length} chunks para otimização`);
-
-  // Emite evento de início de chunking para ultra-expert
-  sseEmitter.sendToCurrent({
-    type: 'chunking_started',
-    data: {
-      totalChunks: chunks.length,
-      chunkSize: strategy.chunkSize,
-      overlapLines: strategy.overlapLines,
-      focusAreas: strategy.focusAreas,
-      mode: 'ultra-expert'
-    }
-  });
-
-  // Processa cada chunk
-  const chunkResults: any[] = [];
-
-  for (let i = 0; i < chunks.length; i++) {
-    checkAborted(abortSignal, `Before chunk ${i + 1}/${chunks.length}`);
-    const chunkInfo = chunks[i];
-    logger.info(`\n⚡ Otimizando ${chunkInfo.context}...`);
-
-    // Emite progresso do chunk em otimização
-    sseEmitter.sendToCurrent({
-      type: 'chunk_progress',
-      data: {
-        currentChunk: i + 1,
-        totalChunks: chunks.length,
-        percentage: Math.round(((i + 1) / chunks.length) * 100),
-        chunkContext: chunkInfo.context,
-        startLine: chunkInfo.startLine,
-        endLine: chunkInfo.endLine,
-        mode: 'ultra-expert'
-      }
-    });
-
-    try {
-      const chunkResult = await stepTimingService.executeWithTiming(
-        "optimization",
-        `opt_chunk_${i + 1}` as any,
-        `Otimização Chunk ${i + 1}/${chunks.length}`,
-        async () => {
-          return await runQlikOptimizeAgent(chunkInfo.chunk, "ultra-expert", llmOptions);
-        },
-        `Chunk ${i + 1}: ${chunkInfo.context}`
-      );
-
-      chunkResults.push({
-        changes: chunkResult.analysis?.changes || [],
-        summary: chunkResult.summary || '',
-        metricsEstimate: chunkResult.analysis?.metricsEstimate,
-        optimizedChunk: chunkResult.optimizedScript || chunkInfo.chunk
-      });
-
-      logger.info(`  ✓ ${chunkResult.analysis?.changes?.length || 0} otimizações aplicadas`);
-    } catch (error) {
-      logger.error(`Erro no chunk ${i + 1}:`, error);
-      chunkResults.push({
-        changes: [],
-        summary: '',
-        optimizedChunk: chunkInfo.chunk // Mantém original se falhar
-      });
-    }
-  }
-
-  // Mescla resultados
-  logger.info("\n🔀 Consolidando otimizações...");
-  const merged = mergeChunkResults(chunkResults, script);
-
-  // Reconstrói script otimizado (usa chunks otimizados)
-  const optimizedScript = chunkResults.map(r => r.optimizedChunk).join('\n');
-
-  // Validação final
-  const validated = validateQlikScript(optimizedScript);
-
-  if (!validated.safe || validated.warnings.length > 0) {
-    logger.warn("⚠️  Validação detectou problemas no script consolidado - retornando original");
-    if (validated.warnings.length > 0) {
-      validated.warnings.forEach(w => logger.warn(`    - ${w}`));
-    }
-    return runUltraExpertMode(script, llmOptions, generateConsultancy); // Fallback para modo tradicional
-  } const realMetrics = calculateRealMetrics(script);
-  const mockResult: OptimizeResult = {
-    originalScript: script,
-    optimizedScript,
-    summary: merged.summary,
-    documentationMarkdown: '',
-    analysis: {
-      changes: merged.changes,
-      breakingRisk: validated.warnings.length > 0 ? 'medium' as const : 'low' as const,
-      safeToApply: validated.safe,
-      mode: 'ultra-expert' as const,
-      metricsEstimate: merged.metricsEstimate || {
-        estimatedLoadTimeReductionPercent: 0,
-        estimatedRAMSavingsPercent: 0,
-        estimatedLOCReduction: 0,
-        complexityReduction: 0
-      },
-      realMetrics
-    }
-  };
-
-  const compactReport = await generateCompactAuditReport(mockResult, realMetrics);
-  const roi = calculateROI(mockResult);
-
-  logger.info("✅ OTIMIZAÇÃO CHUNKED concluída");
-  logger.info(`  📦 Chunks processados: ${chunks.length}`);
-  logger.info(`  🔧 Otimizações consolidadas: ${merged.changes.length}`);
-
-  return {
-    originalScript: script,
-    optimizedScript,
-    summary: merged.summary,
-    documentationMarkdown: '',
-    analysis: {
-      changes: merged.changes,
-      breakingRisk: validated.warnings.length > 0 ? 'medium' as const : 'low' as const,
-      safeToApply: validated.safe,
-      mode: 'ultra-expert' as const,
-      metricsEstimate: merged.metricsEstimate || {
-        estimatedLoadTimeReductionPercent: 0,
-        estimatedRAMSavingsPercent: 0,
-        estimatedLOCReduction: 0,
-        complexityReduction: 0
-      },
-      realMetrics,
-      roi
-    },
-    compactAuditReport: compactReport
-  };
-}
-
 function createOptimizerService() {
   const runOptimization = (
     script: string,

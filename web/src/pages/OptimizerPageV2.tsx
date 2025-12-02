@@ -13,7 +13,6 @@ import { UserMenu } from "../components/UserMenu";
 import ConsultancyDocumentViewer from "../components/ConsultancyDocumentViewer";
 import ROICard from "../components/ROICard";
 import ScriptAnalysisInfo from "../components/ScriptAnalysisInfo";
-import ChunkingProgress from "../components/ChunkingProgress";
 import ScriptInfoModal, { ScriptInfo } from "../components/ScriptInfoModal";
 import { getLLMOptionById, LLM_OPTIONS } from "../lib/llmOptions";
 import {
@@ -806,15 +805,6 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                 {modeInfo[mode].icon} {modeInfo[mode].title}
               </span>
             </div>
-
-            {/* Chunking Progress - Exibe progresso real-time do chunking */}
-            {optimization.chunkingInfo && optimization.isRunning && (
-              <ChunkingProgress
-                chunkingInfo={optimization.chunkingInfo}
-                currentProgress={optimization.currentChunkProgress ?? undefined}
-                isActive={optimization.isRunning}
-              />
-            )}
 
             {/* Cards Superiores com Subtasks Integradas */}
             {(() => {

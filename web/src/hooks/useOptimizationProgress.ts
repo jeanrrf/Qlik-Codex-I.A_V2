@@ -10,8 +10,6 @@ import { SubStepExecution } from "../types/api";
 
 import type { ScriptAnalysisData } from '../components/ScriptAnalysisInfo';
 
-import type { ChunkProgressData, ChunkingInfo } from '../components/ChunkingProgress';
-
 
 
 interface AnalysisSubStep {
@@ -169,101 +167,52 @@ const ANALYSIS_STAGES: OptimizationStage[] = [
 
 
 // Sub-steps para modo ULTRA EXPERT (opt_*)
-
-// IDs alinhados com optimizerService + stepTimingService
-
 const ULTRA_EXPERT_STAGES: OptimizationStage[] = [
-
   {
-
-    id: "opt_001_main",
-
-    name: "Análise Profunda",
-
+    id: "DEEP_ANALYSIS",
+    name: "Deep Analysis (Mega-Prompt)",
     status: "pending",
-
     visible: true,
-
     subSteps: [
-
-      { id: "opt_001_parse", name: "📖 Parse Qlik Completo", description: "Extrair AST: tabelas, joins, variáveis, loops, fields", status: "pending" },
-
-      { id: "opt_001_metadata", name: "🔍 Extração de Metadados Avançada", description: "Mapear grafo de dependências, field lineage, data flow", status: "pending" },
-
-      { id: "opt_001_antipatterns", name: "⚠️ Detecção Automatizada de Anti-patterns", description: "SELECT *, Cartesian Products, Synthetic Keys, Circular Refs", status: "pending" },
-
-      { id: "opt_001_metrics", name: "📊 Cálculo de Métricas de Código", description: "Maintainability Index, Cyclomatic Complexity, Technical Debt", status: "pending" },
-
-      { id: "opt_001_llm", name: "🤖 LLM Ultra Expert - Otimização", description: "LLM otimiza com contexto: AST, anti-patterns, métricas", status: "pending" }
-
+      { id: "DEEP_ANALYSIS", name: "Analyzing Script Structure & Logic", status: "pending" }
     ]
-
   },
-
   {
-
-    id: "opt_002_main",
-
-    name: "Revisão Avançada",
-
+    id: "STRATEGIC_PLAN",
+    name: "Strategic Planning",
     status: "pending",
-
     visible: true,
-
     subSteps: [
-
-      { id: "opt_002_security", name: "🛡️ Scan de Vulnerabilidades", description: "SQL injection, comandos destrutivos, security risks", status: "pending" },
-
-      { id: "opt_002_integrity", name: "✅ Validação de Integridade Estrutural", description: "Garantir JOINs, chaves sintéticas e relações preservadas", status: "pending" },
-
-      { id: "opt_002_diff", name: "📈 Análise de Diferenças", description: "Diff line-by-line, calcular impacto real", status: "pending" },
-
-      { id: "opt_002_llm", name: "🔬 LLM Review Agent", description: "Revisar código com agente crítico especializado", status: "pending" }
-
+      { id: "STRATEGIC_PLAN", name: "Developing Optimization Strategy", status: "pending" }
     ]
-
   },
-
   {
-
-    id: "opt_003_main",
-
-    name: "Documentação Técnica",
-
+    id: "CODE_GEN",
+    name: "Code Generation",
     status: "pending",
-
     visible: true,
-
     subSteps: [
-
-      { id: "opt_003_impact", name: "📊 Análise de Impacto", description: "Impacto de performance, manutenibilidade, segurança", status: "pending" },
-
-      { id: "opt_003_llm", name: "📝 LLM Explain Agent", description: "Documentação técnica e educativa", status: "pending" }
-
+      { id: "CODE_GEN", name: "Generating Optimized Qlik Script", status: "pending" }
     ]
-
   },
-
   {
-
-    id: "opt_005_main",
-
-    name: "Relatório Final",
-
+    id: "VALIDATION",
+    name: "Multi-Layer Validation",
     status: "pending",
-
     visible: true,
-
     subSteps: [
-
-      { id: "opt_004_metrics_real", name: "📊 Métricas Pós-Otimização", description: "LOC, complexidade, issues críticos", status: "pending" },
-
-      { id: "opt_005_report_compact", name: "📝 Relatório Compacto", description: "Sumário + métricas + top recomendações", status: "pending" }
-
+      { id: "VALIDATION", name: "Validating Syntax & Logic", status: "pending" }
     ]
-
+  },
+  {
+    id: "FINAL_REPORT",
+    name: "Final Report & Metrics",
+    status: "pending",
+    visible: true,
+    subSteps: [
+      { id: "FINAL_REPORT", name: "Compiling Final Report", status: "pending" }
+    ]
   }
-
 ];
 
 
@@ -276,7 +225,7 @@ const INITIAL_STAGES: OptimizationStage[] = ANALYSIS_STAGES;
 
 // Timeout de 3 minutos por tarefa (em milissegundos)
 
-const TASK_TIMEOUT_MS = 3 * 60 * 1000; // 180000ms = 3 minutos
+const TASK_TIMEOUT_MS = 5 * 60 * 1000; // 300000ms = 5 minutos
 
 
 
@@ -396,13 +345,7 @@ export interface UseOptimizationProgressReturn {
 
   scriptAnalysis: ScriptAnalysisData | null;
 
-  /** SSE: Informações de chunking */
 
-  chunkingInfo: ChunkingInfo | null;
-
-  /** SSE: Progresso do chunk atual */
-
-  currentChunkProgress: ChunkProgressData | null;
 
   /** SSE: Passo atual em execução */
 
@@ -464,9 +407,9 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
   const [scriptAnalysis, setScriptAnalysis] = useState<ScriptAnalysisData | null>(null);
 
-  const [chunkingInfo, setChunkingInfo] = useState<ChunkingInfo | null>(null);
 
-  const [currentChunkProgress, setCurrentChunkProgress] = useState<ChunkProgressData | null>(null);
+
+
 
   const [currentStep, setCurrentStep] = useState<string | null>(null);
 
@@ -645,10 +588,6 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
     // Limpa estados SSE de execução anterior
 
     setScriptAnalysis(null);
-
-    setChunkingInfo(null);
-
-    setCurrentChunkProgress(null);
 
     setCurrentStep(null);
 
@@ -855,14 +794,6 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
             if (event.type === 'script_analysis') {
 
               setScriptAnalysis(event.data);
-
-            } else if (event.type === 'chunking_started') {
-
-              setChunkingInfo(event.data);
-
-            } else if (event.type === 'chunk_progress') {
-
-              setCurrentChunkProgress(event.data);
 
             } else if (event.type === 'substep') {
 
@@ -1319,10 +1250,6 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
     isConnected,
 
     scriptAnalysis,
-
-    chunkingInfo,
-
-    currentChunkProgress,
 
     currentStep,
 

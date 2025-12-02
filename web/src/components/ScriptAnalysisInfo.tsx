@@ -12,7 +12,7 @@ export interface ScriptAnalysisData {
     reads: number;
     writes: number;
   } | null;
-  strategy: 'full' | 'optimized' | 'chunked';
+  strategy: 'full' | 'optimized';
 }
 
 interface ScriptAnalysisInfoProps {
@@ -43,7 +43,6 @@ const getStrategyLabel = (strategy: string) => {
   switch (strategy) {
     case 'full': return { label: 'Análise Completa', icon: '📋', color: '#00ffff' };
     case 'optimized': return { label: 'Otimizada', icon: '⚡', color: '#ffaa00' };
-    case 'chunked': return { label: 'Por Chunks', icon: '📦', color: '#ff6600' };
     default: return { label: strategy, icon: '❓', color: '#888' };
   }
 };

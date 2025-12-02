@@ -53,35 +53,6 @@ export const config = {
     highDuplicateBlocks: 3
   },
 
-  // Script analysis and chunking thresholds (PERFORMANCE OPTIMIZATION)
-  scriptAnalysis: {
-    // Quando aplicar chunking
-    chunkingThresholds: {
-      qvdQvsLineThreshold: 800,      // QVD/QVS com +800 linhas → chunk
-      qvdQvsTokenThreshold: 40000,   // QVD/QVS com +40k tokens → chunk
-      anyFileLineThreshold: 1500,    // Qualquer arquivo +1500 linhas → chunk
-      anyFileTokenThreshold: 80000   // Qualquer arquivo +80k tokens → chunk
-    },
-
-    // Tamanhos de chunk por complexidade
-    chunkSizes: {
-      low: 400,       // Complexidade baixa = chunks maiores
-      medium: 300,
-      high: 200,
-      critical: 150   // Complexidade crítica = chunks menores e mais precisos
-    },
-
-    // Overlap entre chunks (preserva contexto)
-    overlapPercentage: 15,  // 15% de overlap entre chunks consecutivos
-
-    // Timeouts ajustados por estratégia
-    timeouts: {
-      full: 180000,      // 180s para análise completa (padrão)
-      optimized: 120000, // 120s para análise otimizada
-      chunked: 90000     // 90s por chunk (processamento paralelo futuramente)
-    }
-  },
-
   // Business metrics for ROI calculation (REVENUE FEATURE)
   businessMetrics: {
     // Cloud infrastructure costs (R$/month)
