@@ -35,4 +35,25 @@
 - Skipping Portuguese for docs/UX copy (docs PT-BR, code/comments EN).
 - Introducing fake progress indicators (absolutely prohibited) or bypassing `stepTimingService` when adding optimizer stages.
 
+
+## Agent Coding Guidelines
+- Modes: enforce `analysis` (no mutation; return original) vs `ultra-expert` (rewrite allowed) via `optimizerService` + LLM schemas.
+- Validation: always run `qlikValidator.validateQlikScript()` before persisting or streaming any output.
+- Providers: use `providerOrchestrator` with `neverRetryProvider=true` and max 4 attempts; never retry the same provider.
+- SSE: emit only documented events (script_analysis, chunk_progress, step_started, step_done, error). If adding new events, update both `sseEmitter.ts` and `web/src/hooks/useOptimizationProgress.ts` and document them in `server/docs/EXTREME_MODE_IMPLEMENTATION.md`.
+- Timing: register step timing with `stepTimingService`; no fake progress.
+- Auth & quotas: middleware order `optionalAuth → requireAuth → checkUsageLimits`; OWNER bypasses; USER has 10 runs/day and 1 MB scripts. Fail fast with clear error + remaining quota in the message.
+- Abort/cancel: accept and propagate `AbortSignal` across services/agents; cancel provider requests and close SSE on abort.
+- Backend pattern: route (`routes/*.ts`) → Zod validator → service (`services/*`) → agents/lib. Add Vitest unit tests; mock LLM providers; include at least one failing-path (timeout/provider rotation/schema fallback).
+- Formatter tool: keep LLM-only; do not add deterministic formatting logic.
+- Frontend: follow `web/DESIGN_SYSTEM.md`; pair `.tsx` with local CSS; mirror any new SSE events in dedicated UI components.
+
+### Quick response templates
+- Bugfix: Causa → Correção → Patch → Teste.
+- Feature: Análise → Plano → Código → Notas.
+- Only code: single code block, zero prose.
+
+### Abort/timeout defaults
+- Prefer per-stage timeouts (60–120s). Always pass `AbortSignal` to downstream calls and perform cleanup in `finally`.
+
 Please review and let me know if any section needs clarification or additional depth.

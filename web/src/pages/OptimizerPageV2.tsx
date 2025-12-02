@@ -220,7 +220,10 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
   const exceedsLineLimit = !isOwner && scriptLineCount > FREE_TIER_LINE_LIMIT;
   const willBeTruncated = exceedsLineLimit;
 
-  // FREE TIER: Contador de exceções Ultra Expert (1 por arquivo para USER)
+  // FREE TIER: Controle de visibilidade do banner de aviso
+  const [showFreeTierWarning, setShowFreeTierWarning] = useState(true);
+
+  // FREE TIER: Contador de Ultra Expert (1 por DIA para USER)
   const [ultraExpertUsageCount, setUltraExpertUsageCount] = useState(0);
   const MAX_ULTRA_EXPERT_RUNS = isOwner ? -1 : 1; // -1 = ilimitado
   const hasUltraExpertQuotaLeft = isOwner || ultraExpertUsageCount < MAX_ULTRA_EXPERT_RUNS;
@@ -335,6 +338,12 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
       return;
     }
 
+    // FREE TIER: Verifica quota de Ultra Expert
+    if (!isOwner && mode === 'ultra-expert' && !hasUltraExpertQuotaLeft) {
+      setError(`FREE TIER: Você atingiu o limite de ${MAX_ULTRA_EXPERT_RUNS} execução(ões) Ultra Expert POR DIA. Use modo "Análise" (ilimitado) ou aguarde a renovação diária.`);
+      return;
+    }
+
     // Connect to SSE stream for real-time progress
     optimization.connect();
 
@@ -351,6 +360,11 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
         setResult(optResult);
         if (consultancyDocument) {
           setConsultancyDoc(consultancyDocument);
+        }
+
+        // FREE TIER: Incrementa contador de Ultra Expert após sucesso
+        if (!isOwner && mode === 'ultra-expert') {
+          setUltraExpertUsageCount(prev => prev + 1);
         }
 
         // Salva sessão completa após finalização
@@ -424,11 +438,6 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
 
 
   // === COMPUTED ===
-  const scriptLineCount = useMemo(() => {
-    if (!script) return 0;
-    return script.split(/\r?\n/).length;
-  }, [script]);
-
   const canOptimize = script?.trim().length > 0 && !optimization.isRunning;
 
   const modeInfo = {
@@ -487,7 +496,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
       </header>
 
       {/* FREE TIER WARNING BANNER */}
-      {!isOwner && willBeTruncated && (
+      {!isOwner && willBeTruncated && showFreeTierWarning && (
         <div className="free-tier-warning-banner">
           <div className="warning-icon">⚠️</div>
           <div className="warning-content">
@@ -497,7 +506,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
               O script será automaticamente truncado com <strong>corte inteligente</strong> (até +30 linhas extras para completar blocos).
             </p>
           </div>
-          <button className="warning-dismiss" onClick={() => setError(null)} title="Entendi">
+          <button className="warning-dismiss" onClick={() => setShowFreeTierWarning(false)} title="Entendi">
             ✕
           </button>
         </div>
@@ -529,8 +538,10 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
               </button>
 
               <button
-                className={`mode-card-compact ${mode === 'ultra-expert' ? 'active expert' : ''}`}
+                className={`mode-card-compact ${mode === 'ultra-expert' ? 'active expert' : ''} ${!isOwner && !hasUltraExpertQuotaLeft ? 'disabled-quota' : ''}`}
                 onClick={() => handleModeChange('ultra-expert')}
+                disabled={!isOwner && !hasUltraExpertQuotaLeft}
+                title={!isOwner && !hasUltraExpertQuotaLeft ? 'Quota diária de Ultra Expert esgotada. Use modo Análise (ilimitado) ou aguarde renovação.' : undefined}
               >
                 <div className="mode-card-icon-compact expert-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -541,8 +552,8 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                   <h4>Ultra Expert</h4>
                   <p>Otimização máxima</p>
                   {!isOwner && (
-                    <div className="ultra-expert-quota">
-                      <span className="quota-icon">🎟️</span>
+                    <div className={`ultra-expert-quota ${!hasUltraExpertQuotaLeft ? 'quota-exhausted' : ''}`}>
+                      <span className="quota-icon">{hasUltraExpertQuotaLeft ? '🎟️' : '🚫'}</span>
                       <span className="quota-text">
                         {MAX_ULTRA_EXPERT_RUNS - ultraExpertUsageCount} de {MAX_ULTRA_EXPERT_RUNS} execuções
                       </span>
@@ -4336,6 +4347,16 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
             inset 0 1px 0 rgba(255, 255, 255, 0.08);
         }
 
+        .mode-card-compact.disabled-quota {
+          opacity: 0.5;
+          cursor: not-allowed;
+          pointer-events: none;
+        }
+
+        .mode-card-compact.disabled-quota .mode-card-icon-compact {
+          filter: grayscale(1);
+        }
+
         .mode-card-compact.active {
           border-color: var(--primary);
           background: linear-gradient(135deg, 
@@ -5431,12 +5452,28 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
           animation: quota-glow 2s ease-in-out infinite;
         }
 
+        .ultra-expert-quota.quota-exhausted {
+          background: rgba(255, 68, 68, 0.12);
+          border-color: rgba(255, 68, 68, 0.3);
+          color: #ff4444;
+          animation: quota-exhausted-pulse 2s ease-in-out infinite;
+        }
+
         @keyframes quota-glow {
           0%, 100% {
             box-shadow: 0 0 8px rgba(255, 184, 0, 0.2);
           }
           50% {
             box-shadow: 0 0 16px rgba(255, 184, 0, 0.4);
+          }
+        }
+
+        @keyframes quota-exhausted-pulse {
+          0%, 100% {
+            box-shadow: 0 0 8px rgba(255, 68, 68, 0.3);
+          }
+          50% {
+            box-shadow: 0 0 16px rgba(255, 68, 68, 0.5);
           }
         }
 

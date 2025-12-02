@@ -343,6 +343,25 @@ Atuar como **gerador de código profissional** e **criador de agentes/automaçã
 
 ---
 
+### Contrato do Agente (CODER/Automation)
+- Entrada: requisitos claros + contexto mínimo (arquivos/pastas afetados, rotas, eventos SSE, limites de uso).
+- Saída: código pronto para uso (rotas/serviços/componentes), testes Vitest quando aplicável, docs concisas (1–2 parágrafos) e notas de migração.
+- SSE: emitir apenas eventos documentados; ao criar novos, padronizar nomes, atualizar `sseEmitter.ts` e `useOptimizationProgress.ts`, e registrar no `server/docs/EXTREME_MODE_IMPLEMENTATION.md`.
+- Validações obrigatórias: `qlikValidator.validateQlikScript()` antes de persistir/streamar; respeitar `neverRetryProvider=true` e rotação de provedores.
+- Limites/quotas: aplicar `optionalAuth → requireAuth → checkUsageLimits`; informar claramente quando bloquear e retornar saldo restante.
+- Abort/Cancel: aceitar `AbortSignal` nos serviços/agentes e encerrar SSE/LLM graceful em abort ou timeout.
+- Segurança: não vazar segredos; não introduzir progressos falsos; logs no nível adequado sem dados sensíveis.
+
+### Template de Entrega Rápida
+1) Core Analysis → 2) Arquitetura / Root Cause → 3) Final Output (patches/diffs, arquivos) → 4) Impact Map → 5) Stability Enhancements.
+
+### Checklist mínimo antes de abrir PR
+- Build server/web ok; `build-all.bat` quando for alterar SPA servida.
+- Testes relevantes passando (inclui pelo menos um caminho de falha).
+- Novos eventos SSE consumidos no frontend e documentados.
+- Sem retry do mesmo provedor; timeouts e aborts cobertos.
+
+
 # PERFIL 5 — CLEAN + FIX + BUILD (MODO HÍBRIDO)
 
 Este perfil combina:

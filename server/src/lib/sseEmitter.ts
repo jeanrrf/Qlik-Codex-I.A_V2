@@ -85,11 +85,17 @@ export class SSEEmitter {
   }
 
   /**
-   * Envia evento para o cliente atual (durante uma request específica)
+   * Envia evento para o cliente da requisição atual (durante otimização)
    */
   sendToCurrent(data: any): void {
     if (!this.currentClient) {
       logger.debug('[SSE] No current client set, skipping sendToCurrent');
+      return;
+    }
+
+    // Verifica se o cliente ainda está conectado antes de enviar
+    if (!this.isCurrentClientConnected()) {
+      logger.warn('[SSE] Client disconnected, aborting send');
       return;
     }
 

@@ -382,6 +382,7 @@ async function runUltraExpertMode(
       );
 
       // Sub 1.5: Otimização LLM (com contexto rico)
+      checkAborted(abortSignal, 'Before LLM optimization');
       return await stepTimingService.executeWithTiming(
         "optimization",
         "opt_001_llm",
@@ -400,6 +401,7 @@ async function runUltraExpertMode(
   // ═══════════════════════════════════════════════════════════════
   // ETAPA 2: REVISÃO DE SEGURANÇA AVANÇADA
   // ═══════════════════════════════════════════════════════════════
+  checkAborted(abortSignal, 'Before advanced review');
   logger.info("═══ ETAPA 2/4: REVISÃO AVANÇADA ═══");
 
   const reviewed = await stepTimingService.executeWithTiming(
@@ -657,9 +659,9 @@ export async function optimizeScript(
   let result: FullOptimizeResult;
 
   if (mode === "analysis") {
-    result = await runAnalysisMode(finalScript, llmOptions, truncationInfo?.wasTruncated || false);
+    result = await runAnalysisMode(finalScript, llmOptions, truncationInfo?.wasTruncated || false, abortSignal);
   } else {
-    result = await runUltraExpertMode(finalScript, llmOptions, generateConsultancy, truncationInfo?.wasTruncated || false);
+    result = await runUltraExpertMode(finalScript, llmOptions, generateConsultancy, truncationInfo?.wasTruncated || false, abortSignal);
   }
 
   // Adiciona informação de truncamento ao resultado
@@ -818,8 +820,10 @@ async function runUltraExpertModeChunked(
   script: string,
   characteristics: ReturnType<typeof analyzeScriptCharacteristics>,
   llmOptions?: GenerateStructuredJsonOptions,
-  generateConsultancy = true
+  generateConsultancy = true,
+  abortSignal?: AbortSignal
 ): Promise<FullOptimizeResult> {
+  checkAborted(abortSignal, 'Chunked optimization start');
   logger.info("⚡ Iniciando otimização CHUNKED...");
 
   const strategy = generateChunkStrategy(characteristics);
@@ -843,6 +847,7 @@ async function runUltraExpertModeChunked(
   const chunkResults: any[] = [];
 
   for (let i = 0; i < chunks.length; i++) {
+    checkAborted(abortSignal, `Before chunk ${i + 1}/${chunks.length}`);
     const chunkInfo = chunks[i];
     logger.info(`\n⚡ Otimizando ${chunkInfo.context}...`);
 

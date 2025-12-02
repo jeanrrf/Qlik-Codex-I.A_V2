@@ -6,7 +6,7 @@ import { cacheService } from "./cacheService";
 import { logger } from "../lib/logger";
 
 class ScriptService {
-  async optimizeScript(payload: OptimizeScriptRequestBody) {
+  async optimizeScript(payload: OptimizeScriptRequestBody, abortSignal?: AbortSignal) {
     logger.info("Starting optimization", { mode: payload.mode });
 
     // ✨ FREE TIER DEBUG: Log truncamento
@@ -15,6 +15,11 @@ class ScriptService {
       lineLimit: payload.lineLimit,
       scriptLines: payload.script.split(/\r?\n/).length
     });
+
+    // Verifica se já foi abortado antes de começar
+    if (abortSignal?.aborted) {
+      throw new Error('Optimization aborted before start');
+    }
 
     try {
       // The UI can send the logical agent name 'ainex' to indicate the AINEX pipeline.

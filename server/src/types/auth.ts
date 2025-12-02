@@ -82,7 +82,7 @@ export interface UsageLimits {
   maxConcurrentSessions: number;
   enabledModes: string[];
   canUseMultipleFiles: boolean;
-  ultraExpertExecutionsPerFile: number; // -1 = ilimitado, 0 = desabilitado
+  ultraExpertExecutionsPerDay: number; // -1 = ilimitado, 0 = desabilitado
 }
 
 export const RoleUsageLimits: Record<UserRole, UsageLimits> = {
@@ -93,7 +93,7 @@ export const RoleUsageLimits: Record<UserRole, UsageLimits> = {
     maxConcurrentSessions: -1,
     enabledModes: ["analysis", "ultra-expert"],
     canUseMultipleFiles: true,
-    ultraExpertExecutionsPerFile: -1 // Ilimitado
+    ultraExpertExecutionsPerDay: -1 // Ilimitado
   },
   [UserRole.USER]: {
     optimizationsPerDay: 10,
@@ -102,6 +102,6 @@ export const RoleUsageLimits: Record<UserRole, UsageLimits> = {
     maxConcurrentSessions: 2,
     enabledModes: ["analysis", "ultra-expert"], // Ambos liberados
     canUseMultipleFiles: false, // Apenas 1 arquivo
-    ultraExpertExecutionsPerFile: 1 // 1 execução Ultra Expert por arquivo
+    ultraExpertExecutionsPerDay: 1 // 1 execução Ultra Expert POR DIA
   }
 };
