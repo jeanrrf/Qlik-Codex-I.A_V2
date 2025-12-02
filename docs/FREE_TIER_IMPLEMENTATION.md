@@ -8,18 +8,72 @@ Implementar sistema FREE TIER para pré-lançamento da AINEX, com controle de ac
 ## ✅ Funcionalidades Implementadas
 
 ### 1. Backend - Sistema de Limites
+
 **Arquivos modificados:**
 - `server/src/types/auth.ts`
 - `server/src/middleware/authMiddleware.ts`
 - `server/src/lib/scriptAnalyzer.ts`
 - `server/src/services/optimizerService.ts`
+- `server/src/lib/sqliteDb.ts` ✨ **NOVO**
+- `server/src/services/usageQuotaService.ts` ✨ **NOVO**
+- `server/src/routes/scripts.routes.ts`
 
 #### FREE TIER Limits
 ```typescript
 maxScriptLines: 200,              // Limite base de linhas
 canUseMultipleFiles: false,       // Apenas 1 arquivo por vez
-ultraExpertExecutionsPerFile: 1,  // 1 execução de otimização por arquivo
-optimizationsPerDay: 10           // 10 otimizações por dia
+ultraExpertExecutionsPerDay: 1,   // 1 execução Ultra Expert POR DIA
+optimizationsPerDay: 4            // 4 otimizações POR DIA (analysis + ultra-expert)
+```
+
+#### ✨ Controle de Quota Diária (NOVO)
+**Arquivos:** `server/src/services/usageQuotaService.ts` + `server/src/lib/sqliteDb.ts`
+
+**Tabela SQLite criada:**
+```sql
+CREATE TABLE user_daily_usage (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  mode TEXT NOT NULL,              -- 'analysis' ou 'ultra-expert'
+  executed_at TEXT NOT NULL,       -- Timestamp ISO
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+```
+
+**Funções implementadas:**
+1. `checkDailyQuota(user, mode)` - Verifica se usuário pode executar
+   - Conta execuções nas últimas 24h
+   - Retorna: `{ allowed, remaining, limit, resetAt, usedToday }`
+   - Owner bypassa (ilimitado)
+
+2. `recordUsage(userId, mode)` - Registra execução após sucesso
+   - Chamado em `scripts.routes.ts` após otimização bem-sucedida
+   - Apenas incrementa se request terminou com sucesso
+
+3. `getUserUsageStats(userId)` - Estatísticas de uso
+   - Últimas 24h, 7 dias, 30 dias
+   - Contador por modo (analysis vs ultra-expert)
+
+4. `cleanupOldUsageRecords()` - Limpeza de registros antigos (30+ dias)
+
+**Integração no Middleware:**
+`server/src/middleware/authMiddleware.ts` → `checkUsageLimits()`
+- Chama `checkDailyQuota()` antes de permitir execução
+- Bloqueia com erro 429 se limite atingido
+- Retorna quota restante + timestamp de reset
+
+**Resposta de erro (quota excedida):**
+```json
+{
+  "error": "Daily quota exceeded",
+  "message": "Você atingiu o limite de 10 otimizações por dia...",
+  "quota": {
+    "used": 10,
+    "limit": 10,
+    "remaining": 0,
+    "resetAt": "2025-12-03T00:00:00.000Z"
+  }
+}
 ```
 
 #### Truncamento Inteligente

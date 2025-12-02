@@ -96,7 +96,7 @@ export const RoleUsageLimits: Record<UserRole, UsageLimits> = {
     ultraExpertExecutionsPerDay: -1 // Ilimitado
   },
   [UserRole.USER]: {
-    optimizationsPerDay: 10,
+    optimizationsPerDay: 4, // FREE TIER: 4 otimizações/dia
     maxScriptSizeKB: 1000,
     maxScriptLines: 200, // FREE TIER: 200 linhas base
     maxConcurrentSessions: 2,

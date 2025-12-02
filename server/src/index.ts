@@ -19,6 +19,7 @@ import { toolsRouter } from "./routes/tools.routes";
 import { historyRouter } from "./routes/history.routes";
 import sessionRouter from "./routes/session.routes";
 import authRouter from "./routes/auth.routes";
+import usageRouter from "./routes/usage.routes";
 
 const app = express();
 const corsOptions =
@@ -67,6 +68,7 @@ app.use("/api/validate", validationRouter);
 app.use("/api/tools", toolsRouter);
 app.use("/api/history", historyRouter);
 app.use("/api/sessions", sessionRouter);
+app.use("/api/usage", usageRouter);
 
 if (fs.existsSync(webBuildPath)) {
   app.use(express.static(webBuildPath));

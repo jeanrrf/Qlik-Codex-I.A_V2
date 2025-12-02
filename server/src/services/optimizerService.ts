@@ -92,7 +92,7 @@ async function runAnalysisMode(
   }  // Estratégia adaptativa
   if (characteristics.recommendedStrategy === 'chunked') {
     logger.info("⚡ Estratégia: CHUNKED - Análise otimizada por blocos");
-    return await runAnalysisModeChunked(script, characteristics, llmOptions);
+    return await runAnalysisModeChunked(script, characteristics, llmOptions, abortSignal);
   } else if (characteristics.recommendedStrategy === 'optimized') {
     logger.info("⚡ Estratégia: OPTIMIZED - Análise com prompt compactado");
   } else {
@@ -679,9 +679,11 @@ export async function optimizeScript(
 async function runAnalysisModeChunked(
   script: string,
   characteristics: ReturnType<typeof analyzeScriptCharacteristics>,
-  llmOptions?: GenerateStructuredJsonOptions
+  llmOptions?: GenerateStructuredJsonOptions,
+  abortSignal?: AbortSignal
 ): Promise<FullOptimizeResult> {
   logger.info("🔄 Iniciando análise CHUNKED...");
+  checkAborted(abortSignal, 'Chunked analysis start');
 
   const strategy = generateChunkStrategy(characteristics);
   const chunks = createScriptChunks(script, strategy);
@@ -704,6 +706,7 @@ async function runAnalysisModeChunked(
   const chunkResults: any[] = [];
 
   for (let i = 0; i < chunks.length; i++) {
+    checkAborted(abortSignal, `Before chunk ${i + 1}/${chunks.length}`);
     const chunkInfo = chunks[i];
     logger.info(`\n📄 Processando ${chunkInfo.context}...`);
 
@@ -726,6 +729,7 @@ async function runAnalysisModeChunked(
         `ana_chunk_${i + 1}` as any,
         `Análise Chunk ${i + 1}/${chunks.length}`,
         async () => {
+          checkAborted(abortSignal, `Inside chunk ${i + 1}/${chunks.length}`);
           return await runQlikOptimizeAgent(chunkInfo.chunk, "analysis", llmOptions);
         },
         `Chunk ${i + 1}: ${chunkInfo.context}`
@@ -746,11 +750,32 @@ async function runAnalysisModeChunked(
 
   // Mescla resultados
   logger.info("\n🔀 Consolidando resultados de todos os chunks...");
-  const merged = mergeChunkResults(chunkResults, script);
+  checkAborted(abortSignal, 'Before merging chunk results');
 
-  logger.info(`✅ Consolidação: ${merged.changes.length} issues únicos identificados`);
+  // Consolidar mudanças únicas de todos os chunks (deduplicação simples por description)
+  const allChanges = chunkResults.flatMap(r => r.changes);
+  const uniqueChangesMap = new Map<string, typeof allChanges[0]>();
+  for (const change of allChanges) {
+    const key = `${change.line}-${change.description}`;
+    if (!uniqueChangesMap.has(key)) {
+      uniqueChangesMap.set(key, change);
+    }
+  }
+  const uniqueChanges = Array.from(uniqueChangesMap.values());
 
-  // Parse do script completo para métricas
+  // Mesclar summaries
+  const mergedSummary = chunkResults.map(r => r.summary).filter(Boolean).join('\n\n');
+
+  // Mesclar métricas (usar a melhor estimativa)
+  const mergedMetrics = chunkResults[0]?.metricsEstimate || {
+    estimatedLoadTimeReductionPercent: 0,
+    estimatedRAMSavingsPercent: 0,
+    estimatedLOCReduction: 0,
+    complexityReduction: 0
+  };
+
+  logger.info(`✅ Consolidação: ${uniqueChanges.length} issues únicos identificados`);  // Parse do script completo para métricas
+  checkAborted(abortSignal, 'Before metrics on full script');
   const parsed = parseQlikScript(script);
   const qualityMetrics = calculateQualityMetrics(parsed);
   const realMetrics = calculateRealMetrics(script);
@@ -759,19 +784,14 @@ async function runAnalysisModeChunked(
   const mockAnalysisResult: OptimizeResult = {
     originalScript: script,
     optimizedScript: script,
-    summary: merged.summary,
+    summary: mergedSummary,
     documentationMarkdown: '',
     analysis: {
-      changes: merged.changes,
+      changes: uniqueChanges,
       breakingRisk: 'low' as const,
       safeToApply: true,
       mode: 'analysis' as const,
-      metricsEstimate: merged.metricsEstimate || {
-        estimatedLoadTimeReductionPercent: 0,
-        estimatedRAMSavingsPercent: 0,
-        estimatedLOCReduction: 0,
-        complexityReduction: 0
-      },
+      metricsEstimate: mergedMetrics,
       realMetrics
     }
   };
@@ -781,24 +801,19 @@ async function runAnalysisModeChunked(
 
   logger.info("✓ ANÁLISE CHUNKED concluída");
   logger.info(`  📊 Total de chunks: ${chunks.length}`);
-  logger.info(`  ⚠️  Issues únicos: ${merged.changes.length}`);
+  logger.info(`  ⚠️  Issues únicos: ${uniqueChanges.length}`);
 
   return {
     originalScript: script,
     optimizedScript: script, // Não modifica em modo análise
-    summary: merged.summary,
+    summary: mergedSummary,
     documentationMarkdown: '',
     analysis: {
-      changes: merged.changes,
+      changes: uniqueChanges,
       breakingRisk: 'low' as const,
       safeToApply: true,
       mode: 'analysis' as const,
-      metricsEstimate: merged.metricsEstimate || {
-        estimatedLoadTimeReductionPercent: 0,
-        estimatedRAMSavingsPercent: 0,
-        estimatedLOCReduction: 0,
-        complexityReduction: 0
-      },
+      metricsEstimate: mergedMetrics,
       realMetrics,
       roi
     },
@@ -977,3 +992,7 @@ function createOptimizerService() {
 }
 
 export const optimizerService = createOptimizerService();
+
+
+
+

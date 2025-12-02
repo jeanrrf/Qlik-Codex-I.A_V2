@@ -14,6 +14,7 @@ import {
   verifyOwnerToken,
   ensureOwnerUser
 } from "../services/authService";
+import { checkDailyQuota } from "../services/usageQuotaService";
 import { User, UserRole, RolePermissions, RoleUsageLimits } from "../types/auth";
 
 /**
@@ -335,8 +336,39 @@ export function checkUsageLimits(req: AuthRequest, res: Response, next: NextFunc
     }
   }
 
-  // TODO: Implementar verificação de optimizationsPerDay e maxConcurrentSessions
-  // Requer queries adicionais no banco de dados
+  // ✨ FREE TIER: Verificar quota diária de otimizações
+  const mode = req.body.mode as "analysis" | "ultra-expert";
+  if (mode) {
+    const quotaCheck = checkDailyQuota(req.user, mode);
+
+    if (!quotaCheck.allowed) {
+      logger.warn("[FREE TIER] Quota diária excedida", {
+        userId: req.user.id,
+        mode,
+        usedToday: quotaCheck.usedToday,
+        limit: quotaCheck.limit
+      });
+
+      res.status(429).json({
+        error: "Daily quota exceeded",
+        message: `Você atingiu o limite FREE TIER de ${quotaCheck.limit} otimizações por dia (200 linhas). Limite renova em: ${new Date(quotaCheck.resetAt).toLocaleString('pt-BR')}`,
+        quota: {
+          used: quotaCheck.usedToday,
+          limit: quotaCheck.limit,
+          remaining: quotaCheck.remaining,
+          resetAt: quotaCheck.resetAt
+        }
+      });
+      return;
+    }
+
+    logger.debug("[FREE TIER] Quota OK", {
+      userId: req.user.id,
+      mode,
+      remaining: quotaCheck.remaining,
+      limit: quotaCheck.limit
+    });
+  }
 
   next();
 }

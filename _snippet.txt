@@ -1,0 +1,5 @@
+): Promise<FullOptimizeResult> {
+  logger.info("🔄   checkAborted(abortSignal, 'Chunked analysis start');
+Iniciando análise CHUNKED...");
+
+  const strategy = generateChunkStrategy(characteristics);

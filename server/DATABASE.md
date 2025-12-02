@@ -113,7 +113,84 @@ CREATE TABLE llm_cache (
 );
 ```
 
+### 6. `user_daily_usage` ✨ **NOVO - FREE TIER**
+
+Controle de quota diária de otimizações (FREE TIER tracking).
+
+```sql
+CREATE TABLE user_daily_usage (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  mode TEXT NOT NULL,              -- 'analysis' ou 'ultra-expert'
+  executed_at TEXT NOT NULL,       -- Timestamp ISO
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_usage_user_date ON user_daily_usage(user_id, executed_at DESC);
+CREATE INDEX idx_usage_mode ON user_daily_usage(mode, executed_at DESC);
+```
+
+**Propósito:** Rastreia cada execução de otimização (analysis ou ultra-expert) para aplicar limites diários do FREE TIER (10 otimizações/dia para role USER).
+
 ## 🔌 API Endpoints
+
+### Quota e Uso (FREE TIER) ✨ **NOVO**
+
+#### `GET /api/usage/quota`
+
+Retorna quota diária atual do usuário autenticado.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "analysis": {
+      "allowed": true,
+      "remaining": 7,
+      "limit": 10,
+      "resetAt": "2025-12-03T00:00:00.000Z",
+      "usedToday": 3
+    },
+    "ultraExpert": {
+      "allowed": true,
+      "remaining": 7,
+      "limit": 10,
+      "resetAt": "2025-12-03T00:00:00.000Z",
+      "usedToday": 3
+    },
+    "combined": {
+      "used": 3,
+      "limit": 10,
+      "remaining": 7,
+      "resetAt": "2025-12-03T00:00:00.000Z"
+    }
+  }
+}
+```
+
+#### `GET /api/usage/stats`
+
+Retorna estatísticas de uso do usuário.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "last24h": 3,
+    "last7days": 15,
+    "last30days": 42,
+    "analysisModeCount": 25,
+    "ultraExpertModeCount": 17
+  }
+}
+```
 
 ### História e Estatísticas
 

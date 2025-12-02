@@ -8,6 +8,7 @@ import { requireAuth, checkUsageLimits, AuthRequest } from "../middleware/authMi
 import { optimizeScriptSchema, generateDocSchema } from "../validators/requestSchemas";
 import { scriptService } from "../services/scriptService";
 import { stepTimingService } from "../services/stepTimingService";
+import { recordUsage } from "../services/usageQuotaService";
 import { sseEmitter } from "../lib/sseEmitter";
 import { logger } from "../lib/logger";
 
@@ -132,6 +133,23 @@ router.post(
       // Envia resultado final via SSE
       res.write(`data: ${JSON.stringify({ type: 'complete', result: response })}\n\n`);
       res.end();
+
+      // ✅ Registra uso após sucesso (FREE TIER quota tracking)
+      if (req.user?.id) {
+        try {
+          recordUsage(req.user.id, payload.mode);
+          logger.info("[QUOTA] Uso registrado com sucesso", {
+            userId: req.user.id,
+            mode: payload.mode
+          });
+        } catch (quotaErr) {
+          // Não falha a request se o registro falhar, apenas loga
+          logger.error("[QUOTA] Falha ao registrar uso", {
+            error: quotaErr,
+            userId: req.user.id
+          });
+        }
+      }
 
       // Limpa o cliente atual
       sseEmitter.setCurrentClient(null);

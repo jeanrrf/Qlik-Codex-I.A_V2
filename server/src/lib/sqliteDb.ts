@@ -397,6 +397,23 @@ function createTables() {
     ON auth_sessions(expires_at);
   `);
 
+  // Tabela de controle de uso diário (FREE TIER quota tracking)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_daily_usage (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      mode TEXT NOT NULL,
+      executed_at TEXT NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_usage_user_date 
+    ON user_daily_usage(user_id, executed_at DESC);
+    
+    CREATE INDEX IF NOT EXISTS idx_usage_mode 
+    ON user_daily_usage(mode, executed_at DESC);
+  `);
+
   // Reduz ruído no console: não logar criação/validação de tabelas a cada boot
 }
 
