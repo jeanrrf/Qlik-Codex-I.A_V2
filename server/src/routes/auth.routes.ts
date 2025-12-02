@@ -3,10 +3,10 @@
  * Rotas para Google OAuth, login, logout e gerenciamento de sessões
  */
 
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, CookieOptions } from "express";
 
 import { asyncHandler } from "../middleware/asyncHandler";
-import { requireAuth, optionalAuth, AuthRequest } from "../middleware/authMiddleware";
+import { requireAuth, optionalAuth, AuthRequest, requireRole } from "../middleware/authMiddleware";
 import { logger } from "../lib/logger";
 import {
   getGoogleAuthUrl,
@@ -17,8 +17,20 @@ import {
   revokeAllUserSessions,
   cleanupExpiredSessions
 } from "../services/authService";
+import { UserRole } from "../types/auth";
 
 const router = Router();
+
+function getAuthCookieOptions(expiresInSeconds: number): CookieOptions {
+  const isProduction = process.env.NODE_ENV === "production";
+
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    maxAge: expiresInSeconds * 1000
+  };
+}
 
 /**
  * GET /api/auth/google
@@ -71,13 +83,8 @@ router.get(
         req.get("user-agent")
       );
 
-      // Definir cookie httpOnly com token
-      res.cookie("auth_token", tokens.accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: tokens.expiresIn * 1000
-      });
+      // Definir cookie httpOnly com token (ajustado para cenários cross-site em produção)
+      res.cookie("auth_token", tokens.accessToken, getAuthCookieOptions(tokens.expiresIn));
 
       // Redirecionar para frontend com sucesso
       const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
@@ -130,12 +137,7 @@ router.post(
       );
 
       // Definir cookie
-      res.cookie("auth_token", tokens.accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: tokens.expiresIn * 1000
-      });
+      res.cookie("auth_token", tokens.accessToken, getAuthCookieOptions(tokens.expiresIn));
 
       res.json({
         success: true,
@@ -282,12 +284,13 @@ router.get(
 
 /**
  * POST /api/auth/cleanup
- * Limpa sessões expiradas (pode ser chamado por cron job)
+ * Limpa sessões expiradas (apenas OWNER)
  */
 router.post(
   "/cleanup",
-  asyncHandler(async (req: Request, res: Response) => {
-    // TODO: Adicionar autenticação interna (API key para cron jobs)
+  requireAuth,
+  requireRole(UserRole.OWNER),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const deletedCount = cleanupExpiredSessions();
 
     res.json({

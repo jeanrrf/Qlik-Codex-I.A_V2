@@ -27,6 +27,7 @@
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "src/agents/_future_pro_pipeline"
   ]
 }

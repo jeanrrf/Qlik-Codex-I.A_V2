@@ -26,6 +26,15 @@ import {
   type ParsedScript,
   type AntiPattern
 } from "../lib/qlikParser";
+// NOVO: AINEX PRO Pipeline (8 estágios avançados) - EM DESENVOLVIMENTO
+// import { runDeepParse } from "../agents/qlikDeepParseAgent";
+// import { runSemanticAnalysis } from "../agents/qlikSemanticAgent";
+// import { runStrategicPlanning } from "../agents/qlikStrategicAgent";
+// import { runCodeGeneration } from "../agents/qlikCodeGenAgent";
+// import { runMultiLayerValidation } from "../agents/qlikMultiValidationAgent";
+// import { runDifferentialReview } from "../agents/qlikDifferentialAgent";
+// import { runTechnicalExplain } from "../agents/qlikTechnicalExplainAgent";
+// import { runFinalMetrics } from "../agents/qlikFinalMetricsAgent";
 
 export interface FullOptimizeResult extends OptimizeResult {
   explanation?: string;
@@ -596,6 +605,56 @@ async function runUltraExpertMode(
 }
 
 /**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * AINEX PRO PIPELINE — 8 ESTÁGIOS INTELIGENTES (EM DESENVOLVIMENTO)
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * ROADMAP DE IMPLEMENTAÇÃO:
+ * ─────────────────────────────────────────────────────────────────────────────
+ * ✅ Stage 1: Deep Parse & Syntax Check - Agente criado (precisa ajustes de tipo)
+ * ✅ Stage 2: Semantic Analysis & Performance Profiling - Agente criado (precisa ajustes)
+ * ✅ Stage 3: Strategic Refactor Planning - Agente criado (precisa ajustes)
+ * ✅ Stage 4: Code Generation - Agente criado (precisa ajustes)
+ * ✅ Stage 5: Multi-Layer Validation - Agente criado (precisa ajustes)
+ * ✅ Stage 6: Differential Review & Impact Analysis - Agente criado (precisa ajustes)
+ * ✅ Stage 7: Technical Explain - Agente criado (precisa ajustes)
+ * ✅ Stage 8: Final Metrics & Report - Agente criado (precisa ajustes)
+ * 
+ * PRÓXIMOS PASSOS:
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 1. Ajustar tipos para compatibilidade com qlikParser (QlikJoin, QlikTable)
+ * 2. Adaptar generateStructuredJson para nova assinatura (wrapper compatível)
+ * 3. Integrar ValidationResult corretamente (success/errors structure)
+ * 4. Criar eventos SSE específicos para cada stage
+ * 5. Atualizar frontend para consumir novos eventos
+ * 6. Adicionar testes unitários para cada agente
+ * 
+ * BENEFÍCIOS ESPERADOS:
+ * ─────────────────────────────────────────────────────────────────────────────
+ * - Análise 5x mais profunda (AST real, profiling de performance)
+ * - Planejamento estratégico antes de gerar código
+ * - Validação em 4 camadas (sintaxe, semântica, performance, equivalência)
+ * - Diff linha-a-linha com justificativa técnica
+ * - Explicações multi-persona (DEV, SÊNIOR, ARQUITETO)
+ * - ROI estimado com checklist de deploy
+ * 
+ * Tempo estimado: 38-57 segundos (vs. 15-20s atuais) com valor 5x maior
+ */
+
+/*
+async function runUltraExpertProMode(
+  script: string,
+  llmOptions?: GenerateStructuredJsonOptions,
+  generateConsultancy = true,
+  abortSignal?: AbortSignal
+): Promise<FullOptimizeResult> {
+  // IMPLEMENTAÇÃO COMENTADA TEMPORARIAMENTE
+  // Código completo disponível nos arquivos dos agentes criados
+  throw new Error("AINEX PRO Pipeline em desenvolvimento - use runUltraExpertMode por enquanto");
+}
+*/
+
+/**
  * Entry point: Roteamento por modo
  * ✨ FREE TIER: Suporta truncamento inteligente para limites de linhas
  */
@@ -661,6 +720,8 @@ export async function optimizeScript(
   if (mode === "analysis") {
     result = await runAnalysisMode(finalScript, llmOptions, truncationInfo?.wasTruncated || false, abortSignal);
   } else {
+    // ULTRA EXPERT: Por enquanto usa pipeline existente (8 estágios PRO em desenvolvimento)
+    logger.info("⚡ MODO ULTRA EXPERT - Pipeline Avançado");
     result = await runUltraExpertMode(finalScript, llmOptions, generateConsultancy, truncationInfo?.wasTruncated || false, abortSignal);
   }
 
