@@ -1,0 +1,15 @@
+{
+  "name": "qlik-codex-ia",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Projetos server e web do Qlik Codex I.A organizados como pacotes independentes.",
+  "scripts": {
+    "start:dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix web\"",
+    "server:dev": "npm run dev --prefix server",
+    "web:dev": "npm run dev --prefix web",
+    "kill": "npx kill-port 3000 5173"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}

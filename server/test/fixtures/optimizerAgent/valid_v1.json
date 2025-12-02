@@ -1,0 +1,24 @@
+{
+  "schema_version": "v1",
+  "optimized_code": "LOAD * FROM source;\nDROP TABLE tmp;",
+  "summary": "Removidas redundâncias e ajustada order de LOADs.",
+  "changes": [
+    {
+      "category": "cleanup",
+      "area": "Tabela Temp",
+      "before": "LOAD FieldA FROM A; LOAD FieldA FROM A;",
+      "after": "LOAD FieldA FROM A;",
+      "impact": "Remove leituras duplicadas",
+      "risk_level": "low"
+    }
+  ],
+  "metrics_estimate": {
+    "load_complexity_before": "high",
+    "load_complexity_after": "medium",
+    "maintainability_before": "low",
+    "maintainability_after": "medium",
+    "notes": "Menos leituras duplicadas e joins consolidados"
+  },
+  "documentation_markdown": "# Documento de mudanças\nResumo...",
+  "notes": "Resposta dummy valida v1"
+}

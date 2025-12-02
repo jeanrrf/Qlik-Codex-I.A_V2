@@ -1,0 +1,27 @@
+# Root ignores
+.env
+server/.env
+.DS_Store
+Thumbs.db
+
+# Database
+server/data
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Node modules
+node_modules
+server/node_modules
+web/node_modules
+
+# Build artifacts
+dist
+server/dist
+web/dist
+*.log
+
+# Editor
+.vscode
+.idea

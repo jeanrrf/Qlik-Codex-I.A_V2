@@ -1,0 +1,241 @@
+// 🚀 QLIK FORMATTER & INDENTER — EXTREME MODE
+// Script de demonstração: ANTES vs DEPOIS
+
+// ============================================================
+// EXEMPLO 1: Script básico com múltiplos campos e funções
+// ============================================================
+
+/* ANTES (código desordenado)
+load id,left(nome,10) as nome_curto,if(idade>18,'Maior','Menor') as categoria,num(salario) as sal,trim(endereco) as end from [lib://dados.qvd](qvd) where ativo='S';
+*/
+
+// DEPOIS (EXTREME MODE) ✅
+LOAD
+    id,
+    LEFT(nome, 10)                    AS nome_curto,
+    IF(idade > 18, 'Maior', 'Menor')  AS categoria,
+    NUM(salario)                      AS sal,
+    TRIM(endereco)                    AS end
+FROM [lib://dados.qvd] (qvd)
+WHERE ativo = 'S';
+
+
+// ============================================================
+// EXEMPLO 2: Funções aninhadas complexas
+// ============================================================
+
+/* ANTES
+load id,rangemin(num(if(valor>0,valor,0)),num(if(valor2>0,valor2,0))) as media from dados;
+*/
+
+// DEPOIS (EXTREME MODE) ✅
+LOAD
+    id,
+    RANGEMIN(
+        NUM(
+            IF(
+                valor > 0,
+                valor,
+                0
+            )
+        ),
+        NUM(
+            IF(
+                valor2 > 0,
+                valor2,
+                0
+            )
+        )
+    ) AS media
+FROM dados;
+
+
+// ============================================================
+// EXEMPLO 3: Blocos condicionais com indentação
+// ============================================================
+
+/* ANTES
+if vAno=2024 then
+load * from vendas;
+elseif vAno=2023 then
+load * from vendas_historico;
+else
+load * from vendas_backup;
+end if
+*/
+
+// DEPOIS (EXTREME MODE) ✅
+IF vAno = 2024 THEN
+    LOAD * FROM vendas;
+ELSEIF vAno = 2023 THEN
+    LOAD * FROM vendas_historico;
+ELSE
+    LOAD * FROM vendas_backup;
+END IF
+
+
+// ============================================================
+// EXEMPLO 4: ApplyMap com alinhamento perfeito
+// ============================================================
+
+/* ANTES
+load id,applymap('MapClientes',cliente_id,'Desconhecido') as cliente,applymap('MapProdutos',produto_id,'N/A') as produto from pedidos;
+*/
+
+// DEPOIS (EXTREME MODE) ✅
+LOAD
+    id,
+    APPLYMAP('MapClientes', cliente_id, 'Desconhecido') AS cliente,
+    APPLYMAP('MapProdutos', produto_id, 'N/A')          AS produto
+FROM pedidos;
+
+
+// ============================================================
+// EXEMPLO 5: Joins com formatação estruturada
+// ============================================================
+
+/* ANTES
+load * from vendas;
+left join(vendas) load cliente_id,nome,cidade from clientes;
+*/
+
+// DEPOIS (EXTREME MODE) ✅
+LOAD * FROM vendas;
+
+LEFT JOIN (vendas)
+LOAD
+    cliente_id,
+    nome,
+    cidade
+FROM clientes;
+
+
+// ============================================================
+// EXEMPLO 6: Precedentes LOAD com cálculos
+// ============================================================
+
+/* ANTES
+load *,if(total>1000,'Alto',if(total>500,'Médio','Baixo')) as nivel resident temp;
+load pedido_id,sum(valor) as total resident pedidos group by pedido_id;
+*/
+
+// DEPOIS (EXTREME MODE) ✅
+LOAD
+    *,
+    IF(
+        total > 1000,
+        'Alto',
+        IF(
+            total > 500,
+            'Médio',
+            'Baixo'
+        )
+    ) AS nivel
+RESIDENT temp;
+
+LOAD
+    pedido_id,
+    SUM(valor) AS total
+RESIDENT pedidos
+GROUP BY pedido_id;
+
+
+// ============================================================
+// EXEMPLO 7: Mapeamento com MAPPING LOAD
+// ============================================================
+
+/* ANTES
+map_clientes:
+mapping load cliente_id,nome from clientes;
+*/
+
+// DEPOIS (EXTREME MODE) ✅
+map_clientes:
+MAPPING LOAD
+    cliente_id,
+    nome
+FROM clientes;
+
+
+// ============================================================
+// EXEMPLO 8: Múltiplos operadores e condições
+// ============================================================
+
+/* ANTES
+load * where (idade>=18 and idade<=65) and (salario>2000 or bonus>500) and status<>'Inativo';
+*/
+
+// DEPOIS (EXTREME MODE) ✅
+LOAD *
+WHERE (idade >= 18 AND idade <= 65) 
+  AND (salario > 2000 OR bonus > 500) 
+  AND status <> 'Inativo';
+
+
+// ============================================================
+// EXEMPLO 9: Exists e Peek para verificações
+// ============================================================
+
+/* ANTES
+load * where exists(cliente_id) and peek('valor')>0;
+*/
+
+// DEPOIS (EXTREME MODE) ✅
+LOAD *
+WHERE EXISTS(cliente_id) AND PEEK('valor') > 0;
+
+
+// ============================================================
+// EXEMPLO 10: Script completo com tudo
+// ============================================================
+
+/* ANTES (CAÓTICO)
+SET vAno=2024;
+clientes:
+load cliente_id,left(nome,50) as cliente,if(idade>18,'Adulto','Menor') as faixa from [lib://clientes.qvd](qvd);
+vendas:
+load venda_id,cliente_id,date(data_venda) as data,num(valor) as valor,if(valor>1000,'Alto','Normal') as tipo from [lib://vendas.qvd](qvd) where year(data_venda)=$(vAno);
+left join(vendas) load cliente_id,cliente from clientes;
+drop table clientes;
+*/
+
+// DEPOIS (EXTREME MODE) ✅ — PADRÃO ENTERPRISE INTERNACIONAL
+SET vAno = 2024;
+
+clientes:
+LOAD
+    cliente_id,
+    LEFT(nome, 50)                    AS cliente,
+    IF(idade > 18, 'Adulto', 'Menor') AS faixa
+FROM [lib://clientes.qvd] (qvd);
+
+vendas:
+LOAD
+    venda_id,
+    cliente_id,
+    DATE(data_venda)                        AS data,
+    NUM(valor)                              AS valor,
+    IF(valor > 1000, 'Alto', 'Normal')      AS tipo
+FROM [lib://vendas.qvd] (qvd)
+WHERE YEAR(data_venda) = $(vAno);
+
+LEFT JOIN (vendas)
+LOAD
+    cliente_id,
+    cliente
+FROM clientes;
+
+DROP TABLE clientes;
+
+
+// ============================================================
+// 🎯 RESULTADOS EXTREME MODE
+// ============================================================
+// ✅ Keywords em CAIXA ALTA: LOAD, FROM, WHERE, IF, LEFT JOIN, etc.
+// ✅ Funções em CAIXA ALTA: LEFT, IF, DATE, NUM, YEAR, SUM, etc.
+// ✅ Alinhamento vertical de AS para legibilidade máxima
+// ✅ Indentação de 4 espaços em todos os blocos
+// ✅ Espaçamento padronizado em operadores (=, <>, >, <, >=, <=)
+// ✅ Funções aninhadas formatadas em multi-linha
+// ✅ Zero alteração de lógica — apenas estética perfeita
+// ✅ Código pronto para Enterprise Production

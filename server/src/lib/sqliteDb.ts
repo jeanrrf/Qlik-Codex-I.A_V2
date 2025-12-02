@@ -1,0 +1,377 @@
+/**
+ * Qlik Codex I.A - SQLite Database
+ * Banco de dados local para armazenar histórico, métricas e logs
+ */
+
+import Database from "better-sqlite3";
+import path from "path";
+import fs from "fs";
+
+import { logger } from "./logger";
+
+let db: Database.Database | null = null;
+
+export function initSqliteDb(): Database.Database {
+  if (db) {
+    return db;
+  }
+
+  // Criar pasta data se não existir
+  const dataDir = path.join(process.cwd(), "data");
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+
+  const dbPath = path.join(dataDir, "qlik-codex.db");
+
+  try {
+    db = new Database(dbPath);
+
+    logger.info(`SQLite database initialized at: ${dbPath}`);
+
+    // Criar tabelas
+    createTables();
+
+    return db;
+  } catch (err) {
+    logger.error("Erro ao inicializar SQLite", err);
+    throw err;
+  }
+}
+
+/**
+ * Verifica se uma coluna existe em uma tabela
+ */
+function columnExists(tableName: string, columnName: string): boolean {
+  if (!db) return false;
+
+  try {
+    const result = db.pragma(`table_info(${tableName})`) as any[];
+    return result.some((col: any) => col.name === columnName);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Executa migrations necessárias
+ */
+function runMigrations() {
+  if (!db) {
+    throw new Error("Database not initialized");
+  }
+
+  // Migration 1: Adicionar colunas de script storage na optimization_history
+  const needsScriptColumns = !columnExists("optimization_history", "original_script");
+
+  if (needsScriptColumns) {
+    try {
+      // Verificar se tabela antiga existe
+      const tableCheck = db.prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='optimization_history'"
+      ).get();
+
+      if (tableCheck) {
+        // Criar tabela temporária com nova estrutura
+        db.exec(`
+          CREATE TABLE optimization_history_new (
+            id TEXT PRIMARY KEY,
+            user_id TEXT,
+            mode TEXT NOT NULL,
+            original_script TEXT NOT NULL DEFAULT '-- Script not saved --',
+            optimized_script TEXT,
+            original_lines INTEGER NOT NULL DEFAULT 0,
+            optimized_lines INTEGER,
+            breaking_risk TEXT,
+            changes_count INTEGER,
+            duration_ms INTEGER,
+            llm_provider TEXT,
+            success INTEGER NOT NULL DEFAULT 0,
+            error_message TEXT,
+            created_at TEXT NOT NULL,
+            completed_at TEXT
+          );
+        `);
+
+        // Tentar copiar dados antigos
+        try {
+          db.exec(`
+            INSERT INTO optimization_history_new (
+              id, user_id, mode, original_lines, optimized_lines,
+              breaking_risk, changes_count, duration_ms, llm_provider,
+              success, created_at, completed_at
+            )
+            SELECT 
+              id, user_id, mode, 
+              COALESCE(original_lines, 0), optimized_lines,
+              breaking_risk, changes_count, duration_ms, llm_provider,
+              COALESCE(success, 0), created_at, completed_at
+            FROM optimization_history;
+          `);
+        } catch (copyErr) {
+          logger.warn("Could not copy old data (incompatible structure), creating fresh table");
+        }
+
+        // Remover tabela antiga
+        db.exec("DROP TABLE optimization_history");
+
+        // Renomear nova tabela
+        db.exec("ALTER TABLE optimization_history_new RENAME TO optimization_history");
+
+        // Recriar índices
+        db.exec(`
+          CREATE INDEX idx_opt_created ON optimization_history(created_at DESC);
+          CREATE INDEX idx_opt_user ON optimization_history(user_id, created_at DESC);
+          CREATE INDEX idx_opt_success ON optimization_history(success, created_at DESC);
+        `);
+      }
+    } catch (err) {
+      logger.error("Migration failed", err);
+      // Se falhar, dropar tabela e deixar CREATE TABLE IF NOT EXISTS recriar
+      try {
+        db.exec("DROP TABLE IF EXISTS optimization_history");
+      } catch {
+        // Ignore
+      }
+    }
+  }
+}
+
+/**
+ * Cria as tabelas do banco de dados
+ */
+function createTables() {
+  if (!db) {
+    throw new Error("Database not initialized");
+  }
+
+  // Tabela de mensagens de contato
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS contact_messages (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      company TEXT NOT NULL,
+      message TEXT,
+      created_at TEXT NOT NULL
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_contact_created 
+    ON contact_messages(created_at DESC);
+  `);
+
+  // Tabela de histórico de otimizações
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS optimization_history (
+      id TEXT PRIMARY KEY,
+      user_id TEXT,
+      mode TEXT NOT NULL,
+      original_script TEXT NOT NULL,
+      optimized_script TEXT,
+      original_lines INTEGER NOT NULL,
+      optimized_lines INTEGER,
+      breaking_risk TEXT,
+      changes_count INTEGER,
+      duration_ms INTEGER,
+      llm_provider TEXT,
+      success INTEGER NOT NULL DEFAULT 0,
+      error_message TEXT,
+      created_at TEXT NOT NULL,
+      completed_at TEXT
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_opt_created 
+    ON optimization_history(created_at DESC);
+    
+    CREATE INDEX IF NOT EXISTS idx_opt_user 
+    ON optimization_history(user_id, created_at DESC);
+    
+    CREATE INDEX IF NOT EXISTS idx_opt_success
+    ON optimization_history(success, created_at DESC);
+  `);
+
+  // Executar migrations para atualizar tabelas existentes
+  runMigrations();
+
+  // Tabela de métricas de performance
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS performance_metrics (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      optimization_id TEXT NOT NULL,
+      phase TEXT NOT NULL,
+      duration_ms INTEGER NOT NULL,
+      status TEXT NOT NULL,
+      error_message TEXT,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (optimization_id) REFERENCES optimization_history(id)
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_metrics_opt 
+    ON performance_metrics(optimization_id);
+  `);
+
+  // Tabela de logs de auditoria
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      action TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      user_id TEXT,
+      metadata TEXT,
+      created_at TEXT NOT NULL
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_audit_entity 
+    ON audit_logs(entity_type, entity_id);
+    
+    CREATE INDEX IF NOT EXISTS idx_audit_created 
+    ON audit_logs(created_at DESC);
+  `);
+
+  // Tabela de cache de LLM responses
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS llm_cache (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      prompt_hash TEXT UNIQUE NOT NULL,
+      provider TEXT NOT NULL,
+      model TEXT NOT NULL,
+      prompt TEXT NOT NULL,
+      response TEXT NOT NULL,
+      tokens_used INTEGER,
+      duration_ms INTEGER,
+      created_at TEXT NOT NULL,
+      accessed_at TEXT NOT NULL,
+      access_count INTEGER NOT NULL DEFAULT 1
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_cache_hash 
+    ON llm_cache(prompt_hash);
+    
+    CREATE INDEX IF NOT EXISTS idx_cache_accessed 
+    ON llm_cache(accessed_at DESC);
+  `);
+
+  // Tabela de sessões ativas de otimização
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS active_sessions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT,
+      mode TEXT NOT NULL,
+      script TEXT NOT NULL,
+      llm_provider TEXT,
+      llm_model TEXT,
+      progress_data TEXT,
+      status TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_session_user 
+    ON active_sessions(user_id, updated_at DESC);
+    
+    CREATE INDEX IF NOT EXISTS idx_session_expires 
+    ON active_sessions(expires_at);
+    
+    CREATE INDEX IF NOT EXISTS idx_session_status
+    ON active_sessions(status, updated_at DESC);
+  `);
+
+  // Tabela de usuários autenticados
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      email TEXT UNIQUE NOT NULL,
+      name TEXT,
+      role TEXT NOT NULL DEFAULT 'user',
+      google_id TEXT UNIQUE,
+      avatar_url TEXT,
+      created_at TEXT NOT NULL,
+      last_login TEXT,
+      is_active INTEGER NOT NULL DEFAULT 1
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_user_email 
+    ON users(email);
+    
+    CREATE INDEX IF NOT EXISTS idx_user_google 
+    ON users(google_id);
+    
+    CREATE INDEX IF NOT EXISTS idx_user_role
+    ON users(role, is_active);
+  `);
+
+  // Tabela de sessões de autenticação
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS auth_sessions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      token TEXT UNIQUE NOT NULL,
+      refresh_token TEXT,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      last_activity TEXT NOT NULL,
+      ip_address TEXT,
+      user_agent TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_auth_token 
+    ON auth_sessions(token);
+    
+    CREATE INDEX IF NOT EXISTS idx_auth_user 
+    ON auth_sessions(user_id, last_activity DESC);
+    
+    CREATE INDEX IF NOT EXISTS idx_auth_expires 
+    ON auth_sessions(expires_at);
+  `);
+
+  // Reduz ruído no console: não logar criação/validação de tabelas a cada boot
+}
+
+/**
+ * Obtém instância do banco de dados
+ */
+export function getSqliteDb(): Database.Database {
+  if (!db) {
+    return initSqliteDb();
+  }
+  return db;
+}
+
+/**
+ * Fecha a conexão do banco de dados
+ */
+export function closeSqliteDb(): void {
+  if (db) {
+    db.close();
+    db = null;
+    logger.info("SQLite database closed");
+  }
+}
+
+/**
+ * Execute uma transação
+ */
+export function transaction<T>(fn: (db: Database.Database) => T): T {
+  const database = getSqliteDb();
+  const trx = database.transaction(fn);
+  return trx(database);
+}
+
+/**
+ * Retorna a instância do banco de dados (pode retornar null)
+ */
+export function getDb(): Database.Database | null {
+  return db;
+}
+
+// Export como objeto também para compatibilidade
+export const sqliteDb = {
+  initSqliteDb,
+  getDb,
+  getSqliteDb,
+  closeSqliteDb,
+  transaction
+};
