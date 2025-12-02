@@ -532,8 +532,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 <div className="feature-item">
                   <div className="feature-icon">✅</div>
                   <div className="feature-text">
-                    <strong>2 execuções/dia</strong>
-                    <span>1 Análise + 1 Ultra Expert por dia</span>
+                    <strong>4 execuções/dia</strong>
+                    <span>Análise + Ultra Expert (total 4 por dia)</span>
                   </div>
                 </div>
               </div>

@@ -32,7 +32,7 @@ Sistema completo de autenticação Google OAuth 2.0 com controle de acesso basea
 
 #### **USER (Outros/Terceiros)**
 - ⚠️ Acesso limitado
-- ⚠️ 10 otimizações/dia
+- ⚠️ 4 otimizações/dia
 - ⚠️ Scripts até 1MB
 - ⚠️ Até 2 sessões simultâneas
 - ⚠️ Apenas modo "analysis" (sem modificação de código)
@@ -214,14 +214,16 @@ RoleUsageLimits = {
   OWNER: {
     optimizationsPerDay: -1,    // Ilimitado
     maxScriptSizeKB: -1,
+    maxScriptLines: -1,
     maxConcurrentSessions: -1,
     enabledModes: ["analysis", "ultra-expert"]
   },
   USER: {
-    optimizationsPerDay: 10,
+    optimizationsPerDay: 4,     // FREE TIER: 4 execuções/dia
     maxScriptSizeKB: 1000,
+    maxScriptLines: 200,         // FREE TIER: 200 linhas
     maxConcurrentSessions: 2,
-    enabledModes: ["analysis"]   // SEM modificação de código
+    enabledModes: ["analysis", "ultra-expert"]
   }
 }
 ```

@@ -66,7 +66,7 @@ CREATE TABLE user_daily_usage (
 ```json
 {
   "error": "Daily quota exceeded",
-  "message": "Você atingiu o limite de 10 otimizações por dia...",
+  "message": "Você atingiu o limite de 4 otimizações por dia...",
   "quota": {
     "used": 10,
     "limit": 10,

@@ -340,7 +340,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
 
     // FREE TIER: Verifica quota de Ultra Expert
     if (!isOwner && mode === 'ultra-expert' && !hasUltraExpertQuotaLeft) {
-      setError(`FREE TIER: Você atingiu o limite de ${MAX_ULTRA_EXPERT_RUNS} execução(ões) Ultra Expert POR DIA. Use modo "Análise" (ilimitado) ou aguarde a renovação diária.`);
+      setError(`FREE TIER: Você atingiu o limite de ${MAX_ULTRA_EXPERT_RUNS} execução(ões) Ultra Expert POR DIA. O limite geral é de 4 execuções/dia (análise + ultra expert). Aguarde renovação diária.`);
       return;
     }
 
@@ -541,7 +541,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                 className={`mode-card-compact ${mode === 'ultra-expert' ? 'active expert' : ''} ${!isOwner && !hasUltraExpertQuotaLeft ? 'disabled-quota' : ''}`}
                 onClick={() => handleModeChange('ultra-expert')}
                 disabled={!isOwner && !hasUltraExpertQuotaLeft}
-                title={!isOwner && !hasUltraExpertQuotaLeft ? 'Quota diária de Ultra Expert esgotada. Use modo Análise (ilimitado) ou aguarde renovação.' : undefined}
+                title={!isOwner && !hasUltraExpertQuotaLeft ? 'Quota diária de Ultra Expert esgotada. Limite geral: 4 execuções/dia. Aguarde renovação.' : undefined}
               >
                 <div className="mode-card-icon-compact expert-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
