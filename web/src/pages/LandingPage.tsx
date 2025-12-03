@@ -230,11 +230,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       {/* NAV */}
       <nav className="landing-nav">
         <div className="nav-brand">
-          <div className="brand-logo-container">
-            <div className="brand-logo-bg" />
-            <span className="brand-logo-text">QLIK CODEX I.A</span>
+          <div className="brand-logo-unified">
+            <div className="brand-logo-gradient" />
+            <div className="brand-logo-content">
+              <span className="brand-name">QLIK CODEX I.A</span>
+              <span className="brand-beta">BETA</span>
+            </div>
           </div>
-          <span className="brand-badge">BETA</span>
         </div>
 
         <div className="nav-links">
@@ -612,9 +614,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       {/* FOOTER HORIZONTAL */}
       <footer className="landing-footer">
         <div className="footer-content">
-          <span className="footer-brand">
-            ⚡ QLIK CODEX I.A
-          </span>
+          <div className="footer-logo">
+            <span className="footer-logo-name">QLIK CODEX I.A</span>
+            <span className="footer-logo-beta">BETA</span>
+          </div>
           <span className="footer-separator">•</span>
           <span className="footer-copy">
             &copy; 2025 SENTINNELL IA
@@ -757,73 +760,99 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           gap: 12px;
         }
 
-        /* Logo Oficial - Estilo Moderno Cinza */
-        .brand-logo-container {
+        /* Logo Oficial Unificado - Escurecimento Progressivo + BETA Verde */
+        .brand-logo-unified {
           position: relative;
           display: flex;
           align-items: center;
-          padding: 8px 16px;
-          border-radius: 8px;
+          padding: 10px 14px 10px 18px;
+          border-radius: 10px;
           overflow: hidden;
+          cursor: pointer;
+          transition: all 0.3s ease;
         }
 
-        .brand-logo-bg {
+        .brand-logo-gradient {
           position: absolute;
           inset: 0;
-          background: linear-gradient(135deg, 
-            rgba(30, 35, 45, 0.95) 0%, 
-            rgba(20, 24, 32, 0.98) 50%,
-            rgba(15, 18, 25, 1) 100%);
-          border: 1px solid rgba(100, 116, 139, 0.3);
-          border-radius: 8px;
+          background: linear-gradient(90deg, 
+            rgba(45, 50, 60, 0.98) 0%,
+            rgba(35, 40, 50, 0.98) 25%,
+            rgba(25, 30, 40, 0.99) 50%,
+            rgba(18, 22, 30, 1) 75%,
+            rgba(12, 15, 22, 1) 100%);
+          border: 1px solid rgba(100, 116, 139, 0.25);
+          border-radius: 10px;
           box-shadow: 
-            0 4px 20px rgba(0, 0, 0, 0.4),
-            inset 0 1px 0 rgba(255, 255, 255, 0.05),
-            0 0 0 1px rgba(0, 0, 0, 0.3);
+            0 6px 24px rgba(0, 0, 0, 0.5),
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            inset 0 -1px 0 rgba(0, 0, 0, 0.2);
         }
 
-        .brand-logo-text {
+        .brand-logo-content {
           position: relative;
           z-index: 1;
-          font-size: 1rem;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .brand-name {
+          font-size: 1.05rem;
           font-weight: 800;
-          letter-spacing: 0.08em;
+          letter-spacing: 0.06em;
           background: linear-gradient(180deg, 
             #ffffff 0%, 
-            #e2e8f0 40%,
+            #f1f5f9 30%,
+            #cbd5e1 60%,
             #94a3b8 100%);
           -webkit-background-clip: text;
           background-clip: text;
           -webkit-text-fill-color: transparent;
-          text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
         }
 
-        .nav-brand:hover .brand-logo-bg {
-          border-color: rgba(0, 242, 255, 0.3);
+        .brand-beta {
+          font-size: 0.6rem;
+          font-weight: 800;
+          letter-spacing: 0.15em;
+          padding: 4px 8px;
+          background: linear-gradient(135deg, 
+            rgba(16, 185, 129, 0.25) 0%, 
+            rgba(5, 150, 105, 0.35) 100%);
+          color: #34d399;
+          border: 1px solid rgba(16, 185, 129, 0.4);
+          border-radius: 5px;
+          text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
           box-shadow: 
-            0 4px 25px rgba(0, 0, 0, 0.5),
-            inset 0 1px 0 rgba(255, 255, 255, 0.08),
-            0 0 20px rgba(0, 242, 255, 0.1);
+            0 0 12px rgba(16, 185, 129, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
         }
 
-        .nav-brand:hover .brand-logo-text {
+        .nav-brand:hover .brand-logo-gradient {
+          border-color: rgba(16, 185, 129, 0.4);
+          box-shadow: 
+            0 8px 32px rgba(0, 0, 0, 0.6),
+            0 0 20px rgba(16, 185, 129, 0.15),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .nav-brand:hover .brand-name {
           background: linear-gradient(180deg, 
             #ffffff 0%, 
-            #f0f4f8 40%,
-            #cbd5e1 100%);
+            #f8fafc 40%,
+            #e2e8f0 100%);
           -webkit-background-clip: text;
           background-clip: text;
         }
 
-        .brand-badge {
-          font-size: 0.65rem;
-          font-weight: 700;
-          padding: 2px 8px;
-          background: rgba(0, 242, 255, 0.15);
-          color: var(--primary);
-          border-radius: 4px;
-          letter-spacing: 0.1em;
+        .nav-brand:hover .brand-beta {
+          background: linear-gradient(135deg, 
+            rgba(16, 185, 129, 0.35) 0%, 
+            rgba(5, 150, 105, 0.45) 100%);
+          box-shadow: 
+            0 0 18px rgba(16, 185, 129, 0.35),
+            inset 0 1px 0 rgba(255, 255, 255, 0.15);
         }
 
         .nav-links {
@@ -1893,6 +1922,63 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           color: var(--primary);
           letter-spacing: 0.08em;
           text-shadow: 0 0 12px rgba(0, 242, 255, 0.4);
+        }
+
+        .footer-brand-box {
+          font-weight: 800;
+          font-size: 0.75rem;
+          letter-spacing: 0.1em;
+          padding: 6px 12px;
+          background: linear-gradient(135deg, 
+            rgba(30, 35, 45, 0.95) 0%, 
+            rgba(20, 24, 32, 0.98) 100%);
+          border: 1px solid rgba(100, 116, 139, 0.4);
+          border-radius: 6px;
+          color: #e2e8f0;
+          box-shadow: 
+            0 2px 8px rgba(0, 0, 0, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        }
+
+        .footer-logo {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 10px 6px 14px;
+          background: linear-gradient(90deg, 
+            rgba(40, 45, 55, 0.95) 0%,
+            rgba(25, 30, 40, 0.98) 60%,
+            rgba(15, 18, 25, 1) 100%);
+          border: 1px solid rgba(100, 116, 139, 0.25);
+          border-radius: 8px;
+          box-shadow: 
+            0 3px 12px rgba(0, 0, 0, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        }
+
+        .footer-logo-name {
+          font-size: 0.7rem;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          background: linear-gradient(180deg, 
+            #ffffff 0%, 
+            #e2e8f0 50%,
+            #94a3b8 100%);
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+
+        .footer-logo-beta {
+          font-size: 0.5rem;
+          font-weight: 800;
+          letter-spacing: 0.12em;
+          padding: 3px 6px;
+          background: rgba(16, 185, 129, 0.2);
+          color: #34d399;
+          border: 1px solid rgba(16, 185, 129, 0.35);
+          border-radius: 4px;
+          text-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
         }
 
         .footer-separator {

@@ -482,6 +482,29 @@
   color: #fff;
 }
 
+/* --- AINEX TRAINING NOTE --- */
+.ainex-training-note {
+  margin-top: 12px;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.45);
+  font-family: 'JetBrains Mono', monospace;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ainex-training-note-badge {
+  padding: 3px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 255, 157, 0.35);
+  background: radial-gradient(circle at 0% 0%, rgba(0, 255, 157, 0.18), transparent 55%);
+  color: #00ff9d;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
 /* --- ONBOARDING OVERLAY --- */
 .onboarding-overlay {
   position: fixed;

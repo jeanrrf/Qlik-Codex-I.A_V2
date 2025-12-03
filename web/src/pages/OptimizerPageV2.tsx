@@ -904,25 +904,31 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
             {/* Real KPIs */}
             {
               (optimization.progress.status === "success" || result) && (
-                <div className="pipeline-kpis">
-                  <div className="kpi">
-                    <span className="kpi-label">⏱️ Tempo Total</span>
-                    <span className="kpi-value">{formatDuration(optimization.progress.elapsedTime)}</span>
-                  </div>
-                  <div className="kpi">
-                    <span className="kpi-label">Etapas</span>
-                    <span className="kpi-value">
-                      {optimization.progress.stages.filter(s => s.visible !== false && s.status === "success").length}/
-                      {optimization.progress.stages.filter(s => s.visible !== false).length}
-                    </span>
-                  </div>
-                  {result && (
+                <>
+                  <div className="pipeline-kpis">
                     <div className="kpi">
-                      <span className="kpi-label">Mudanças</span>
-                      <span className="kpi-value">{result.analysis.changes.length}</span>
+                      <span className="kpi-label">⏱️ Tempo Total</span>
+                      <span className="kpi-value">{formatDuration(optimization.progress.elapsedTime)}</span>
                     </div>
-                  )}
-                </div>
+                    <div className="kpi">
+                      <span className="kpi-label">Etapas</span>
+                      <span className="kpi-value">
+                        {optimization.progress.stages.filter(s => s.visible !== false && s.status === "success").length}/
+                        {optimization.progress.stages.filter(s => s.visible !== false).length}
+                      </span>
+                    </div>
+                    {result && (
+                      <div className="kpi">
+                        <span className="kpi-label">Mudanças</span>
+                        <span className="kpi-value">{result.analysis.changes.length}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="ainex-training-note">
+                    <span className="ainex-training-note-badge">AINEX ENGINE</span>
+                    <span>Modelo treinado em milhares de scripts Qlik de produ⏱️o para entregar recomenda⏱️es em n?vel PRO.</span>
+                  </div>
+                </>
               )
             }
           </div>
