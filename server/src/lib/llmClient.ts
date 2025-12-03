@@ -5,6 +5,10 @@ import type { ProviderName, ProviderResult } from "./llmProviders/types";
 import { googleProvider } from "./llmProviders/googleProvider";
 import { nvidiaProvider } from "./llmProviders/nvidiaProvider";
 
+/**
+ * @deprecated Use ProviderOrchestrator instead for better resilience and rotation.
+ * This client is kept for backward compatibility.
+ */
 const providerMap = {
   google: googleProvider,
   nvidia: nvidiaProvider

@@ -1,9 +1,7 @@
-import {
-  generateStructuredJson,
-  GenerateStructuredJsonOptions
-} from "../lib/llmClient";
+import { defaultOrchestrator } from "../lib/providerOrchestrator";
 import { logger } from "../lib/logger";
 import { OptimizeResult } from "../types/qlik";
+import type { LLMOptions } from "../types/optimization";
 
 function buildExplainPrompt(result: OptimizeResult): string {
   const changesSummary = result.analysis.changes
@@ -106,7 +104,7 @@ AGORA GERE SUA EXPLICAÇÃO BASEADA NAS MUDANÇAS FORNECIDAS ACIMA.
 
 export async function runQlikExplainAgent(
   result: OptimizeResult,
-  llmOptions?: GenerateStructuredJsonOptions
+  llmOptions?: LLMOptions
 ): Promise<string> {
   const prompt = buildExplainPrompt(result);
 
@@ -116,9 +114,17 @@ export async function runQlikExplainAgent(
 
     const jsonPrompt = `${prompt}\n\nResponda APENAS com um JSON: { "explanation": "seu texto aqui" }`;
 
-    const { text } = await generateStructuredJson(jsonPrompt, llmOptions);
-    if (!text) return "Não foi possível gerar a explicação.";
+    const orchestratorResult = await defaultOrchestrator.executeWithRotation(
+      "result_108_generate_explanation",
+      jsonPrompt,
+      45000 // 45s timeout
+    );
 
+    if (orchestratorResult.fallbackTriggered || !orchestratorResult.result) {
+      return "Não foi possível gerar a explicação (todos os provedores falharam).";
+    }
+
+    const text = orchestratorResult.result;
     const parsed = JSON.parse(text);
     return parsed.explanation || "Explicação não encontrada.";
 

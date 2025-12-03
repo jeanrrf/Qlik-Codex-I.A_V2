@@ -1,10 +1,8 @@
-import {
-  generateStructuredJson,
-  GenerateStructuredJsonOptions
-} from "../lib/llmClient";
+import { defaultOrchestrator } from "../lib/providerOrchestrator";
 import { logger } from "../lib/logger";
 import { ReviewSchema } from "../validators/llmResponseSchemas";
 import { OptimizeResult, AgentReviewResult, BreakingRisk } from "../types/qlik";
+import type { LLMOptions } from "../types/optimization";
 
 function buildReviewPrompt(original: string, optimized: string): string {
   return `
@@ -104,19 +102,24 @@ ${optimized}
 
 export async function runQlikReviewAgent(
   result: OptimizeResult,
-  llmOptions?: GenerateStructuredJsonOptions
+  llmOptions?: LLMOptions
 ): Promise<OptimizeResult> {
   // Se não houve mudanças, não precisa revisar profundamente, mas vamos passar pelo fluxo.
   const prompt = buildReviewPrompt(result.originalScript, result.optimizedScript);
 
   try {
-    const { text } = await generateStructuredJson(prompt, llmOptions);
+    const orchestratorResult = await defaultOrchestrator.executeWithRotation(
+      "post_105_breaking_change_analysis",
+      prompt,
+      60000 // 60s timeout
+    );
 
-    if (!text) {
-      logger.warn("Review Agent retornou vazio.");
+    if (orchestratorResult.fallbackTriggered || !orchestratorResult.result) {
+      logger.warn("Review Agent falhou em todos os provedores.");
       return result;
     }
 
+    const text = orchestratorResult.result;
     const parsed = JSON.parse(text);
     const validated = ReviewSchema.safeParse(parsed);
 

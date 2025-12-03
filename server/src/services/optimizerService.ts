@@ -10,7 +10,8 @@ import {
 } from "../lib/scriptAnalyzer";
 import type { OptimizeMode, OptimizeResult } from "../types/qlik";
 import type { ConsultancyDocument } from "../types/consultancy";
-import type { GenerateStructuredJsonOptions } from "../lib/llmClient";
+import type { LLMOptions } from "../types/optimization";
+// import type { GenerateStructuredJsonOptions } from "../lib/llmClient";
 import { stepTimingService } from "./stepTimingService";
 // import { calculateRealMetrics, getCriticalIssuesFromMetrics, formatMetricsCompact } from "./metricsCalculator";
 import {
@@ -21,7 +22,6 @@ import {
   type AntiPattern
 } from "../lib/qlikParser";
 import { QlikMegaOptimizer } from "../agents/qlikMegaOptimizer";
-
 
 export interface FullOptimizeResult extends OptimizeResult {
   explanation?: string;
@@ -52,7 +52,7 @@ function checkAborted(signal?: AbortSignal, context?: string): void {
  */
 async function runUltraExpertMode(
   script: string,
-  llmOptions?: GenerateStructuredJsonOptions,
+  llmOptions?: LLMOptions,
   generateConsultancy = true,
   isTruncated = false,
   abortSignal?: AbortSignal
@@ -244,7 +244,7 @@ async function runUltraExpertProMode(
 export async function optimizeScript(
   script: string,
   mode: OptimizeMode, // Mantido para compatibilidade de API, mas ignorado internamente
-  llmOptions?: GenerateStructuredJsonOptions,
+  llmOptions?: LLMOptions,
   generateConsultancy = true,
   shouldTruncate?: boolean,
   lineLimit?: number,
@@ -317,7 +317,7 @@ function createOptimizerService() {
   const runOptimization = (
     script: string,
     mode: OptimizeMode,
-    llmOptions?: GenerateStructuredJsonOptions,
+    llmOptions?: LLMOptions,
     generateConsultancy = true
   ): Promise<FullOptimizeResult> => {
     return optimizeScript(script, mode, llmOptions, generateConsultancy);

@@ -1,9 +1,7 @@
-import {
-  generateStructuredJson,
-  GenerateStructuredJsonOptions
-} from "../lib/llmClient";
+import { defaultOrchestrator } from "../lib/providerOrchestrator";
 import { logger } from "../lib/logger";
 import { z } from "zod";
+import type { LLMOptions } from "../types/optimization";
 
 const DocSchema = z.object({
   title: z.string(),
@@ -59,14 +57,23 @@ ${script.slice(0, 30000)}
 
 export async function runQlikDocAgent(
   script: string,
-  llmOptions?: GenerateStructuredJsonOptions
+  llmOptions?: LLMOptions
 ): Promise<QlikDocResult> {
   const prompt = buildDocPrompt(script);
 
   try {
-    const { text } = await generateStructuredJson(prompt, llmOptions);
-    if (!text) throw new Error("Empty response from LLM");
+    // Use orchestrator for robust execution
+    const result = await defaultOrchestrator.executeWithRotation(
+      "result_111_create_documentation",
+      prompt,
+      60000 // 60s timeout
+    );
 
+    if (result.fallbackTriggered || !result.result) {
+      throw new Error(result.fallbackReason || "Failed to generate documentation");
+    }
+
+    const text = result.result;
     const parsed = JSON.parse(text);
     const data = DocSchema.parse(parsed);
 

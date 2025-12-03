@@ -330,3 +330,8 @@ export const DEFAULT_ROTATION_CONFIG: ProviderRotationConfig = {
   timeoutPerStep: 180000, // 3 minutos por tarefa (180000ms)
   globalTimeout: 900000, // 15 minutos total (900000ms)
 };
+
+export interface LLMOptions {
+  provider?: string;
+  model?: string;
+}
