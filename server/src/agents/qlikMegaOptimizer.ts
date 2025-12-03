@@ -65,10 +65,10 @@ ${promptTemplate}
     for (const strategy of strategies) {
       try {
         logger.info(`[MegaOptimizer] Attempting task ${taskName} with ${strategy.name}`);
-        
+
         // Notify UI of model switch if not the first attempt
         if (strategy !== strategies[0]) {
-           sseEmitter.sendToCurrent({
+          sseEmitter.sendToCurrent({
             type: "substep",
             substep: {
               id: taskName,

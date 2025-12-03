@@ -161,18 +161,8 @@ const TASK_TIMEOUT_MS = 5 * 60 * 1000; // 300000ms = 5 minutos
 
 
 
-function getStagesForMode(mode: OptimizeMode): OptimizationStage[] {
-
-  if (mode === "analysis") {
-
-    return ANALYSIS_STAGES.map(s => ({ ...s, visible: true }));
-
-  } else {
-
-    return ULTRA_EXPERT_STAGES.map(s => ({ ...s, visible: true }));
-
-  }
-
+function getStagesForMode(_: OptimizeMode): OptimizationStage[] {
+  return ULTRA_EXPERT_STAGES.map(s => ({ ...s, visible: true }));
 }
 
 
@@ -309,7 +299,7 @@ export interface UseOptimizationProgressReturn {
 
 export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
-  const [currentMode, setCurrentMode] = useState<OptimizeMode>("analysis");
+  const [currentMode, setCurrentMode] = useState<OptimizeMode>("ultra-expert");
 
   const [progress, setProgress] = useState<OptimizationProgress>({
 
