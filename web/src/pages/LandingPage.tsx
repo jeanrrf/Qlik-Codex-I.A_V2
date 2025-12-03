@@ -230,11 +230,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       {/* NAV */}
       <nav className="landing-nav">
         <div className="nav-brand">
-          <div className="brand-icon">
-            <div className="brand-pulse" />
-            <div className="brand-core" />
+          <div className="brand-logo-container">
+            <div className="brand-logo-bg" />
+            <span className="brand-logo-text">QLIK CODEX I.A</span>
           </div>
-          <span className="brand-text">QLIK CODEX I.A</span>
           <span className="brand-badge">BETA</span>
         </div>
 
@@ -340,16 +339,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
 
         {/* SUITE / FEATURES */}
         <section id="suite" className="suite-section">
-            <div className="section-header">
-              <span className="section-badge">SUITE COMPLETA</span>
-              <h2 className="section-title">
-                Suite de ferramentas para<br />
-                <span className="title-accent">Desenvolvedores Qlik.</span>
-              </h2>
-              <p className="section-description">
-                Conjunto de ferramentas para auditar, otimizar e documentar seus projetos Qlik Sense e SaaS.
-              </p>
-            </div>
+          <div className="section-header">
+            <span className="section-badge">SUITE COMPLETA</span>
+            <h2 className="section-title">
+              Suite de ferramentas para<br />
+              <span className="title-accent">Desenvolvedores Qlik.</span>
+            </h2>
+            <p className="section-description">
+              Conjunto de ferramentas para auditar, otimizar e documentar seus projetos Qlik Sense e SaaS.
+            </p>
+          </div>
 
           <div className="features-grid">
             <div className="feature-card feature-card-radar">
@@ -621,14 +620,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             &copy; 2025 SENTINNELL IA
           </span>
           <span className="footer-separator">•</span>
-          <span className="footer-powered">
-            Powered by AINEX
-          </span>
-          <span className="footer-separator">•</span>
           <a href="https://github.com/jeanrrf" target="_blank" rel="noopener noreferrer" className="footer-link">
             GitHub
           </a>
-          <a href="https://api.whatsapp.com/send?phone=5548999373041" target="_blank" rel="noopener noreferrer" className="footer-link">
+          <a href="https://api.whatsapp.com/send?phone=5548991937304" target="_blank" rel="noopener noreferrer" className="footer-link">
             WhatsApp
           </a>
         </div>
@@ -762,55 +757,63 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           gap: 12px;
         }
 
-        .brand-icon {
+        /* Logo Oficial - Estilo Moderno Cinza */
+        .brand-logo-container {
           position: relative;
-          width: 32px;
-          height: 32px;
           display: flex;
           align-items: center;
-          justify-content: center;
+          padding: 8px 16px;
+          border-radius: 8px;
+          overflow: hidden;
         }
 
-        .brand-icon.small {
-          width: 20px;
-          height: 20px;
-        }
-
-        .brand-pulse {
+        .brand-logo-bg {
           position: absolute;
-          width: 100%;
-          height: 100%;
-          border-radius: 50%;
-          background: rgba(0, 242, 255, 0.2);
-          animation: brand-pulse 2s ease-in-out infinite;
+          inset: 0;
+          background: linear-gradient(135deg, 
+            rgba(30, 35, 45, 0.95) 0%, 
+            rgba(20, 24, 32, 0.98) 50%,
+            rgba(15, 18, 25, 1) 100%);
+          border: 1px solid rgba(100, 116, 139, 0.3);
+          border-radius: 8px;
+          box-shadow: 
+            0 4px 20px rgba(0, 0, 0, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.05),
+            0 0 0 1px rgba(0, 0, 0, 0.3);
         }
 
-        .brand-core {
-          width: 12px;
-          height: 12px;
-          background: var(--primary);
-          border-radius: 50%;
-          box-shadow: 0 0 20px var(--primary);
-        }
-
-        .brand-icon.small .brand-core {
-          width: 8px;
-          height: 8px;
-        }
-
-        @keyframes brand-pulse {
-          0%, 100% { transform: scale(1); opacity: 0.5; }
-          50% { transform: scale(1.5); opacity: 0; }
-        }
-
-        .brand-text {
-          font-size: 1.1rem;
-          font-weight: 700;
-          letter-spacing: -0.02em;
-          background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+        .brand-logo-text {
+          position: relative;
+          z-index: 1;
+          font-size: 1rem;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          background: linear-gradient(180deg, 
+            #ffffff 0%, 
+            #e2e8f0 40%,
+            #94a3b8 100%);
           -webkit-background-clip: text;
           background-clip: text;
           -webkit-text-fill-color: transparent;
+          text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+        }
+
+        .nav-brand:hover .brand-logo-bg {
+          border-color: rgba(0, 242, 255, 0.3);
+          box-shadow: 
+            0 4px 25px rgba(0, 0, 0, 0.5),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08),
+            0 0 20px rgba(0, 242, 255, 0.1);
+        }
+
+        .nav-brand:hover .brand-logo-text {
+          background: linear-gradient(180deg, 
+            #ffffff 0%, 
+            #f0f4f8 40%,
+            #cbd5e1 100%);
+          -webkit-background-clip: text;
+          background-clip: text;
         }
 
         .brand-badge {

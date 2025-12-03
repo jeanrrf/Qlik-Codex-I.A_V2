@@ -179,7 +179,6 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
   const [showConsultancy, setShowConsultancy] = useState(false);
   const [showScriptInfo, setShowScriptInfo] = useState(false);
   const [scriptInfo, setScriptInfo] = useState<ScriptInfo | null>(null);
-  const [dismissOnboarding, setDismissOnboarding] = useState(false);
 
   // === HOOKS ===
   const { user } = useAuth();
@@ -200,7 +199,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
 
   // FREE TIER: Contador de Ultra Expert (4 por DIA para USER) com persistência
   const MAX_ULTRA_EXPERT_RUNS = isOwner ? -1 : 4; // -1 = ilimitado
-  
+
   // Carregar contador do localStorage e verificar se é do mesmo dia
   const getStoredUsageCount = (): number => {
     try {
@@ -350,7 +349,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
 
     // FREE TIER: Verifica quota de Ultra Expert
     if (!isOwner && mode === 'ultra-expert' && !hasUltraExpertQuotaLeft) {
-      setError(`FREE TIER: Você atingiu o limite de ${MAX_ULTRA_EXPERT_RUNS} execução(ões) Ultra Expert POR DIA. O limite geral é de 4 execuções/dia (análise + ultra expert). Aguarde renovação diária.`);
+      setError(`FREE TIER: Você atingiu o limite de ${MAX_ULTRA_EXPERT_RUNS} otimizações por dia. Aguarde renovação diária (meia-noite).`);
       return;
     }
 
@@ -928,31 +927,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
             }
           </div>
 
-          {/* Onboarding Tooltip - Shows where to start */}
-          {!script?.trim() && !uploadMeta && !optimization.isRunning && !dismissOnboarding && (
-            <div className="onboarding-overlay" onClick={() => setDismissOnboarding(true)}>
-              <div className="onboarding-spotlight" onClick={(e) => e.stopPropagation()} />
-              <div className="onboarding-tooltip" onClick={(e) => e.stopPropagation()}>
-                <div className="tooltip-content">
-                  <button className="tooltip-close" onClick={() => setDismissOnboarding(true)}>
-                    ×
-                  </button>
-                  <div className="tooltip-icon">🚀</div>
-                  <h2 className="tooltip-title">Comece carregando um script Qlik</h2>
-                  <p className="tooltip-description">
-                    Use o botão <strong>"Carregar"</strong> no painel lateral esquerdo para importar o script que deseja otimizar.
-                  </p>
-                  <div className="tooltip-arrow-container">
-                    <div className="tooltip-arrow">←</div>
-                    <span className="tooltip-arrow-text">Botão "Carregar" fica aqui</span>
-                  </div>
-                  <button className="tooltip-dismiss-btn" onClick={() => setDismissOnboarding(true)}>
-                    Entendi
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+
         </main>
       </div>
 
@@ -981,7 +956,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
         <span style={{ color: '#00ff9d', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>AINEX</span>
         <span style={{ color: '#333' }}>•</span>
         <a href="https://github.com/jeanrrf" target="_blank" rel="noopener noreferrer" style={{ color: '#888', fontSize: '0.75rem', textDecoration: 'none', whiteSpace: 'nowrap' }}>GitHub</a>
-        <a href="https://api.whatsapp.com/send?phone=5548999373041" target="_blank" rel="noopener noreferrer" style={{ color: '#888', fontSize: '0.75rem', textDecoration: 'none', whiteSpace: 'nowrap' }}>WhatsApp</a>
+        <a href="https://api.whatsapp.com/send?phone=5548991937304" target="_blank" rel="noopener noreferrer" style={{ color: '#888', fontSize: '0.75rem', textDecoration: 'none', whiteSpace: 'nowrap' }}>WhatsApp</a>
       </div>
 
       {/* Modals */}
