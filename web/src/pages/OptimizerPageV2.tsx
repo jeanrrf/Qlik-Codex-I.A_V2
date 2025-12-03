@@ -476,19 +476,17 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
               <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
           </button>
-          <div className="brand-logo">
-            <div className="brand-info">
-              <span className="brand-name">SENTINNEL IA</span>
-              <span className="brand-product">Qlik Codex</span>
+          <div className="brand-logo-unified">
+            <div className="brand-logo-gradient" />
+            <div className="brand-logo-content">
+              <span className="brand-name-text">QLIK CODEX I.A</span>
+              <span className="brand-beta-tag">BETA</span>
             </div>
           </div>
         </div>
 
         <div className="header-center">
-          <div className="header-title-badge">
-            <span className="badge-dot"></span>
-            <span>QLIK CODEX I.A</span>
-          </div>
+          {/* Centro vazio - logo já está na esquerda */}
         </div>
 
         <div className="header-user">
@@ -926,7 +924,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                   </div>
                   <div className="ainex-training-note">
                     <span className="ainex-training-note-badge">AINEX ENGINE</span>
-                    <span>Modelo treinado em milhares de scripts Qlik de produ⏱️o para entregar recomenda⏱️es em n?vel PRO.</span>
+                    <span>Modelo treinado em milhares de scripts Qlik de produ??o para entregar recomenda??es em n?vel PRO.</span>
                   </div>
                 </>
               )
@@ -955,12 +953,13 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
         overflow: 'hidden',
         flexShrink: 0
       }}>
-        <span style={{ color: '#00f2ff', fontWeight: 700, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>⚡ QLIK CODEX I.A</span>
-        <span style={{ color: '#333' }}>•</span>
+        <div className="footer-logo-v2">
+          <span className="footer-name-v2">QLIK CODEX I.A</span>
+          <span className="footer-beta-v2">BETA</span>
+        </div>
+        <span style={{ color: '#444' }}>•</span>
         <span style={{ color: '#888', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>© 2025 Sentinnell IA</span>
-        <span style={{ color: '#333' }}>•</span>
-        <span style={{ color: '#00ff9d', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>AINEX</span>
-        <span style={{ color: '#333' }}>•</span>
+        <span style={{ color: '#444' }}>•</span>
         <a href="https://github.com/jeanrrf" target="_blank" rel="noopener noreferrer" style={{ color: '#888', fontSize: '0.75rem', textDecoration: 'none', whiteSpace: 'nowrap' }}>GitHub</a>
         <a href="https://api.whatsapp.com/send?phone=5548991937304" target="_blank" rel="noopener noreferrer" style={{ color: '#888', fontSize: '0.75rem', textDecoration: 'none', whiteSpace: 'nowrap' }}>WhatsApp</a>
       </div>
@@ -4901,54 +4900,141 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
           gap: 12px;
         }
 
-        .brand-icon {
+        /* Logo Oficial Unificado - Escurecimento Progressivo + BETA Verde */
+        .brand-logo-unified {
+          position: relative;
           display: flex;
           align-items: center;
-          justify-content: center;
-          width: 42px;
-          height: 42px;
-          border-radius: 11px;
-          background: linear-gradient(135deg, rgba(0, 242, 255, 0.18) 0%, rgba(0, 200, 212, 0.1) 100%);
-          border: 1px solid rgba(0, 242, 255, 0.25);
-          font-size: 1.4rem;
+          padding: 10px 14px 10px 18px;
+          border-radius: 10px;
+          overflow: hidden;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+
+        .brand-logo-gradient {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(90deg, 
+            rgba(45, 50, 60, 0.98) 0%,
+            rgba(35, 40, 50, 0.98) 25%,
+            rgba(25, 30, 40, 0.99) 50%,
+            rgba(18, 22, 30, 1) 75%,
+            rgba(12, 15, 22, 1) 100%);
+          border: 1px solid rgba(100, 116, 139, 0.25);
+          border-radius: 10px;
           box-shadow: 
-            0 4px 16px rgba(0, 242, 255, 0.2),
-            inset 0 1px 0 rgba(255, 255, 255, 0.15);
-          animation: icon-pulse 3s ease-in-out infinite;
+            0 6px 24px rgba(0, 0, 0, 0.5),
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            inset 0 -1px 0 rgba(0, 0, 0, 0.2);
         }
 
-        @keyframes icon-pulse {
-          0%, 100% { 
-            box-shadow: 0 4px 16px rgba(0, 242, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-            transform: scale(1);
-          }
-          50% { 
-            box-shadow: 0 6px 24px rgba(0, 242, 255, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-            transform: scale(1.02);
-          }
-        }
-
-        .brand-info {
+        .brand-logo-content {
+          position: relative;
+          z-index: 1;
           display: flex;
-          flex-direction: column;
-          gap: 3px;
+          align-items: center;
+          gap: 10px;
         }
 
-        .brand-name {
-          font-size: 1rem;
-          font-weight: 700;
-          letter-spacing: 0.03em;
-          color: var(--text-primary);
-          line-height: 1;
+        .brand-name-text {
+          font-size: 1.05rem;
+          font-weight: 800;
+          letter-spacing: 0.06em;
+          background: linear-gradient(180deg, 
+            #ffffff 0%, 
+            #f1f5f9 30%,
+            #cbd5e1 60%,
+            #94a3b8 100%);
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
         }
 
-        .brand-product {
+        .brand-beta-tag {
+          font-size: 0.6rem;
+          font-weight: 800;
+          letter-spacing: 0.15em;
+          padding: 4px 8px;
+          background: linear-gradient(135deg, 
+            rgba(16, 185, 129, 0.25) 0%, 
+            rgba(5, 150, 105, 0.35) 100%);
+          color: #34d399;
+          border: 1px solid rgba(16, 185, 129, 0.4);
+          border-radius: 5px;
+          text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+          box-shadow: 
+            0 0 12px rgba(16, 185, 129, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .brand-logo-unified:hover .brand-logo-gradient {
+          border-color: rgba(16, 185, 129, 0.4);
+          box-shadow: 
+            0 8px 32px rgba(0, 0, 0, 0.6),
+            0 0 20px rgba(16, 185, 129, 0.15),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .brand-logo-unified:hover .brand-name-text {
+          background: linear-gradient(180deg, 
+            #ffffff 0%, 
+            #f8fafc 40%,
+            #e2e8f0 100%);
+          -webkit-background-clip: text;
+          background-clip: text;
+        }
+
+        .brand-logo-unified:hover .brand-beta-tag {
+          background: linear-gradient(135deg, 
+            rgba(16, 185, 129, 0.35) 0%, 
+            rgba(5, 150, 105, 0.45) 100%);
+          box-shadow: 
+            0 0 18px rgba(16, 185, 129, 0.35),
+            inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+
+        /* Footer Logo V2 */
+        .footer-logo-v2 {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 10px 6px 14px;
+          background: linear-gradient(90deg, 
+            rgba(40, 45, 55, 0.95) 0%,
+            rgba(25, 30, 40, 0.98) 60%,
+            rgba(15, 18, 25, 1) 100%);
+          border: 1px solid rgba(100, 116, 139, 0.25);
+          border-radius: 8px;
+          box-shadow: 
+            0 3px 12px rgba(0, 0, 0, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        }
+
+        .footer-name-v2 {
           font-size: 0.7rem;
-          font-weight: 600;
-          color: var(--text-muted);
+          font-weight: 800;
           letter-spacing: 0.08em;
-          text-transform: uppercase;
-          opacity: 0.8;
+          background: linear-gradient(180deg, 
+            #ffffff 0%, 
+            #e2e8f0 50%,
+            #94a3b8 100%);
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+
+        .footer-beta-v2 {
+          font-size: 0.5rem;
+          font-weight: 800;
+          letter-spacing: 0.12em;
+          padding: 3px 6px;
+          background: rgba(16, 185, 129, 0.2);
+          color: #34d399;
+          border: 1px solid rgba(16, 185, 129, 0.35);
+          border-radius: 4px;
+          text-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
         }
 
         .header-center {

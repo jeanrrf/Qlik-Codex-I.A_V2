@@ -60,8 +60,8 @@ async function runUltraExpertMode(
   checkAborted(abortSignal, 'Ultra Expert mode start');
   logger.info("⚡ MODO ULTRA EXPERT - MEGA OPTIMIZER (Gemini 2.5 Flash Architecture)");
 
-  // Instantiate the Mega Optimizer
-  const optimizer = new QlikMegaOptimizer(script);
+  // Instantiate the Mega Optimizer with AbortSignal support
+  const optimizer = new QlikMegaOptimizer(script, { signal: abortSignal });
   const originalLines = script.split(/\r?\n/).length;
 
   // Run deterministic parser for metadata

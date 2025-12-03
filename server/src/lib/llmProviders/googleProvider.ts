@@ -26,7 +26,8 @@ async function generate(prompt: string, options?: ProviderCallOptions): Promise<
 
   const modelToUse = options?.model || MODEL_NAME;
 
-  // Adiciona timeout de 120s para LLMs grandes
+  // OTIMIZAÇÃO: Timeout reduzido para fail-fast (era 120s, agora 45s)
+  // Permite rotação mais rápida para próximo provider em caso de lentidão
   const response = await withTimeout(
     client.models.generateContent({
       model: modelToUse,
@@ -42,7 +43,7 @@ async function generate(prompt: string, options?: ProviderCallOptions): Promise<
         temperature: 0.1,
       }
     }),
-    120000, // 120s timeout para LLMs grandes
+    45000, // 45s timeout - fail-fast para rotação de provider
     'Google Gemini API'
   );
 

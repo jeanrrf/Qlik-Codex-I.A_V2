@@ -102,9 +102,8 @@ async function callNvidiaWithModel(
 
   logger.info("NVIDIA API: Tentando modelo", { model: modelName });
 
-  // NOTE: Removed response_format: { type: "json_object" } to allow "Thinking" models
-  // to output their chain-of-thought text without being suppressed or causing errors.
-  // We will extract the JSON manually from the response.
+  // OTIMIZAÇÃO: Timeout reduzido para fail-fast (era 120s, agora 45s)
+  // Permite rotação mais rápida para próximo provider em caso de lentidão
   const response = await withTimeout(
     fetch(endpoint, {
       method: "POST",
@@ -129,7 +128,7 @@ async function callNvidiaWithModel(
         stream: false
       })
     }),
-    120000, // 120s timeout para LLMs grandes
+    45000, // 45s timeout - fail-fast para rotação de provider
     'NVIDIA NIM API'
   );
 
