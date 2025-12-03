@@ -41,7 +41,7 @@ describe("sessionService", () => {
       expect(() => {
         saveActiveSession({
           id: testSessionId + "-undefined",
-          mode: "analysis",
+          mode: "ultra-expert",
           // script: REMOVIDO
           progressData: undefined,
           status: "running"
@@ -111,7 +111,7 @@ describe("sessionService", () => {
       saveActiveSession({
         id: testSessionId + "-list-1",
         userId: "test-user",
-        mode: "analysis",
+        mode: "ultra-expert",
         // script: REMOVIDO
         progressData: null as any,
         status: "running"
@@ -157,7 +157,7 @@ describe("sessionService", () => {
         stmt.run(
           testSessionId + "-direct",
           null,
-          "analysis",
+          "ultra-expert",
           "LOAD * FROM test;",
           null,
           null,

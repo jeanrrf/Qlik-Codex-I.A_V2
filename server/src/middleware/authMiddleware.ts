@@ -295,8 +295,7 @@ export function checkUsageLimits(req: AuthRequest, res: Response, next: NextFunc
   }
 
   if (req.body.script && limits.maxScriptLines > 0) {
-    const scriptLines = req.body.script.split(/?
-/).length;
+    const scriptLines = req.body.script.split(/\r?\n/).length;
 
     logger.debug("[FREE TIER] Verificando limite de linhas", {
       scriptLines,

@@ -98,74 +98,6 @@ interface OptimizationOptions {
 
 // IDs alinhados com optimizerService + stepTimingService
 
-const ANALYSIS_STAGES: OptimizationStage[] = [
-
-  {
-
-    id: "ana_001_main",
-
-    name: "Análise Estrutural",
-
-    status: "pending",
-
-    visible: true,
-
-    subSteps: [
-
-      { id: "ana_001_parse", name: "📖 Parse Qlik Real", description: "Extrair tabelas, campos, variáveis, joins", status: "pending" },
-
-      { id: "ana_001_antipatterns", name: "⚠️ Detecção de Anti-patterns", description: "SELECT *, Cartesian Products, Synthetic Keys", status: "pending" },
-
-      { id: "ana_001_metrics", name: "📊 Métricas de Qualidade", description: "Manutenibilidade, Complexidade, Comentários", status: "pending" }
-
-    ]
-
-  },
-
-  {
-
-    id: "ana_002_main",
-
-    name: "Análise Inteligente (IA)",
-
-    status: "pending",
-
-    visible: true,
-
-    subSteps: [
-
-      { id: "ana_002_context", name: "🔍 Preparação de Contexto", description: "Montar contexto estruturado", status: "pending" },
-
-      { id: "ana_002_llm", name: "🧠 Análise AINEX", description: "IA gera sugestões SEM modificar", status: "pending" }
-
-    ]
-
-  },
-
-  {
-
-    id: "ana_003_main",
-
-    name: "Métricas e Relatório",
-
-    status: "pending",
-
-    visible: true,
-
-    subSteps: [
-
-      { id: "ana_003_metrics_real", name: "📊 Métricas Quantitativas", description: "LOC, complexidade, anti-patterns, MI", status: "pending" },
-
-      { id: "ana_004_report_compact", name: "📝 Relatório Compacto", description: "Sumário + métricas + top issues", status: "pending" }
-
-    ]
-
-  }
-
-];
-
-
-
 // Sub-steps para modo ULTRA EXPERT (opt_*)
 const ULTRA_EXPERT_STAGES: OptimizationStage[] = [
   {
@@ -219,7 +151,7 @@ const ULTRA_EXPERT_STAGES: OptimizationStage[] = [
 
 // Default para backward compatibility
 
-const INITIAL_STAGES: OptimizationStage[] = ANALYSIS_STAGES;
+const INITIAL_STAGES: OptimizationStage[] = ULTRA_EXPERT_STAGES;
 
 
 

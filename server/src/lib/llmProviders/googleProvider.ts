@@ -19,15 +19,17 @@ if (config.geminiApiKey) {
   });
 }
 
-async function generate(prompt: string): Promise<ProviderResult> {
+async function generate(prompt: string, options?: ProviderCallOptions): Promise<ProviderResult> {
   if (!client) {
     throw new Error("Google Gemini client not configured");
   }
 
+  const modelToUse = options?.model || MODEL_NAME;
+
   // Adiciona timeout de 120s para LLMs grandes
   const response = await withTimeout(
     client.models.generateContent({
-      model: MODEL_NAME,
+      model: modelToUse,
       contents: [
         {
           role: "user",
@@ -52,7 +54,7 @@ async function generate(prompt: string): Promise<ProviderResult> {
     text: response.text,
     provider: "google",
     metadata: {
-      model: MODEL_NAME
+      model: modelToUse
     }
   };
 }
@@ -60,9 +62,9 @@ async function generate(prompt: string): Promise<ProviderResult> {
 export const googleProvider: LLMProvider = {
   name: "google",
   isAvailable: () => Boolean(client),
-  generateStructuredJson: async (prompt: string, _options?: ProviderCallOptions) => {
+  generateStructuredJson: async (prompt: string, options?: ProviderCallOptions) => {
     try {
-      return await generate(prompt);
+      return await generate(prompt, options);
     } catch (error) {
       logger.error("Google LLM provider failed", {
         error: error instanceof Error ? error.message : String(error)

@@ -386,23 +386,6 @@ function generateRecommendations(
     });
   }
 
-  // Sugestão de modo
-  if (mode === 'analysis' && changes.length < 3) {
-    recommendations.push({
-      priority: 'low',
-      category: 'Otimização',
-      title: 'Considerar Modo Agressivo',
-      description: `Apenas ${changes.length} mudanças no modo conservador. Para otimizações mais profundas, execute novamente em modo agressivo.`,
-      effort: 'minimal',
-      impact: 'medium',
-      actionItems: [
-        'Re-executar análise em modo agressivo',
-        'Comparar diferenças entre os modos',
-        'Avaliar se riscos adicionais são aceitáveis'
-      ]
-    });
-  }
-
   // Aplicação segura
   if (safeToApply && breakingRisk === 'none') {
     recommendations.push({

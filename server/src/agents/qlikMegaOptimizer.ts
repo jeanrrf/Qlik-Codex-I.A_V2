@@ -25,7 +25,7 @@ export class QlikMegaOptimizer {
     this.script = script;
   }
 
-  private async executeTask(taskName: string, promptTemplate: string, maxRetries = 2): Promise<any> {
+  private async executeTask(taskName: string, promptTemplate: string): Promise<any> {
     const startTime = Date.now();
     logger.info(`[MegaOptimizer] Starting task: ${taskName}`);
 
@@ -53,28 +53,35 @@ ${this.history.join("\n\n")}
 ${promptTemplate}
     `;
 
+    // Fallback Strategy: Gemini 2.5 -> Gemini 2.0 -> Nvidia
+    const strategies = [
+      { provider: "google", model: "gemini-2.5-flash", name: "Gemini 2.5 Flash" },
+      { provider: "google", model: "gemini-2.0-flash-exp", name: "Gemini 2.0 Flash" },
+      { provider: "nvidia", model: undefined, name: "Nvidia Nemotron" }
+    ];
+
     let lastError: any;
 
-    for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
+    for (const strategy of strategies) {
       try {
-        if (attempt > 1) {
-          logger.warn(`[MegaOptimizer] Retrying task ${taskName} (Attempt ${attempt}/${maxRetries + 1})`);
-          sseEmitter.sendToCurrent({
+        logger.info(`[MegaOptimizer] Attempting task ${taskName} with ${strategy.name}`);
+        
+        // Notify UI of model switch if not the first attempt
+        if (strategy !== strategies[0]) {
+           sseEmitter.sendToCurrent({
             type: "substep",
             substep: {
               id: taskName,
-              name: `Retrying ${taskName} (${attempt}/${maxRetries + 1})...`,
+              name: `Fallback to ${strategy.name}...`,
               status: "running",
               startTime: new Date().toISOString()
             }
           });
         }
 
-        // Use Gemini 1.5 Pro (or 2.5 Flash when available) via the 'google' provider
-        // We request JSON output.
         const result = await generateStructuredJson(fullPrompt, {
-          provider: "google",
-          model: "gemini-1.5-pro-latest" // Using the best available model for large context
+          provider: strategy.provider as any,
+          model: strategy.model
         });
 
         const responseText = result.text;
@@ -82,18 +89,12 @@ ${promptTemplate}
         // Try to parse JSON
         let parsedResult: any;
         try {
-          // Sometimes LLMs wrap JSON in markdown code blocks
           const jsonMatch = responseText.match(/\{[\s\S]*\}/);
           const jsonStr = jsonMatch ? jsonMatch[0] : responseText;
           parsedResult = JSON.parse(jsonStr);
         } catch (e) {
-          logger.warn(`[MegaOptimizer] Failed to parse JSON for ${taskName} on attempt ${attempt}`, { error: e });
-          if (attempt === maxRetries + 1) {
-            throw new Error(`Failed to parse JSON response from LLM after ${attempt} attempts.`);
-          }
-          // Wait a bit before retry
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          continue; // Try again
+          logger.warn(`[MegaOptimizer] Failed to parse JSON from ${strategy.name}`, { error: e });
+          throw new Error(`JSON Parse Error from ${strategy.name}`);
         }
 
         // Success!
@@ -103,7 +104,7 @@ ${promptTemplate}
         this.history.push(`USER REQUEST: ${promptTemplate}`);
         this.history.push(`AI RESPONSE: ${responseText}`);
 
-        logger.info(`[MegaOptimizer] Completed task: ${taskName} in ${duration}ms`);
+        logger.info(`[MegaOptimizer] Completed task: ${taskName} using ${strategy.name} in ${duration}ms`);
 
         sseEmitter.sendToCurrent({
           type: "substep",
@@ -120,26 +121,24 @@ ${promptTemplate}
 
       } catch (error) {
         lastError = error;
-        logger.error(`[MegaOptimizer] Error in task ${taskName} attempt ${attempt}`, { error });
-        if (attempt === maxRetries + 1) break;
-        // Wait a bit before retry
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        logger.warn(`[MegaOptimizer] Strategy ${strategy.name} failed for ${taskName}`, { error });
+        // Continue to next strategy
       }
     }
 
-    // If we got here, all retries failed
+    // If we got here, all strategies failed
     sseEmitter.sendToCurrent({
       type: "substep",
       substep: {
         id: taskName,
         name: `Failed ${taskName}`,
         status: "error",
-        error: lastError?.message || "Unknown error",
+        error: lastError?.message || "All models failed",
         endTime: new Date().toISOString()
       }
     });
 
-    throw lastError || new Error(`Task ${taskName} failed after retries`);
+    throw lastError || new Error(`Task ${taskName} failed after all fallbacks`);
   }
 
   public async run(): Promise<MegaOptimizerResult> {
