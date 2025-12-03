@@ -6,54 +6,53 @@
 - Never repeat user wording, never ship speculative or unsafe changes.
 
 ## Architecture Snapshot
-- Monorepo: `server/` (TypeScript Express) + `web/` (React + Vite). Express serves `web/dist` SPA at runtime; `/api/*` hosts JSON/SSE endpoints.
-- Core domain: AINEX multi-agent optimizer (files under `server/src/agents` + `services/optimizerService.ts`) orchestrates Gemini/NVIDIA LLMs through `providerOrchestrator.ts` with `neverRetryProvider=true` and max 4 attempts.
-- SSE streaming: `sseEmitter.ts` sends `script_analysis`, chunk progress, etc.; frontend consumes in `web/src/hooks/useOptimizationProgress.ts` and mirrors every new event type.
+- **Monorepo**: `server/` (TypeScript Express) + `web/` (React + Vite). Express serves `web/dist` SPA at runtime; `/api/*` hosts JSON/SSE endpoints.
+- **Core Domain**: AINEX multi-agent optimizer (`server/src/agents/qlikMegaOptimizer.ts`) orchestrates Gemini/NVIDIA LLMs.
+- **Orchestration**: `providerOrchestrator.ts` manages LLM calls with `neverRetryProvider=true` and max 4 attempts.
+- **Streaming**: `sseEmitter.ts` sends events (`script_analysis`, `substep`, `truncation_warning`); frontend consumes in `web/src/hooks/useOptimizationProgress.ts`.
 
 ## Workflows That Matter
-- Dev servers: `npm run start:dev` (root) or `cd server && npm run dev`, `cd web && npm run dev`.
-- Production build: `build-all.bat` (cleans + builds server/web). Express needs fresh `web/dist` before serving.
-- Tests (server): `npm test` via Vitest; mock LLM providers with `vi.mock()` and fixtures in `server/test/fixtures`.
-- Infra env: keys live in `server/.env` (see `.env.example`). NVIDIA provider hardcodes `nvidia/llama-3.3-nemotron-super-49b-v1.5`; don’t change name casually.
+- **Dev Servers**: `npm run start:dev` (root) or `cd server && npm run dev`, `cd web && npm run dev`.
+- **Production Build**: `build-all.bat` (cleans + builds server/web). Express needs fresh `web/dist` before serving.
+- **Tests**: `npm test` (server) via Vitest. Mock LLM providers with `vi.mock()` and fixtures in `server/test/fixtures`.
+- **Database**: SQLite (`server/data/qlik-codex.db`). Use `better-sqlite3`. Migrations are manual/idempotent in `lib/sqliteDb.ts`.
 
 ## Domain Rules & Patterns
-- Modes: `analysis` never mutates scripts (return original), `ultra-expert` can rewrite. Enforce via `optimizerService` + response schemas (`validators/llmResponseSchemas.ts`).
-- Validation: ALWAYS run `qlikValidator.validateQlikScript()` before persisting/streaming results; it blocks SQL DDL/DML, improper set analysis, hallucinated SQL functions.
-- Formatter tool (`routes/tools.routes.ts` + `services/qlikScriptFormatter.ts`) is LLM-only—no deterministic formatting logic allowed. Streaming variant must emit the same SSE events documented in `server/docs/EXTREME_MODE_IMPLEMENTATION.md`.
-- Auth: `authMiddleware.ts` chains `optionalAuth → requireAuth → checkUsageLimits`. OWNER role bypasses quotas; USER capped at 10 runs/day + 1 MB scripts.
-- Database: `lib/sqliteDb.ts` creates tables via raw SQL; keep migrations idempotent and document new tables inside `server/DATABASE.md`.
+- **Modes**:
+    - `ultra-expert`: Full rewrite allowed.
+    - `analysis`: Runs full pipeline but **reverts script changes** before returning (returns original script + analysis report).
+- **Localization**: **ALL** user-facing text (reports, prompts, UI) must be in **Portuguese (PT-BR)**. Code comments/vars in English.
+- **Validation**: ALWAYS run `qlikValidator.validateQlikScript()` before persisting/streaming. Blocks SQL DDL/DML and dangerous patterns.
+- **Formatter**: `qlikScriptFormatter.ts` is LLM-only. No regex/deterministic formatting.
+- **Auth & Quotas**: `authMiddleware.ts` chains `optionalAuth → requireAuth → checkUsageLimits`.
+    - **Free Tier**: Enforces `lineLimit` via "Smart Truncation" (cuts at logical boundaries).
+    - **Owner**: Bypasses all limits.
 
 ## Feature & Bug Workflow
-- New backend capabilities follow pattern: route (`routes/*.ts`) → validator (Zod) → service in `services/` → agent/lib updates. Register SSE events + step timing IDs when relevant.
-- Frontend UI additions respect glassmorphism theme (`web/DESIGN_SYSTEM.md`) and usually pair `.tsx` with co-located CSS. Any data surfaced from new SSE events must be handled in `useOptimizationProgress` and surfaced via dedicated components.
-- Tests: prefer Vitest unit tests around services/validators; mock LLM clients to avoid network. Include at least one failing-path test whenever orchestration logic changes (timeouts, provider rotation, schema fallback).
+- **Backend**: Route (`routes/*.ts`) → Zod Validator → Service (`services/*`) → Agent/Lib.
+- **Frontend**: Glassmorphism theme (`web/DESIGN_SYSTEM.md`). Pair `.tsx` with co-located CSS.
+- **SSE Updates**: When adding events:
+    1. Update `sseEmitter.ts` (server).
+    2. Update `useOptimizationProgress.ts` (web).
+    3. Document in `server/docs/EXTREME_MODE_IMPLEMENTATION.md`.
 
 ## Common Pitfalls to Avoid
-- Forgetting to update both emitter and consumer when introducing new SSE event names.
-- Re-trying the same LLM provider—`providerOrchestrator` forbids it; respect `neverRetryProvider`.
-- Serving frontend without rebuilding `web/dist`; Express will 404 SPA routes.
-- Skipping Portuguese for docs/UX copy (docs PT-BR, code/comments EN).
-- Introducing fake progress indicators (absolutely prohibited) or bypassing `stepTimingService` when adding optimizer stages.
-
+- **React Hooks**: Watch out for conditional hook execution in complex viewers (e.g., `ConsultancyDocumentViewer`). Always declare hooks at top level.
+- **Syntax Highlighting**: `qlikSyntaxHighlighter.ts` must **strip existing HTML** before re-highlighting to avoid nested/broken tags (`<span class=...`).
+- **Prompt Language**: Ensure `megaPrompts.ts` and other agent prompts are in **PT-BR**.
+- **Provider Retry**: Never retry the same LLM provider immediately (`providerOrchestrator` handles rotation).
+- **Build Sync**: Serving frontend without rebuilding `web/dist` causes 404s.
 
 ## Agent Coding Guidelines
-- Modes: enforce `analysis` (no mutation; return original) vs `ultra-expert` (rewrite allowed) via `optimizerService` + LLM schemas.
-- Validation: always run `qlikValidator.validateQlikScript()` before persisting or streaming any output.
-- Providers: use `providerOrchestrator` with `neverRetryProvider=true` and max 4 attempts; never retry the same provider.
-- SSE: emit only documented events (script_analysis, chunk_progress, step_started, step_done, error). If adding new events, update both `sseEmitter.ts` and `web/src/hooks/useOptimizationProgress.ts` and document them in `server/docs/EXTREME_MODE_IMPLEMENTATION.md`.
-- Timing: register step timing with `stepTimingService`; no fake progress.
-- Auth & quotas: middleware order `optionalAuth → requireAuth → checkUsageLimits`; OWNER bypasses; USER has 10 runs/day and 1 MB scripts. Fail fast with clear error + remaining quota in the message.
-- Abort/cancel: accept and propagate `AbortSignal` across services/agents; cancel provider requests and close SSE on abort.
-- Backend pattern: route (`routes/*.ts`) → Zod validator → service (`services/*`) → agents/lib. Add Vitest unit tests; mock LLM providers; include at least one failing-path (timeout/provider rotation/schema fallback).
-- Formatter tool: keep LLM-only; do not add deterministic formatting logic.
-- Frontend: follow `web/DESIGN_SYSTEM.md`; pair `.tsx` with local CSS; mirror any new SSE events in dedicated UI components.
+- **Abort/Cancel**: Propagate `AbortSignal` everywhere. Clean up resources in `finally`.
+- **Timing**: Register step timing with `stepTimingService`. No fake progress bars.
+- **Error Handling**: Fail fast with clear errors. Return remaining quota info for 429s.
+- **Testing**: Include at least one failing-path test (timeout/provider rotation) for new logic.
 
 ### Quick response templates
-- Bugfix: Causa → Correção → Patch → Teste.
-- Feature: Análise → Plano → Código → Notas.
-- Only code: single code block, zero prose.
+- **Bugfix**: Causa → Correção → Patch → Teste.
+- **Feature**: Análise → Plano → Código → Notas.
+- **Only code**: Single code block, zero prose.
 
 ### Abort/timeout defaults
 - Prefer per-stage timeouts (60–120s). Always pass `AbortSignal` to downstream calls and perform cleanup in `finally`.
-
-Please review and let me know if any section needs clarification or additional depth.

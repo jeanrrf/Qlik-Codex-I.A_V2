@@ -232,6 +232,15 @@ export function tokensToHtml(tokens: Token[]): string {
 }
 
 export function highlightQlikCode(code: string): string {
-  const tokens = tokenizeQlikScript(code);
+  // Strip existing HTML tags and decode entities to prevent double-highlighting
+  const cleanCode = code
+    .replace(/<[^>]*>/g, '')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'");
+
+  const tokens = tokenizeQlikScript(cleanCode);
   return tokensToHtml(tokens);
 }

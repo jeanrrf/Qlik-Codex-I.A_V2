@@ -1,0 +1,234 @@
+TRACE==========================================================;
+TRACE                  NOTA FISCAL DE SAÍDA;
+TRACE----------------------------------------------------------;
+LET vAno = year(Today());
+
+
+    TRACE === Iniciando script de particionamento anual - $(vAno) (apenas anos completos) ===;
+    //  separamos as etapas em partes, para nao sobrecarregar a aplicação devido ao grande volume de Concatenates.
+    //  Etapa de Full Load / Para trazer os dados para Memoria de todos os dias.
+
+    NF_SAIDA_CAB_1t:
+    LOAD  codEmp_u2 
+         ,codFil_u2 
+         ,codSnf_u2 
+         ,numNfv_u2 
+         ,datEmi    
+         ,codCli    
+         ,sitNfv    
+         ,vlrliq    
+         ,pesLiq_u0 
+         ,qtdItp    
+         ,qtdIts    
+         ,codRep_u0 
+         ,codMoe    
+         ,horEmi    
+         ,cgcRde    
+         ,obsNfv  
+         ,__KEY_notaFiscal
+FROM [lib://Dados - QVD e Arquivos:DataFiles/Integrações/NF-Saida/$(vAno)*F001_notaFiscal.qvd](qvd)
+    	WHERE sitNfv = 2 and year(DataEmi) = $(vAno);
+       
+    NF_SAIDA_CAB_2t:
+    NoConcatenate
+    LOAD
+        codEmp_u2 as NF_ID_Empresa,
+        codFil_u2 as NF_ID_Filial,
+        codSnf_u2 as NF_Serie,
+        numNfv_u2 as NF_Numero,
+        datEmi    as NF_DataEmissao,
+        codCli    as Cliente_ID,
+        sitNfv    as NF_Situacao,
+        vlrliq    as NF_ValorLiquidoTotal,
+        pesLiq_u0 as NF_PesoLiquidoTotal,
+        qtdItp    as NF_QtdeItensProduto,
+        qtdIts    as NF_QtdeItensServico,
+        codRep_u0 as Representante_ID,
+        codMoe    as Moeda_ID,
+        horEmi    as NF_HoraEmissao,
+        cgcRde    as Cliente_CNPJ,
+        obsNfv    as NF_Observacao,
+        __KEY_notaFiscal
+    RESIDENT NF_SAIDA_CAB_1t;
+    	DROP TABLE NF_SAIDA_CAB_1t;
+           
+
+    STORE * FROM NF_SAIDA_CAB_2t INTO [lib://Dados - Transformações:DataFiles/NF_Saida_Anual/NF_SAIDA_CAB_$(vAno).qvd](qvd);
+    	DROP TABLE NF_SAIDA_CAB_2t;
+
+
+TRACE === Iniciando script de particionamento anual de ITENS - $(vAno) (apenas anos completos) ===;
+    // Nos Items separamos as empresas, pois cada unidade usa cfops distintos, o que pode gerar conflito caso as duas tenham operações iguais
+
+    NF_SAIDA_ITEMS_1t:
+    LOAD
+        __KEY_notaFiscal,
+        seqNfi   ,
+        codPro   ,
+        qtdFat   ,
+        preUni   ,
+        vlrLiq   ,
+        pesLiq   ,
+        tnsPro   ,
+        cplIpv   ,
+        codFam
+    FROM [lib://Dados - QVD e Arquivos:DataFiles/Integrações/NF-Saida/$(vAno)*E001F001_produto.qvd](qvd)
+    	WHERE 
+        WILDMATCH(tnsPro,'5101','6101','5101D','6101D') 
+        and year(DataEmi) = $(vAno) 
+        ;
+        
+        
+//     CONCATENATE(NF_SAIDA_ITEMS_1t)
+//     LOAD
+//         __KEY_notaFiscal,
+//         seqNfi   ,
+//         codPro   ,
+//         qtdFat   ,
+//         preUni   ,
+//         vlrLiq    as vlrLiq_Devolucao,
+//         pesLiq   ,
+//         tnsPro   ,
+//         cplIpv   ,
+//         codFam
+//     FROM [lib://Dados - QVD e Arquivos:DataFiles/Integrações/NF-Saida/$(vAno)*E001F001_produto.qvd](qvd)
+//     	WHERE 
+//         WILDMATCH(tnsPro,'1201','2201','1201D','2201D') 
+//         and year(DataEmi) = $(vAno) 
+//         ;
+                     
+    CONCATENATE(NF_SAIDA_ITEMS_1t)
+    LOAD
+        __KEY_notaFiscal,
+        seqNfi   ,
+        codPro   ,
+        qtdFat   ,
+        preUni   ,
+        vlrLiq   ,
+        pesLiq   ,
+        tnsPro   ,
+        cplIpv   ,
+        codFam 
+    FROM [lib://Dados - QVD e Arquivos:DataFiles/Integrações/NF-Saida/$(vAno)*E002F001_produto.qvd](qvd)
+    	WHERE 
+        WILDMATCH(tnsPro,'5102','6102','5102D','6102D') 
+        and year(DataEmi) = $(vAno) 
+        ;
+        
+//     CONCATENATE(NF_SAIDA_ITEMS_1t)
+//     LOAD
+//         __KEY_notaFiscal,
+//         seqNfi   ,
+//         codPro   ,
+//         qtdFat   ,
+//         preUni   ,
+//         vlrLiq    as vlrLiq_Devolucao,
+//         pesLiq   ,
+//         tnsPro   ,
+//         cplIpv   ,
+//         codFam
+//     FROM [lib://Dados - QVD e Arquivos:DataFiles/Integrações/NF-Saida/$(vAno)*E002F001_produto.qvd](qvd)
+//     	WHERE 
+//         WILDMATCH(tnsPro,'1201','2201','1201D','2201D') 
+//         and year(DataEmi) = $(vAno) 
+//         ;
+        
+                     
+    NF_SAIDA_ITEMS_2t:
+    NOCONCATENATE
+    LOAD
+        __KEY_notaFiscal,
+        seqNfi             AS Item_Sequencia,
+        codPro             AS Item_ID_Produto,
+        qtdFat             AS Item_QuantidadeVendida,
+        preUni             AS Item_PrecoUnitario,
+        vlrLiq             AS Item_ValorLiquido,
+        pesLiq             AS Item_PesoLiquido,
+        tnsPro             AS Item_Transação_Produtos,
+        cplIpv             AS Item_Complemento_Descricao_Produto,
+        codFam             AS Item_Codigo_familia_Produto
+    RESIDENT NF_SAIDA_ITEMS_1t;
+    	DROP TABLE NF_SAIDA_ITEMS_1t;
+   
+    STORE * FROM NF_SAIDA_ITEMS_2t INTO [lib://Dados - Transformações:DataFiles/NF_Saida_Anual/NF_SAIDA_ITENS_$(vAno).qvd](qvd);
+    	DROP TABLE NF_SAIDA_ITEMS_2t;
+
+
+TRACE === Iniciando script de particionamento anual de ALL NFS - $(vAno) (apenas anos completos) ===;
+	
+    NF_SAIDA_CAB_ALL:  
+    LOAD   
+    	NF_ID_Empresa,
+		NF_ID_Filial,
+		NF_Serie,
+		NF_Numero,
+		NF_DataEmissao,
+		Cliente_ID,
+		NF_Situacao,
+		NF_ValorLiquidoTotal,
+		NF_PesoLiquidoTotal,
+		NF_QtdeItensProduto,
+		NF_QtdeItensServico,
+		Representante_ID,
+		Moeda_ID,
+		NF_HoraEmissao,
+		Cliente_CNPJ,
+		NF_Observacao,
+        __KEY_notaFiscal
+    FROM [lib://Dados - Transformações:DataFiles/NF_Saida_Anual/NF_SAIDA_CAB*.qvd](qvd);
+
+	NF_SAIDA_ITEM_ALL: 
+    LOAD 
+    	__KEY_notaFiscal,
+        Item_Sequencia,
+	    Item_ID_Produto,
+	    Item_QuantidadeVendida,
+	    Item_PrecoUnitario,
+	    Item_ValorLiquido,
+	    Item_PesoLiquido,
+	    Item_Transação_Produtos,
+	    Item_Complemento_Descricao_Produto,
+	    Item_Codigo_familia_Produto
+    FROM [lib://Dados - Transformações:DataFiles/NF_Saida_Anual/NF_SAIDA_ITENS*.qvd](qvd);
+    
+	LEFT JOIN (NF_SAIDA_CAB_ALL) LOAD * RESIDENT NF_SAIDA_ITEM_ALL;	
+    
+    	DROP TABLE NF_SAIDA_ITEM_ALL;
+        
+        
+// --- 2.3 Junção Final: NotaFiscal_Saida (Cabeçalho + Itens consolidados) ---
+NotaFiscal_Saida:
+NoConcatenate
+LOAD
+    NF_ID_Empresa,
+    Cliente_ID,
+    Representante_ID,
+    NF_ID_Filial,
+    NF_DataEmissao,
+    Item_Codigo_familia_Produto,
+    NF_Numero,
+    NF_Serie,
+    Num(Replace(NF_ValorLiquidoTotal, '.', ',')) as NF_ValorLiquidoTotal,
+    Num(Replace(NF_PesoLiquidoTotal, '.', ','))  as NF_PesoLiquidoTotal,
+    Num(Replace(NF_QtdeItensProduto, '.', ','))  as NF_QtdeItensProduto,
+    Num(Replace(Item_QuantidadeVendida, '.', ',')) as Item_QuantidadeVendida,
+    Num(Replace(NF_QtdeItensServico, '.', ','))    as NF_QtdeItensServico, 
+    NF_HoraEmissao,
+    NF_Observacao,
+    Item_Sequencia,
+    Item_ID_Produto,
+    Num(Replace(Item_PrecoUnitario, '.', ','))            as Item_PrecoUnitario, 
+    Num(Replace(Item_ValorLiquido, '.', ','))             as Item_ValorLiquido, 
+    Num(Replace(Item_PesoLiquido, '.', ','))              as Item_PesoLiquido,
+    Item_Transação_Produtos,
+    Item_Complemento_Descricao_Produto
+resident NF_SAIDA_CAB_ALL;
+Drop Table NF_SAIDA_CAB_ALL;
+
+// --- 2.4 Armazena o QVD Final Consolidado ---
+STORE * FROM NotaFiscal_Saida INTO [lib://Dados - Transformações:DataFiles/NotaFiscal_Saida.qvd](qvd);
+
+// --- 2.5 Limpa as tabelas intermediárias da Fase 2 ---
+DROP TABLES  NotaFiscal_Saida;
+
+TRACE----------------------------------------------------------;

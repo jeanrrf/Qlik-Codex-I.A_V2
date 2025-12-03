@@ -25,7 +25,8 @@ export class QlikMegaOptimizer {
   private taskTimes: Record<string, number> = {};
 
   constructor(script: string) {
-    this.script = script;
+    // Sanitize input script to remove any HTML tags if the user pasted formatted code
+    this.script = script ? script.replace(/<[^>]*>/g, '') : script;
   }
 
   private async executeTask(taskName: string, promptTemplate: string, schema?: ZodSchema): Promise<any> {
@@ -197,6 +198,12 @@ ${promptTemplate}
 
     // 3. Code Generation
     const codeGen = await this.executeTask("CODE_GEN", TASK_PROMPTS.CODE_GEN, CodeGenSchema);
+
+    // Sanitize optimizedScript to remove any HTML tags if the LLM hallucinated them
+    // This prevents double-escaping issues in the frontend report
+    if (codeGen.optimizedScript) {
+      codeGen.optimizedScript = codeGen.optimizedScript.replace(/<[^>]*>/g, '');
+    }
 
     // 4. Final Delivery (Validation + Docs + Report)
     const delivery = await this.executeTask("FINAL_DELIVERY", TASK_PROMPTS.FINAL_DELIVERY, FinalDeliverySchema);

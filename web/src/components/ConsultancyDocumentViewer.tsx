@@ -85,6 +85,49 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
   document: doc,
   onClose
 }) => {
+  // Abas inteligentes - só mostrar se tiver conteúdo relevante
+  const availableTabs = useMemo(() => {
+    const tabs: { id: TabId; label: string; icon: string }[] = [
+      { id: 'summary', label: 'Resumo', icon: '[R]' }
+    ];
+
+    // Discoveries: só se tiver mudanças ou descobertas relevantes
+    const hasDiscoveries = (doc.codeComparison?.markers?.length || 0) > 0 ||
+      (doc.warnings?.length || 0) > 0 ||
+      (doc.executiveSummary?.criticalAlerts?.length || 0) > 0;
+    if (hasDiscoveries) {
+      tabs.push({ id: 'discoveries', label: 'Descobertas', icon: '[D]' });
+    }
+
+    // Gains: só se tiver ganhos reais (não placeholders)
+    const hasRealGains = (doc.qualitativeGains?.length || 0) > 0 &&
+      !doc.qualitativeGains[0]?.description.includes('já seguia boas práticas');
+    if (hasRealGains) {
+      tabs.push({ id: 'gains', label: 'Ganhos', icon: '[G]' });
+    }
+
+    // Timeline: só para modo ultra-expert ou se tiver timeline real
+    const hasTimeline = (doc.timeline?.length || 0) > 2; // Mais de 2 entradas = timeline relevante
+    if (hasTimeline) {
+      tabs.push({ id: 'timeline', label: 'Timeline', icon: '[T]' });
+    }
+
+    // Code: só se houver comparação de código
+    const hasCodeChanges = (doc.codeComparison?.diffStats?.linesAdded || 0) > 0 ||
+      (doc.codeComparison?.diffStats?.linesRemoved || 0) > 0 ||
+      (doc.codeComparison?.diffStats?.linesModified || 0) > 0;
+    if (hasCodeChanges) {
+      tabs.push({ id: 'code', label: 'Código', icon: '[C]' });
+    }
+
+    // Actions: sempre mostrar se houver recomendações
+    if ((doc.recommendations?.length || 0) > 0) {
+      tabs.push({ id: 'actions', label: 'Plano de Ação', icon: '[A]' });
+    }
+
+    return tabs;
+  }, [doc]);
+
   const [activeTab, setActiveTab] = useState<TabId>('summary');
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['keyFindings']));
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
@@ -208,48 +251,7 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
     excellent: '#00ff9d'
   };
 
-  // Abas inteligentes - só mostrar se tiver conteúdo relevante
-  const availableTabs = useMemo(() => {
-    const tabs: { id: TabId; label: string; icon: string }[] = [
-      { id: 'summary', label: 'Resumo', icon: '[R]' }
-    ];
 
-    // Discoveries: só se tiver mudanças ou descobertas relevantes
-    const hasDiscoveries = doc.codeComparison.markers.length > 0 ||
-      doc.warnings.length > 0 ||
-      doc.executiveSummary.criticalAlerts.length > 0;
-    if (hasDiscoveries) {
-      tabs.push({ id: 'discoveries', label: 'Descobertas', icon: '[D]' });
-    }
-
-    // Gains: só se tiver ganhos reais (não placeholders)
-    const hasRealGains = doc.qualitativeGains.length > 0 &&
-      !doc.qualitativeGains[0]?.description.includes('já seguia boas práticas');
-    if (hasRealGains) {
-      tabs.push({ id: 'gains', label: 'Ganhos', icon: '[G]' });
-    }
-
-    // Timeline: só para modo ultra-expert ou se tiver timeline real
-    const hasTimeline = doc.timeline.length > 2; // Mais de 2 entradas = timeline relevante
-    if (hasTimeline) {
-      tabs.push({ id: 'timeline', label: 'Timeline', icon: '[T]' });
-    }
-
-    // Code: só se houver comparação de código
-    const hasCodeChanges = doc.codeComparison.diffStats.linesAdded > 0 ||
-      doc.codeComparison.diffStats.linesRemoved > 0 ||
-      doc.codeComparison.diffStats.linesModified > 0;
-    if (hasCodeChanges) {
-      tabs.push({ id: 'code', label: 'Codigo', icon: '[C]' });
-    }
-
-    // Actions: sempre mostrar se houver recomendações
-    if (doc.recommendations.length > 0) {
-      tabs.push({ id: 'actions', label: 'Plano de Acao', icon: '[A]' });
-    }
-
-    return tabs;
-  }, [doc]);
 
   const actionLabels: Record<string, { text: string; color: string }> = {
     apply: { text: 'Aplicar', color: '#00ff9d' },
@@ -276,17 +278,17 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
   }, [doc.tips, doc.recommendations]);
 
   const originalLines = useMemo(() => {
-    return doc.codeComparison.originalCode.split(/\r?\n/);
-  }, [doc.codeComparison.originalCode]);
+    return (doc.codeComparison?.originalCode || '').split(/\r?\n/);
+  }, [doc.codeComparison]);
 
   const optimizedLines = useMemo(() => {
-    return doc.codeComparison.optimizedCode.split(/\r?\n/);
-  }, [doc.codeComparison.optimizedCode]);
+    return (doc.codeComparison?.optimizedCode || '').split(/\r?\n/);
+  }, [doc.codeComparison]);
 
   const originalHighlights = useMemo(() => {
     const allowed = new Set(['removed', 'modified', 'warning']);
     const map = new Map<number, string>();
-    doc.codeComparison.markers.forEach(marker => {
+    (doc.codeComparison?.markers || []).forEach(marker => {
       if (!allowed.has(marker.type)) {
         return;
       }
@@ -295,12 +297,12 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
       }
     });
     return map;
-  }, [doc.codeComparison.markers]);
+  }, [doc.codeComparison]);
 
   const optimizedHighlights = useMemo(() => {
     const allowed = new Set(['added', 'modified', 'improvement', 'warning']);
     const map = new Map<number, string>();
-    doc.codeComparison.markers.forEach(marker => {
+    (doc.codeComparison?.markers || []).forEach(marker => {
       if (!allowed.has(marker.type)) {
         return;
       }
@@ -309,7 +311,7 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
       }
     });
     return map;
-  }, [doc.codeComparison.markers]);
+  }, [doc.codeComparison]);
 
   const renderCodeLines = (
     lines: string[],
@@ -350,151 +352,155 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
   };
 
   // Render Summary Tab
-  const renderSummaryTab = () => (
-    <div className="cd-tab-content">
-      {/* Executive Summary Header */}
-      <div className="cd-exec-header">
-        <div className="cd-exec-title-row">
-          <h2>{doc.executiveSummary.title}</h2>
-          <div
-            className="cd-action-badge"
-            style={{
-              backgroundColor: `${actionLabels[doc.executiveSummary.recommendedAction].color}20`,
-              borderColor: actionLabels[doc.executiveSummary.recommendedAction].color,
-              color: actionLabels[doc.executiveSummary.recommendedAction].color
-            }}
-          >
-            {actionLabels[doc.executiveSummary.recommendedAction].text}
-          </div>
-        </div>
-        <div className="cd-exec-meta">
-          <span>📅 {formatDate(doc.executiveSummary.date)}</span>
-          <span>🤖 {doc.executiveSummary.analyst}</span>
-          <span>⏱️ {formatDuration(doc.processingTimeMs)}</span>
-        </div>
-      </div>
+  const renderSummaryTab = () => {
+    if (!doc.executiveSummary) return <div className="cd-tab-content">Dados do sumário indisponíveis</div>;
 
-      {/* Health & Risk Indicators */}
-      <div className="cd-indicators-row">
-        <div className="cd-indicator-card">
-          <span className="cd-indicator-label">Saúde Geral</span>
-          <div
-            className="cd-indicator-value"
-            style={{ color: healthColors[doc.executiveSummary.overallHealth] }}
-          >
-            {doc.executiveSummary.overallHealth.toUpperCase()}
-          </div>
-          <div className="cd-indicator-bar">
+    return (
+      <div className="cd-tab-content">
+        {/* Executive Summary Header */}
+        <div className="cd-exec-header">
+          <div className="cd-exec-title-row">
+            <h2>{doc.executiveSummary.title}</h2>
             <div
-              className="cd-indicator-bar-fill"
+              className="cd-action-badge"
               style={{
-                width: `${(['critical', 'poor', 'fair', 'good', 'excellent'].indexOf(doc.executiveSummary.overallHealth) + 1) * 20}%`,
-                backgroundColor: healthColors[doc.executiveSummary.overallHealth]
+                backgroundColor: `${actionLabels[doc.executiveSummary.recommendedAction].color}20`,
+                borderColor: actionLabels[doc.executiveSummary.recommendedAction].color,
+                color: actionLabels[doc.executiveSummary.recommendedAction].color
               }}
-            />
+            >
+              {actionLabels[doc.executiveSummary.recommendedAction].text}
+            </div>
+          </div>
+          <div className="cd-exec-meta">
+            <span>📅 {formatDate(doc.executiveSummary.date)}</span>
+            <span>🤖 {doc.executiveSummary.analyst}</span>
+            <span>⏱️ {formatDuration(doc.processingTimeMs)}</span>
           </div>
         </div>
-        <div className="cd-indicator-card">
-          <span className="cd-indicator-label">Risco Geral</span>
-          <div
-            className="cd-indicator-value"
-            style={{ color: riskColors[doc.executiveSummary.overallRisk] }}
-          >
-            {doc.executiveSummary.overallRisk.toUpperCase()}
-          </div>
-          <div className="cd-indicator-bar">
+
+        {/* Health & Risk Indicators */}
+        <div className="cd-indicators-row">
+          <div className="cd-indicator-card">
+            <span className="cd-indicator-label">Saúde Geral</span>
             <div
-              className="cd-indicator-bar-fill"
-              style={{
-                width: `${(4 - ['none', 'low', 'medium', 'high'].indexOf(doc.executiveSummary.overallRisk)) * 25}%`,
-                backgroundColor: riskColors[doc.executiveSummary.overallRisk]
-              }}
-            />
+              className="cd-indicator-value"
+              style={{ color: healthColors[doc.executiveSummary?.overallHealth || 'fair'] }}
+            >
+              {(doc.executiveSummary?.overallHealth || 'fair').toUpperCase()}
+            </div>
+            <div className="cd-indicator-bar">
+              <div
+                className="cd-indicator-bar-fill"
+                style={{
+                  width: `${(['critical', 'poor', 'fair', 'good', 'excellent'].indexOf(doc.executiveSummary.overallHealth) + 1) * 20}%`,
+                  backgroundColor: healthColors[doc.executiveSummary.overallHealth]
+                }}
+              />
+            </div>
+          </div>
+          <div className="cd-indicator-card">
+            <span className="cd-indicator-label">Risco Geral</span>
+            <div
+              className="cd-indicator-value"
+              style={{ color: riskColors[doc.executiveSummary?.overallRisk || 'medium'] }}
+            >
+              {(doc.executiveSummary?.overallRisk || 'medium').toUpperCase()}
+            </div>
+            <div className="cd-indicator-bar">
+              <div
+                className="cd-indicator-bar-fill"
+                style={{
+                  width: `${(4 - ['none', 'low', 'medium', 'high'].indexOf(doc.executiveSummary.overallRisk)) * 25}%`,
+                  backgroundColor: riskColors[doc.executiveSummary.overallRisk]
+                }}
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Overview */}
-      <div className="cd-section">
-        <p className="cd-overview">{doc.executiveSummary.overview}</p>
-      </div>
-
-      {/* Critical Alerts */}
-      {doc.executiveSummary?.criticalAlerts && doc.executiveSummary.criticalAlerts.length > 0 && (
-        <div className="cd-alerts-section">
-          <h4 className="cd-section-title danger">
-            <Icons.AlertTriangle />
-            Alertas Críticos
-          </h4>
-          <div className="cd-alerts-list">
-            {doc.executiveSummary.criticalAlerts.map((alert, i) => (
-              <div key={i} className="cd-alert-item">
-                {alert}
-              </div>
-            ))}
-          </div>
+        {/* Overview */}
+        <div className="cd-section">
+          <p className="cd-overview">{doc.executiveSummary.overview}</p>
         </div>
-      )}
 
-      {/* Key Findings */}
-      <div className="cd-collapsible">
-        <button
-          className="cd-collapsible-header"
-          onClick={() => toggleSection('keyFindings')}
-        >
-          <span className="cd-collapsible-icon">
-            {expandedSections.has('keyFindings') ? <Icons.ChevronDown /> : <Icons.ChevronRight />}
-          </span>
-          <h4>🔍 Principais Descobertas</h4>
-          <span className="cd-badge">{doc.executiveSummary?.keyFindings?.length || 0}</span>
-        </button>
-        {expandedSections.has('keyFindings') && (
-          <div className="cd-collapsible-content">
-            <ul className="cd-findings-list">
-              {(doc.executiveSummary?.keyFindings || []).map((finding, i) => (
-                <li key={i}>
-                  <Icons.Check />
-                  {finding}
-                </li>
+        {/* Critical Alerts */}
+        {doc.executiveSummary?.criticalAlerts && doc.executiveSummary.criticalAlerts.length > 0 && (
+          <div className="cd-alerts-section">
+            <h4 className="cd-section-title danger">
+              <Icons.AlertTriangle />
+              Alertas Críticos
+            </h4>
+            <div className="cd-alerts-list">
+              {doc.executiveSummary.criticalAlerts.map((alert, i) => (
+                <div key={i} className="cd-alert-item">
+                  {alert}
+                </div>
               ))}
-            </ul>
+            </div>
+          </div>
+        )}
+
+        {/* Key Findings */}
+        <div className="cd-collapsible">
+          <button
+            className="cd-collapsible-header"
+            onClick={() => toggleSection('keyFindings')}
+          >
+            <span className="cd-collapsible-icon">
+              {expandedSections.has('keyFindings') ? <Icons.ChevronDown /> : <Icons.ChevronRight />}
+            </span>
+            <h4>🔍 Principais Descobertas</h4>
+            <span className="cd-badge">{doc.executiveSummary?.keyFindings?.length || 0}</span>
+          </button>
+          {expandedSections.has('keyFindings') && (
+            <div className="cd-collapsible-content">
+              <ul className="cd-findings-list">
+                {(doc.executiveSummary?.keyFindings || []).map((finding, i) => (
+                  <li key={i}>
+                    <Icons.Check />
+                    {finding}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        {/* Diff Stats */}
+        <div className="cd-stats-grid">
+          <div className="cd-stat-card added">
+            <div className="cd-stat-value">+{doc.codeComparison?.diffStats?.linesAdded || 0}</div>
+            <div className="cd-stat-label">Linhas Adicionadas</div>
+          </div>
+          <div className="cd-stat-card removed">
+            <div className="cd-stat-value">-{doc.codeComparison?.diffStats?.linesRemoved || 0}</div>
+            <div className="cd-stat-label">Linhas Removidas</div>
+          </div>
+          <div className="cd-stat-card modified">
+            <div className="cd-stat-value">~{doc.codeComparison?.diffStats?.linesModified || 0}</div>
+            <div className="cd-stat-label">Linhas Modificadas</div>
+          </div>
+          <div className="cd-stat-card total">
+            <div className="cd-stat-value">
+              {doc.codeComparison?.diffStats?.totalOriginal || 0} → {doc.codeComparison?.diffStats?.totalOptimized || 0}
+            </div>
+            <div className="cd-stat-label">Total de Linhas</div>
+          </div>
+        </div>
+
+        {/* Warnings */}
+        {doc.warnings && doc.warnings.length > 0 && (
+          <div className="cd-warnings-section">
+            <h4 className="cd-section-title warn">⚠️ Avisos</h4>
+            {doc.warnings.map((warning, i) => (
+              <div key={i} className="cd-warning-item">{warning}</div>
+            ))}
           </div>
         )}
       </div>
-
-      {/* Diff Stats */}
-      <div className="cd-stats-grid">
-        <div className="cd-stat-card added">
-          <div className="cd-stat-value">+{doc.codeComparison?.diffStats?.linesAdded || 0}</div>
-          <div className="cd-stat-label">Linhas Adicionadas</div>
-        </div>
-        <div className="cd-stat-card removed">
-          <div className="cd-stat-value">-{doc.codeComparison?.diffStats?.linesRemoved || 0}</div>
-          <div className="cd-stat-label">Linhas Removidas</div>
-        </div>
-        <div className="cd-stat-card modified">
-          <div className="cd-stat-value">~{doc.codeComparison?.diffStats?.linesModified || 0}</div>
-          <div className="cd-stat-label">Linhas Modificadas</div>
-        </div>
-        <div className="cd-stat-card total">
-          <div className="cd-stat-value">
-            {doc.codeComparison?.diffStats?.totalOriginal || 0} → {doc.codeComparison?.diffStats?.totalOptimized || 0}
-          </div>
-          <div className="cd-stat-label">Total de Linhas</div>
-        </div>
-      </div>
-
-      {/* Warnings */}
-      {doc.warnings && doc.warnings.length > 0 && (
-        <div className="cd-warnings-section">
-          <h4 className="cd-section-title warn">⚠️ Avisos</h4>
-          {doc.warnings.map((warning, i) => (
-            <div key={i} className="cd-warning-item">{warning}</div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+    );
+  };
 
   // Render Discoveries Tab (Nova aba com descobertas clicáveis)
   const renderDiscoveriesTab = () => {
@@ -572,9 +578,9 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
                         <div className="cd-discovery-rec-card">
                           <div className="cd-discovery-rec-title">{rec.title}</div>
                           <div className="cd-discovery-rec-priority" style={{
-                            backgroundColor: priorityColors[rec.priority]
+                            backgroundColor: priorityColors[rec.priority || 'medium']
                           }}>
-                            {rec.priority.toUpperCase()}
+                            {(rec.priority || 'medium').toUpperCase()}
                           </div>
                         </div>
                       </div>
@@ -822,27 +828,29 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
 
     return (
       <div className="cd-tab-content">
-        <h3 className="cd-tab-title">dY'? Plano de Acao</h3>
+        <h3 className="cd-tab-title">📋 Plano de Ação</h3>
         <p className="cd-tab-subtitle">
-          Prioridades objetivas. Onde a IA ja ajustou, apenas revise e registre no Qlik.
+          Prioridades objetivas. Onde a IA já ajustou, apenas revise e registre no Qlik.
         </p>
 
         <div className="cd-recommendations-list cd-action-plan-list">
-          {doc.recommendations.map((rec, i) => {
+          {(doc.recommendations || []).map((rec, i) => {
             const relatedTips = tipsByCategory[rec.category] || [];
             const showTips = relatedTips.length > 0 && !renderedTipCategories.has(rec.category);
             if (showTips) {
               renderedTipCategories.add(rec.category);
             }
 
+            const priority = rec.priority || 'medium';
+
             return (
-              <div key={i} className={`cd-recommendation-card ${rec.priority}`}>
+              <div key={i} className={`cd-recommendation-card ${priority}`}>
                 <div className="cd-rec-header">
                   <div
                     className="cd-rec-priority"
-                    style={{ backgroundColor: priorityColors[rec.priority] }}
+                    style={{ backgroundColor: priorityColors[priority] }}
                   >
-                    {rec.priority.toUpperCase()}
+                    {priority.toUpperCase()}
                   </div>
                   <h4>{rec.title}</h4>
                   <span className="cd-rec-category">{rec.category}</span>
@@ -861,12 +869,12 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
 
                 <div className="cd-rec-actions">
                   <div className="cd-rec-actions-header">
-                    <h5>Proximos passos</h5>
+                    <h5>Próximos passos</h5>
                     <button
                       className="cd-copy-btn"
                       onClick={() =>
                         copyTextToClipboard(
-                          `${rec.title}\n${rec.description}\nAcoes:\n- ${rec.actionItems.join('\n- ')}`,
+                          `${rec.title}\n${rec.description}\nAções:\n- ${(rec.actionItems || []).join('\n- ')}`,
                           `Plano "${rec.title}"`
                         )
                       }
@@ -876,14 +884,14 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
                     </button>
                   </div>
                   <ul>
-                    {rec.actionItems.map((action, j) => (
+                    {(rec.actionItems || []).map((action, j) => (
                       <li key={j}>
                         <Icons.ChevronRight />
                         <span className="cd-action-text">{action}</span>
                         <button
                           className="cd-inline-copy"
-                          aria-label={`Copiar acao ${j + 1}`}
-                          onClick={() => copyTextToClipboard(action, "Acao")}
+                          aria-label={`Copiar ação ${j + 1}`}
+                          onClick={() => copyTextToClipboard(action, "Ação")}
                         >
                           <Icons.Clipboard />
                         </button>
