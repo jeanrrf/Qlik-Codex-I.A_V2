@@ -13,10 +13,10 @@ const ANALYSIS_CACHE = new Map<string, { result: any; timestamp: number }>();
 const ANALYSIS_CACHE_TTL = 1800000; // 30 minutos
 const ANALYSIS_CACHE_MAX_SIZE = 50;
 
-// Task timeout configuration (in ms)
+// Task timeout configuration (in ms) - Otimizado para Kimi K2 + Gemini 2.5
 const TASK_TIMEOUTS: Record<string, number> = {
-  ANALYSIS_AND_PLAN: 120000,  // 2 min - análise completa
-  CODE_GEN: 90000,            // 1.5 min - geração de código
+  ANALYSIS_AND_PLAN: 150000,  // 2.5 min - análise completa com reasoning
+  CODE_GEN: 120000,            // 2 min - geração de código
   FINAL_DELIVERY: 90000       // 1.5 min - documentação final
 };
 
@@ -54,13 +54,13 @@ export class QlikMegaOptimizer {
     this.scriptHash = createHash('sha256').update(this.script).digest('hex').substring(0, 16);
     this.abortSignal = options?.signal;
 
-    // Cria orquestrador com configuração otimizada para o MegaOptimizer
+    // Cria orquestrador com configuração otimizada para MegaOptimizer + Kimi K2
     this.orchestrator = createOrchestrator({
       maxAttemptsPerStep: 4,
-      providerOrder: ["google", "nvidia"],
+      providerOrder: ["google", "nvidia"],  // Gemini primeiro, Kimi K2 como fallback
       neverRetryProvider: true,
-      timeoutPerStep: 90000,  // 90s default
-      globalTimeout: 300000  // 5 min total
+      timeoutPerStep: 120000,  // 2 min default por step
+      globalTimeout: 420000   // 7 min total (scripts grandes)
     });
   }
 

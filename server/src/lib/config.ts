@@ -21,7 +21,7 @@ export const config = {
   geminiApiKey: process.env.GEMINI_API_KEY || "",
   geminiModel: process.env.GEMINI_MODEL_NAME || "gemini-2.5-flash",
   nvidiaApiKey: process.env.NVIDIA_API_KEY || "",
-  nvidiaModel: process.env.NVIDIA_MODEL_NAME || "mistralai/mistral-large-3-675b-instruct-2512",
+  nvidiaModel: process.env.NVIDIA_MODEL_NAME || "moonshotai/kimi-k2-instruct",  // Kimi K2 - 1T MoE model
   llmProviders,
   databaseUrl: process.env.DATABASE_URL || "",
   version: APP_VERSION,

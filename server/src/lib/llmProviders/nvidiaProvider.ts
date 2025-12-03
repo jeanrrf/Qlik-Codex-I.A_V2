@@ -102,8 +102,8 @@ async function callNvidiaWithModel(
 
   logger.info("NVIDIA API: Tentando modelo", { model: modelName });
 
-  // OTIMIZAÇÃO: Timeout reduzido para fail-fast (era 120s, agora 45s)
-  // Permite rotação mais rápida para próximo provider em caso de lentidão
+  // OTIMIZAÇÃO: Timeout de 60s para Kimi K2 (modelo grande com reasoning)
+  // Kimi K2 é um modelo MoE de 1T parâmetros com capacidades avançadas
   const response = await withTimeout(
     fetch(endpoint, {
       method: "POST",
@@ -118,17 +118,17 @@ async function callNvidiaWithModel(
           {
             role: "system",
             content:
-              "Você é o QLIK CODEX I.A. Responda APENAS com o JSON solicitado. Não inclua explicações fora do JSON."
+              "Você é o QLIK CODEX I.A, um otimizador especialista de scripts Qlik. Responda APENAS com o JSON solicitado, sem explicações adicionais fora da estrutura JSON."
           },
           { role: "user", content: prompt }
         ],
-        temperature: 0.2,
-        top_p: 0.9,
-        max_tokens: 4096,
+        temperature: 0.15,
+        top_p: 0.95,
+        max_tokens: 16384,  // Aumentado para scripts grandes
         stream: false
       })
     }),
-    45000, // 45s timeout - fail-fast para rotação de provider
+    60000, // 60s timeout - Kimi K2 precisa de mais tempo para reasoning
     'NVIDIA NIM API'
   );
 
