@@ -7,7 +7,7 @@ import { useConvexOptimization } from "../hooks/useConvexOptimization";
 import { useAuth } from "../contexts/AuthContext";
 import { UserMenu } from "../components/UserMenu";
 import { highlightQlikCode } from "../lib/qlikSyntaxHighlighter";
-import "./OptimizerPageV2.css";
+import "./OptimizerPageConvex.css";
 
 interface Props {
   onBackToLanding: () => void;
