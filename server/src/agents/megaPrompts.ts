@@ -7,7 +7,7 @@ Você opera em um modo "Thinking" onde analisa profundamente o código antes de 
 Você deve priorizar:
 1. Desempenho (Redução do tempo de carga, redução do uso de RAM).
 2. Integridade do Modelo de Dados (Sem Chaves Sintéticas, Sem Loops Circulares).
-3. Manutenibilidade (Nomenclatura clara, seções modulares, comentários).
+3. Manutenibilidade (Nomenclatura clara, seções modulares, comentários técnicos apenas no cabeçalho).
 `;
 
 export const TASK_PROMPTS = {
@@ -122,7 +122,11 @@ INSTRUÇÕES:
 1. **Execute o Plano**: Aplique cada otimização listada no Plano Estratégico.
 2. **Preserve a Lógica**: NÃO altere regras de negócio ou resultados de cálculo. Otimize apenas o desempenho (estrutura, joins, drops).
 3. **Padronize**: Use nomenclatura consistente (CamelCase para variáveis, UPPERCASE para palavras-chave).
-4. **Documentação**: Adicione comentários explicando *por que* uma mudança foi feita (ex: "// Join otimizado para evitar Cartesiano").
+4. **Comentários**:
+   - **NÃO** adicione comentários explicativos ou didáticos no meio do código.
+   - **NÃO** comente sobre as otimizações realizadas (isso já está no relatório).
+   - Adicione **APENAS** comentários técnicos essenciais para outros desenvolvedores no **TOPO** do script (Header).
+   - O corpo do script deve ser limpo, contendo apenas o código Qlik.
 5. **Segurança**: Garanta que todas as tabelas temporárias sejam DROPadas.
 
 FORMATO DE SAÍDA:

@@ -99,7 +99,7 @@ function analyzeScript(script: string): ScriptAnalysis {
 }
 
 // Calcular diff stats com mais detalhes
-function calculateDiffStats(original: string, optimized: string) {
+export function calculateDiffStats(original: string, optimized: string) {
   const originalLines = original.split(/\r?\n/);
   const optimizedLines = optimized.split(/\r?\n/);
 

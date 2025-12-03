@@ -16,8 +16,13 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .modal-container {
@@ -38,6 +43,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -207,6 +213,32 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.copy-btn {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: inherit;
+  background: rgba(0, 242, 255, 0.1);
+  border: 1px solid rgba(0, 242, 255, 0.3);
+  border-radius: 6px;
+  color: var(--primary);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.copy-btn:hover {
+  background: rgba(0, 242, 255, 0.2);
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
 .panel-label {
   font-weight: 600;
   font-size: 0.85rem;
@@ -228,10 +260,45 @@
 
 .code-content-wrapper {
   flex: 1;
-  overflow: auto;
+  display: flex;
   max-height: 500px;
   background: rgba(0, 0, 0, 0.4);
   position: relative;
+  overflow: hidden;
+}
+
+/* Coluna fixa de numeração */
+.line-numbers-column {
+  flex-shrink: 0;
+  width: 50px;
+  background: rgba(0, 0, 0, 0.3);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  overflow-y: auto;
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.line-numbers-column::-webkit-scrollbar {
+  display: none;
+  /* Chrome, Safari */
+}
+
+.line-number {
+  display: block;
+  text-align: right;
+  padding: 0 12px 0 8px;
+  min-height: 21px;
+  line-height: 21px;
+  color: rgba(255, 255, 255, 0.3);
+  user-select: none;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Área de código com scroll horizontal */
+.code-scroll-area {
+  flex: 1;
+  overflow: auto;
 }
 
 .code-content {
@@ -244,30 +311,15 @@
 }
 
 .code-line {
-  display: flex;
+  display: block;
   min-height: 21px;
   padding: 0 12px;
+  white-space: pre;
   transition: background 0.1s;
 }
 
 .code-line:hover {
   background: rgba(255, 255, 255, 0.03);
-}
-
-.line-number {
-  flex-shrink: 0;
-  width: 50px;
-  text-align: right;
-  padding-right: 16px;
-  color: rgba(255, 255, 255, 0.3);
-  user-select: none;
-  font-size: 12px;
-}
-
-.line-content {
-  flex: 1;
-  white-space: pre;
-  word-break: break-all;
 }
 
 /* --- SYNTAX HIGHLIGHTING --- */

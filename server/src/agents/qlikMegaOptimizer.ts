@@ -26,7 +26,28 @@ export class QlikMegaOptimizer {
 
   constructor(script: string) {
     // Sanitize input script to remove any HTML tags if the user pasted formatted code
-    this.script = script ? script.replace(/<[^>]*>/g, '') : script;
+    // Uses a smart regex to preserve "WHERE Value < 10" but remove "<span...>"
+    this.script = QlikMegaOptimizer.sanitizeScript(script);
+  }
+
+  /**
+   * Removes HTML tags and entities from script text.
+   * Preserves valid Qlik operators like < > in expressions.
+   */
+  private static sanitizeScript(text: string): string {
+    if (!text) return text;
+    return text
+      .replace(/<\/?\s*[a-zA-Z][^>]*>/g, '')  // Remove HTML tags like <span>, </div>
+      .replace(/<span\s+[^>]*$/gm, '')        // Remove incomplete opening tags
+      .replace(/^\s*<\/span>/gm, '')          // Remove orphan closing tags
+      .replace(/&lt;/g, '<')                  // Decode HTML entities
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#039;/g, "'")
+      .replace(/&nbsp;/g, ' ')
+      .replace(/class="[^"]*"/g, '')          // Remove orphan class attributes
+      .replace(/<\/?>/g, '');                 // Remove empty tags
   }
 
   private async executeTask(taskName: string, promptTemplate: string, schema?: ZodSchema): Promise<any> {
@@ -60,7 +81,7 @@ ${promptTemplate}
     // Fallback Strategy: Gemini 2.5 -> Gemini 2.0 -> Nvidia
     const strategies = [
       { provider: "google", model: "gemini-2.5-flash", name: "Gemini 2.5 Flash" },
-      { provider: "google", model: "gemini-2.0-flash-exp", name: "Gemini 2.0 Flash" },
+      { provider: "google", model: "gemini-2.0-flash", name: "Gemini 2.0 Flash" },
       { provider: "nvidia", model: undefined, name: "Nvidia Nemotron" }
     ];
 
@@ -199,10 +220,9 @@ ${promptTemplate}
     // 3. Code Generation
     const codeGen = await this.executeTask("CODE_GEN", TASK_PROMPTS.CODE_GEN, CodeGenSchema);
 
-    // Sanitize optimizedScript to remove any HTML tags if the LLM hallucinated them
-    // This prevents double-escaping issues in the frontend report
+    // Sanitize optimizedScript using the same method as input
     if (codeGen.optimizedScript) {
-      codeGen.optimizedScript = codeGen.optimizedScript.replace(/<[^>]*>/g, '');
+      codeGen.optimizedScript = QlikMegaOptimizer.sanitizeScript(codeGen.optimizedScript);
     }
 
     // 4. Final Delivery (Validation + Docs + Report)

@@ -8,6 +8,7 @@
 
 import { generateStructuredJson } from "../lib/llmClient";
 import { logger } from "../lib/logger";
+import { config } from "../lib/config";
 
 export interface FormatterResult {
   formattedScript: string;
@@ -75,14 +76,29 @@ export async function formatQlikScript(script: string): Promise<FormatterResult>
   try {
     const prompt = buildPrompt(script.trim());
 
+    // Usando modelo configurado (default: gemini-2.5-flash)
     const { text } = await generateStructuredJson(prompt, {
       provider: "google",
-      model: "gemini-2.5-flash"
+      model: config.geminiModel
     });
 
     if (!text) throw new Error("LLM retornou vazio");
 
-    const parsed = JSON.parse(text) as { formattedScript?: string; notes?: string[] };
+    // Limpeza robusta de Markdown antes do parse
+    const cleanedText = text.replace(/```json\s*|\s*```/g, "").trim();
+
+    let parsed: { formattedScript?: string; notes?: string[] };
+    try {
+      parsed = JSON.parse(cleanedText);
+    } catch (e) {
+      // Tenta extrair JSON se houver texto antes/depois
+      const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsed = JSON.parse(jsonMatch[0]);
+      } else {
+        throw e;
+      }
+    }
 
     if (!parsed.formattedScript) throw new Error("Resposta sem formattedScript");
 

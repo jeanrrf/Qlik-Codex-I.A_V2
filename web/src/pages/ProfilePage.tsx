@@ -56,7 +56,7 @@ Nome: ${user?.name}
 Aguardo retorno!`;
 
     window.open(
-      `https://wa.me/5511999999999?text=${encodeURIComponent(message)}`,
+      `https://api.whatsapp.com/send?phone=5548999373041&text=${encodeURIComponent(message)}`,
       '_blank'
     );
   };

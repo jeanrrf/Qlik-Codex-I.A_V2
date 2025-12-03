@@ -8,6 +8,98 @@ import type { ConsultancyDocument } from '../types/consultancy';
 import { highlightQlikCode } from '../lib/qlikSyntaxHighlighter';
 import { formatDuration } from '../../../server/src/lib/formatTime';
 
+// Simple Markdown Renderer Component
+const SimpleMarkdown: React.FC<{ content: string }> = ({ content }) => {
+  if (!content) return null;
+
+  const lines = content.split('\n');
+  const elements: React.ReactNode[] = [];
+  let inCodeBlock = false;
+  let codeBlockContent: string[] = [];
+
+  lines.forEach((line, index) => {
+    // Code blocks
+    if (line.trim().startsWith('```')) {
+      if (inCodeBlock) {
+        // End of code block
+        elements.push(
+          <pre key={`code-${index}`} className="cd-md-code-block" style={{
+            background: 'rgba(0, 0, 0, 0.3)',
+            padding: '12px',
+            borderRadius: '8px',
+            overflowX: 'auto',
+            fontFamily: 'monospace',
+            margin: '12px 0'
+          }}>
+            <code>{codeBlockContent.join('\n')}</code>
+          </pre>
+        );
+        codeBlockContent = [];
+        inCodeBlock = false;
+      } else {
+        // Start of code block
+        inCodeBlock = true;
+      }
+      return;
+    }
+
+    if (inCodeBlock) {
+      codeBlockContent.push(line);
+      return;
+    }
+
+    // Headers
+    if (line.startsWith('# ')) {
+      elements.push(<h1 key={index} className="cd-md-h1" style={{ fontSize: '1.8rem', margin: '24px 0 16px', color: 'var(--primary)' }}>{line.substring(2)}</h1>);
+      return;
+    }
+    if (line.startsWith('## ')) {
+      elements.push(<h2 key={index} className="cd-md-h2" style={{ fontSize: '1.5rem', margin: '20px 0 12px', color: 'var(--text-main)' }}>{line.substring(3)}</h2>);
+      return;
+    }
+    if (line.startsWith('### ')) {
+      elements.push(<h3 key={index} className="cd-md-h3" style={{ fontSize: '1.2rem', margin: '16px 0 8px', color: 'var(--text-secondary)' }}>{line.substring(4)}</h3>);
+      return;
+    }
+
+    // Lists
+    if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
+      const text = line.trim().substring(2);
+      const parts = text.split(/(\*\*.*?\*\*)/g);
+      const renderedText = parts.map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          return <strong key={i} style={{ color: 'var(--text-main)' }}>{part.substring(2, part.length - 2)}</strong>;
+        }
+        return part;
+      });
+
+      elements.push(
+        <li key={index} className="cd-md-li" style={{ marginLeft: '20px', marginBottom: '8px', color: 'var(--text-secondary)' }}>
+          {renderedText}
+        </li>
+      );
+      return;
+    }
+
+    // Paragraphs (with bold support)
+    if (line.trim().length > 0) {
+      const parts = line.split(/(\*\*.*?\*\*)/g);
+      const renderedLine = parts.map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          return <strong key={i} style={{ color: 'var(--text-main)' }}>{part.substring(2, part.length - 2)}</strong>;
+        }
+        return part;
+      });
+      elements.push(<p key={index} className="cd-md-p" style={{ marginBottom: '12px', lineHeight: '1.6', color: 'var(--text-secondary)' }}>{renderedLine}</p>);
+    } else {
+      // Empty line
+      elements.push(<div key={index} style={{ height: '8px' }} />);
+    }
+  });
+
+  return <div className="cd-simple-markdown">{elements}</div>;
+};
+
 interface ConsultancyDocumentViewerProps {
   document: ConsultancyDocument;
   onClose?: () => void;
@@ -780,7 +872,20 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
           <div className="cd-code-panel">
             <div className="cd-code-header original">
               <span className="cd-code-label">📄 Código Original</span>
-              <span className="cd-code-lines">{doc.codeComparison.diffStats.totalOriginal} linhas</span>
+              <div className="cd-code-actions">
+                <span className="cd-code-lines">{doc.codeComparison.diffStats.totalOriginal} linhas</span>
+                <button
+                  className="cd-copy-btn"
+                  onClick={() => {
+                    navigator.clipboard.writeText(doc.codeComparison?.originalScript || '');
+                    const btn = document.querySelector('.cd-code-panel:first-child .cd-copy-btn') as HTMLButtonElement;
+                    if (btn) { btn.textContent = '✓ Copiado'; setTimeout(() => btn.textContent = '📋 Copiar', 2000); }
+                  }}
+                  title="Copiar código original"
+                >
+                  📋 Copiar
+                </button>
+              </div>
             </div>
             <div className="cd-code-block" ref={originalCodeRef}>
               {renderCodeLines(originalLines, originalHighlights, 'orig')}
@@ -794,7 +899,20 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
           <div className="cd-code-panel">
             <div className="cd-code-header optimized">
               <span className="cd-code-label">✨ Código Otimizado</span>
-              <span className="cd-code-lines">{doc.codeComparison.diffStats.totalOptimized} linhas</span>
+              <div className="cd-code-actions">
+                <span className="cd-code-lines">{doc.codeComparison.diffStats.totalOptimized} linhas</span>
+                <button
+                  className="cd-copy-btn"
+                  onClick={() => {
+                    navigator.clipboard.writeText(doc.codeComparison?.optimizedScript || '');
+                    const btn = document.querySelector('.cd-code-panel:last-of-type .cd-copy-btn') as HTMLButtonElement;
+                    if (btn) { btn.textContent = '✓ Copiado'; setTimeout(() => btn.textContent = '📋 Copiar', 2000); }
+                  }}
+                  title="Copiar código otimizado"
+                >
+                  📋 Copiar
+                </button>
+              </div>
             </div>
             <div className="cd-code-block" ref={optimizedCodeRef}>
               {renderCodeLines(optimizedLines, optimizedHighlights, 'opt')}
@@ -855,6 +973,10 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
                   <h4>{rec.title}</h4>
                   <span className="cd-rec-category">{rec.category}</span>
                 </div>
+
+                <p className="cd-rec-description" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: '12px 0' }}>
+                  {rec.description}
+                </p>
 
                 <div className="cd-rec-metrics compact">
                   <div className="cd-rec-metric">
@@ -934,9 +1056,9 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
 
         {doc.fullDocumentation && (
           <div className="cd-full-doc-section compact">
-            <h4 className="cd-section-title">dY"s Documentacao Completa</h4>
+            <h4 className="cd-section-title">📄 Documentação Completa</h4>
             <div className="cd-markdown-preview">
-              <pre>{doc.fullDocumentation}</pre>
+              <SimpleMarkdown content={doc.fullDocumentation} />
             </div>
           </div>
         )}
@@ -2073,6 +2195,32 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
         .cd-code-label {
           font-size: 0.8rem;
           font-weight: 600;
+        }
+
+        .cd-code-actions {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .cd-copy-btn {
+          padding: 4px 10px;
+          font-size: 0.7rem;
+          font-weight: 600;
+          font-family: inherit;
+          background: rgba(0, 242, 255, 0.1);
+          border: 1px solid rgba(0, 242, 255, 0.3);
+          border-radius: 6px;
+          color: var(--primary);
+          cursor: pointer;
+          transition: all 0.2s;
+          white-space: nowrap;
+        }
+
+        .cd-copy-btn:hover {
+          background: rgba(0, 242, 255, 0.2);
+          border-color: var(--primary);
+          transform: translateY(-1px);
         }
 
         .cd-code-lines {

@@ -9,7 +9,7 @@ import type {
   ProviderCallOptions
 } from "./types";
 
-const MODEL_NAME = "gemini-2.5-flash";
+const MODEL_NAME = config.geminiModel;
 
 let client: GoogleGenAI | undefined;
 

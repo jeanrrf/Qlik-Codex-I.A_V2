@@ -25,6 +25,7 @@ import ScriptCaptureModal from "../components/ScriptCaptureModal";
 import DownloadModal from "../components/DownloadModal";
 import { useOptimizationProgress } from "../hooks/useOptimizationProgress";
 import { useSessionPersistence } from "../hooks/useSessionPersistence";
+import { highlightQlikCode } from "../lib/qlikSyntaxHighlighter";
 
 interface OptimizerPageProps {
   onBackToLanding: () => void;
@@ -157,35 +158,10 @@ const Spinner: React.FC<{ size?: number }> = ({ size = 20 }) => (
   </svg>
 );
 
-// Função para syntax highlighting simples de Qlik
+// Função para syntax highlighting de Qlik usando o módulo centralizado
+// highlightQlikCode já faz limpeza de HTML existente antes de aplicar highlighting
 const highlightQlikSyntax = (line: string): string => {
-  // Escape HTML
-  let highlighted = line
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-
-  // Keywords Qlik (case insensitive)
-  const keywords = /\b(LOAD|FROM|WHERE|SELECT|AS|JOIN|LEFT|RIGHT|INNER|OUTER|RESIDENT|CONCATENATE|IF|THEN|ELSE|ENDIF|FOR|TO|NEXT|DO|LOOP|WHILE|STORE|DROP|FIELD|FIELDS|TABLE|TABLES|QUALIFY|UNQUALIFY|LET|SET|CALL|SUB|ENDSUB|EXIT|SCRIPT|WHEN|CASE|END|REPLACE|MAPPING|APPLYMAP|PEEK|PREVIOUS|EXISTS|KEEP|ONLY|NOCONCATENATE|AUTOGENERATE|INLINE|BUFFER|QVD|TXT|CSV|SQL)\b/gi;
-  highlighted = highlighted.replace(keywords, '<span class="syntax-keyword">$1</span>');
-
-  // Strings (entre aspas simples ou duplas)
-  highlighted = highlighted.replace(/('[^']*')/g, '<span class="syntax-string">$1</span>');
-  highlighted = highlighted.replace(/("[^"]*")/g, '<span class="syntax-string">$1</span>');
-
-  // Números
-  highlighted = highlighted.replace(/\b(\d+\.?\d*)\b/g, '<span class="syntax-number">$1</span>');
-
-  // Comentários (// ou REM)
-  highlighted = highlighted.replace(/(\/\/.*$|REM .*$)/gi, '<span class="syntax-comment">$1</span>');
-
-  // Funções (palavra seguida de parêntese)
-  highlighted = highlighted.replace(/\b([A-Za-z_]\w*)\s*\(/g, '<span class="syntax-function">$1</span>(');
-
-  // Operadores
-  highlighted = highlighted.replace(/([+\-*/%=<>!&|])/g, '<span class="syntax-operator">$1</span>');
-
-  return highlighted;
+  return highlightQlikCode(line);
 };
 
 const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
@@ -222,10 +198,37 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
   // FREE TIER: Controle de visibilidade do banner de aviso
   const [showFreeTierWarning, setShowFreeTierWarning] = useState(true);
 
-  // FREE TIER: Contador de Ultra Expert (1 por DIA para USER)
-  const [ultraExpertUsageCount, setUltraExpertUsageCount] = useState(0);
-  const MAX_ULTRA_EXPERT_RUNS = isOwner ? -1 : 1; // -1 = ilimitado
+  // FREE TIER: Contador de Ultra Expert (4 por DIA para USER) com persistência
+  const MAX_ULTRA_EXPERT_RUNS = isOwner ? -1 : 4; // -1 = ilimitado
+  
+  // Carregar contador do localStorage e verificar se é do mesmo dia
+  const getStoredUsageCount = (): number => {
+    try {
+      const stored = localStorage.getItem('qlik_codex_usage');
+      if (!stored) return 0;
+      const { count, date } = JSON.parse(stored);
+      const today = new Date().toISOString().split('T')[0];
+      // Se é um novo dia, resetar contador
+      if (date !== today) {
+        localStorage.setItem('qlik_codex_usage', JSON.stringify({ count: 0, date: today }));
+        return 0;
+      }
+      return count;
+    } catch {
+      return 0;
+    }
+  };
+
+  const [ultraExpertUsageCount, setUltraExpertUsageCount] = useState(getStoredUsageCount);
   const hasUltraExpertQuotaLeft = isOwner || ultraExpertUsageCount < MAX_ULTRA_EXPERT_RUNS;
+
+  // Salvar contador no localStorage quando mudar
+  useEffect(() => {
+    if (!isOwner) {
+      const today = new Date().toISOString().split('T')[0];
+      localStorage.setItem('qlik_codex_usage', JSON.stringify({ count: ultraExpertUsageCount, date: today }));
+    }
+  }, [ultraExpertUsageCount, isOwner]);
 
   // Sincroniza mudança de modo com o hook de progresso
   const handleModeChange = (newMode: OptimizeMode) => {
@@ -475,7 +478,6 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
             </svg>
           </button>
           <div className="brand-logo">
-            <div className="brand-icon">⚡</div>
             <div className="brand-info">
               <span className="brand-name">SENTINNEL IA</span>
               <span className="brand-product">Qlik Codex</span>
@@ -602,14 +604,13 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
         {/* Coluna Direita: Ações Secundárias */}
         <div className="control-right-section">
           <div className="control-section-compact actions-section-compact">
-            <div className="section-icon-compact">⚡</div>
             <div className="action-cards-compact">
               {/* Consultoria */}
               <button
                 className={`action-btn-compact consultancy ${!consultancyDoc ? 'disabled-blur' : ''}`}
                 onClick={() => consultancyDoc && setShowConsultancy(true)}
                 disabled={!consultancyDoc}
-                title={consultancyDoc ? "Consultoria disponível" : "Consultoria será gerada após otimização"}
+                title={consultancyDoc ? "Ver Auditoria/Consultoria" : "Auditoria será gerada após otimização"}
               >
                 📊
               </button>
@@ -723,17 +724,6 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
               </div>
               <div className="analysis-metrics">
                 <div className="analysis-metric">
-                  <span className="analysis-label">Complexidade</span>
-                  <span className={`analysis-value complexity-${optimization.scriptAnalysis?.complexity || 'medium'}`}>
-                    {optimization.scriptAnalysis?.complexity
-                      ? optimization.scriptAnalysis.complexity === 'low' ? 'Baixa'
-                        : optimization.scriptAnalysis.complexity === 'medium' ? 'Média'
-                          : optimization.scriptAnalysis.complexity === 'high' ? 'Alta'
-                            : 'Crítica'
-                      : 'Média'}
-                  </span>
-                </div>
-                <div className="analysis-metric">
                   <span className="analysis-label">Tokens Est.</span>
                   <span className="analysis-value">
                     {optimization.scriptAnalysis?.estimatedTokens
@@ -794,9 +784,17 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
               return (
                 <div className={`stage-cards-row stages-${stageCount}`}>
                   {visibleStages.map((stage, index) => {
-                    const colors = ['#00f2ff', '#00ff9d', '#ffb800', '#ff6b6b'];
+                    const colorConfig = [
+                      { hex: '#00f2ff', rgb: '0, 242, 255' },
+                      { hex: '#00ff9d', rgb: '0, 255, 157' },
+                      { hex: '#ffb800', rgb: '255, 184, 0' },
+                      { hex: '#ff6b6b', rgb: '255, 107, 107' }
+                    ];
+                    const theme = colorConfig[index % colorConfig.length];
+                    const color = theme.hex;
+                    const rgb = theme.rgb;
+
                     const icons = [<Icons.Search key="s" />, <Icons.Zap key="z" />, <Icons.Shield key="sh" />, <Icons.CheckCircle key="c" />];
-                    const color = colors[index % colors.length];
                     const icon = icons[index % icons.length];
 
                     const subSteps = stage?.subSteps || [];
@@ -811,19 +809,18 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                     return (
                       <details
                         key={stage.id}
-                        className={`stage-card-v3 ${isActive ? 'active' : ''} ${isComplete ? 'complete' : ''}`}
+                        className={`stage-card-v3 ${isActive ? 'active' : ''} ${isComplete ? 'complete' : ''} ${hasError ? 'error' : ''}`}
                         open={true}
                         style={{
                           '--card-color': color,
-                          borderColor: isComplete ? '#00ff9d' : isActive ? color : undefined,
-                          background: `linear-gradient(145deg, ${color}10, rgba(12, 16, 30, 0.95))`
+                          '--card-color-rgb': rgb
                         } as React.CSSProperties}
                       >
                         <summary className="card-summary">
-                          <div className="card-top-accent" style={{ background: isComplete ? '#00ff9d' : color }} />
+                          <div className="card-top-accent" />
 
                           <div className="card-top-row">
-                            <div className="card-icon-box" style={{ background: `${color}15`, borderColor: `${color}40`, color: color }}>
+                            <div className="card-icon-box" style={{ color: color }}>
                               {icon}
                             </div>
 
@@ -834,7 +831,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
 
                             <div className="card-status-badge-container">
                               {isActive ? (
-                                <span className="status-pill active" style={{ borderColor: color, color: color, background: `${color}15` }}>
+                                <span className="status-pill active" style={{ color: color, borderColor: color }}>
                                   EXEC
                                 </span>
                               ) : isComplete ? (
@@ -852,9 +849,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                               <div
                                 className="card-progress-bar"
                                 style={{
-                                  width: `${progressPercent}%`,
-                                  background: isComplete ? '#00ff9d' : color,
-                                  boxShadow: `0 0 10px ${isComplete ? '#00ff9d' : color}`
+                                  width: `${progressPercent}%`
                                 }}
                               />
                             </div>
@@ -923,20 +918,10 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                     </span>
                   </div>
                   {result && (
-                    <>
-                      <div className="kpi">
-                        <span className="kpi-label">Mudanças</span>
-                        <span className="kpi-value">{result.analysis.changes.length}</span>
-                      </div>
-                      <div className="kpi">
-                        <span className="kpi-label">Risco</span>
-                        <span className={`kpi-value risk-${result.analysis.breakingRisk}`}>
-                          {result.analysis.breakingRisk === "none" ? "Nenhum" :
-                            result.analysis.breakingRisk === "low" ? "Baixo" :
-                              result.analysis.breakingRisk === "medium" ? "Médio" : "Alto"}
-                        </span>
-                      </div>
-                    </>
+                    <div className="kpi">
+                      <span className="kpi-label">Mudanças</span>
+                      <span className="kpi-value">{result.analysis.changes.length}</span>
+                    </div>
                   )}
                 </div>
               )
@@ -953,13 +938,13 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                     ×
                   </button>
                   <div className="tooltip-icon">🚀</div>
-                  <h2 className="tooltip-title">Bem-vindo ao Qlik Codex I.A!</h2>
+                  <h2 className="tooltip-title">Comece carregando um script Qlik</h2>
                   <p className="tooltip-description">
-                    Para começar a otimizar seus scripts Qlik, clique no botão <strong>"Carregar"</strong> no painel lateral esquerdo.
+                    Use o botão <strong>"Carregar"</strong> no painel lateral esquerdo para importar o script que deseja otimizar.
                   </p>
                   <div className="tooltip-arrow-container">
                     <div className="tooltip-arrow">←</div>
-                    <span className="tooltip-arrow-text">Clique aqui para iniciar</span>
+                    <span className="tooltip-arrow-text">Botão "Carregar" fica aqui</span>
                   </div>
                   <button className="tooltip-dismiss-btn" onClick={() => setDismissOnboarding(true)}>
                     Entendi
@@ -1048,14 +1033,6 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                 <div className="result-summary-card">
                   <h4>📝 Resumo</h4>
                   <p>{result.summary}</p>
-                  {result.changes && result.changes.length > 0 && (
-                    <div className="changes-count">
-                      <span className="badge">{result.changes.length} mudanças</span>
-                      <span className="badge safe">{result.changes.filter(c => c.riskLevel === 'low').length} baixo risco</span>
-                      <span className="badge warning">{result.changes.filter(c => c.riskLevel === 'medium').length} médio</span>
-                      <span className="badge danger">{result.changes.filter(c => c.riskLevel === 'high').length} alto</span>
-                    </div>
-                  )}
                 </div>
 
                 {/* Code Comparison com Scroll Sincronizado */}
@@ -1063,53 +1040,115 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                   <div className="code-panel original">
                     <div className="code-panel-header">
                       <span className="panel-label">📄 Original</span>
-                      <span className="line-count">{result.originalScript.split('\n').length} linhas</span>
+                      <div className="panel-actions">
+                        <span className="line-count">{result.originalScript.split('\n').length} linhas</span>
+                        <button
+                          className="copy-btn"
+                          onClick={() => {
+                            navigator.clipboard.writeText(result.originalScript);
+                            const btn = document.querySelector('.code-panel.original .copy-btn') as HTMLButtonElement;
+                            if (btn) { btn.textContent = '✓ Copiado'; setTimeout(() => btn.textContent = '📋 Copiar', 2000); }
+                          }}
+                          title="Copiar código original"
+                        >
+                          📋 Copiar
+                        </button>
+                      </div>
                     </div>
                     <div
                       className="code-content-wrapper"
                       onScroll={(e) => {
-                        const target = e.currentTarget;
-                        const optimizedPanel = target.parentElement?.parentElement?.querySelector('.optimized .code-content-wrapper') as HTMLDivElement;
-                        if (optimizedPanel && optimizedPanel !== target) {
-                          optimizedPanel.scrollTop = target.scrollTop;
-                          optimizedPanel.scrollLeft = target.scrollLeft;
+                        const target = e.currentTarget.querySelector('.code-scroll-area') as HTMLDivElement;
+                        const lineNumbers = e.currentTarget.querySelector('.line-numbers-column') as HTMLDivElement;
+                        const optimizedWrapper = e.currentTarget.parentElement?.parentElement?.querySelector('.optimized .code-content-wrapper') as HTMLDivElement;
+                        if (lineNumbers && target) {
+                          lineNumbers.scrollTop = target.scrollTop;
+                        }
+                        if (optimizedWrapper) {
+                          const optimizedScroll = optimizedWrapper.querySelector('.code-scroll-area') as HTMLDivElement;
+                          const optimizedLines = optimizedWrapper.querySelector('.line-numbers-column') as HTMLDivElement;
+                          if (optimizedScroll) {
+                            optimizedScroll.scrollTop = target.scrollTop;
+                            optimizedScroll.scrollLeft = target.scrollLeft;
+                          }
+                          if (optimizedLines) optimizedLines.scrollTop = target.scrollTop;
                         }
                       }}
                     >
-                      <pre className="code-content qlik-syntax">
-                        {result.originalScript.split('\n').map((line, idx) => (
-                          <div key={idx} className="code-line">
-                            <span className="line-number">{idx + 1}</span>
-                            <span className="line-content" dangerouslySetInnerHTML={{ __html: highlightQlikSyntax(line) }} />
-                          </div>
+                      <div className="line-numbers-column">
+                        {result.originalScript.split('\\n').map((_, idx) => (
+                          <span key={idx} className="line-number">{idx + 1}</span>
                         ))}
-                      </pre>
+                      </div>
+                      <div className="code-scroll-area" onScroll={(e) => {
+                        const target = e.currentTarget;
+                        const wrapper = target.parentElement as HTMLDivElement;
+                        const lineNumbers = wrapper?.querySelector('.line-numbers-column') as HTMLDivElement;
+                        if (lineNumbers) lineNumbers.scrollTop = target.scrollTop;
+                      }}>
+                        <pre className="code-content qlik-syntax">
+                          {result.originalScript.split('\\n').map((line, idx) => (
+                            <div key={idx} className="code-line" dangerouslySetInnerHTML={{ __html: highlightQlikSyntax(line) || '&nbsp;' }} />
+                          ))}
+                        </pre>
+                      </div>
                     </div>
                   </div>
                   <div className="code-panel optimized">
                     <div className="code-panel-header">
                       <span className="panel-label">✨ Otimizado</span>
-                      <span className="line-count">{result.optimizedScript.split('\n').length} linhas</span>
+                      <div className="panel-actions">
+                        <span className="line-count">{result.optimizedScript.split('\\n').length} linhas</span>
+                        <button
+                          className="copy-btn"
+                          onClick={() => {
+                            navigator.clipboard.writeText(result.optimizedScript);
+                            const btn = document.querySelector('.code-panel.optimized .copy-btn') as HTMLButtonElement;
+                            if (btn) { btn.textContent = '✓ Copiado'; setTimeout(() => btn.textContent = '📋 Copiar', 2000); }
+                          }}
+                          title="Copiar código otimizado"
+                        >
+                          📋 Copiar
+                        </button>
+                      </div>
                     </div>
                     <div
                       className="code-content-wrapper"
                       onScroll={(e) => {
-                        const target = e.currentTarget;
-                        const originalPanel = target.parentElement?.parentElement?.querySelector('.original .code-content-wrapper') as HTMLDivElement;
-                        if (originalPanel && originalPanel !== target) {
-                          originalPanel.scrollTop = target.scrollTop;
-                          originalPanel.scrollLeft = target.scrollLeft;
+                        const target = e.currentTarget.querySelector('.code-scroll-area') as HTMLDivElement;
+                        const lineNumbers = e.currentTarget.querySelector('.line-numbers-column') as HTMLDivElement;
+                        const originalWrapper = e.currentTarget.parentElement?.parentElement?.querySelector('.original .code-content-wrapper') as HTMLDivElement;
+                        if (lineNumbers && target) {
+                          lineNumbers.scrollTop = target.scrollTop;
+                        }
+                        if (originalWrapper) {
+                          const originalScroll = originalWrapper.querySelector('.code-scroll-area') as HTMLDivElement;
+                          const originalLines = originalWrapper.querySelector('.line-numbers-column') as HTMLDivElement;
+                          if (originalScroll) {
+                            originalScroll.scrollTop = target.scrollTop;
+                            originalScroll.scrollLeft = target.scrollLeft;
+                          }
+                          if (originalLines) originalLines.scrollTop = target.scrollTop;
                         }
                       }}
                     >
-                      <pre className="code-content qlik-syntax">
-                        {result.optimizedScript.split('\n').map((line, idx) => (
-                          <div key={idx} className="code-line">
-                            <span className="line-number">{idx + 1}</span>
-                            <span className="line-content" dangerouslySetInnerHTML={{ __html: highlightQlikSyntax(line) }} />
-                          </div>
+                      <div className="line-numbers-column">
+                        {result.optimizedScript.split('\\n').map((_, idx) => (
+                          <span key={idx} className="line-number">{idx + 1}</span>
                         ))}
-                      </pre>
+                      </div>
+                      <div className="code-scroll-area" onScroll={(e) => {
+                        const target = e.currentTarget;
+                        const wrapper = target.parentElement as HTMLDivElement;
+                        const lineNumbers = wrapper?.querySelector('.line-numbers-column') as HTMLDivElement;
+                        if (lineNumbers) lineNumbers.scrollTop = target.scrollTop;
+                      }}>
+                        <pre className="code-content qlik-syntax">
+                          {result.optimizedScript.split('\\n').map((line, idx) => (
+                            <div key={idx} className="code-line" dangerouslySetInnerHTML={{ __html: highlightQlikSyntax(line) || '&nbsp;' }} />
+                          ))}
+                        </pre>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1117,13 +1156,12 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                 {/* Changes List */}
                 {result.changes && result.changes.length > 0 && (
                   <div className="changes-list">
-                    <h4>🔧 Lista de Alterações</h4>
+                    <h4>🔧 Lista de Alterações ({result.changes.length})</h4>
                     <div className="changes-grid">
                       {result.changes.slice(0, 10).map((change, idx) => (
-                        <div key={idx} className={`change-item risk-${change.riskLevel}`}>
+                        <div key={idx} className="change-item">
                           <div className="change-header">
                             <span className="change-category">{change.category}</span>
-                            <span className={`risk-badge ${change.riskLevel}`}>{change.riskLevel}</span>
                           </div>
                           <p className="change-description">{change.area}</p>
                           {change.impact && <p className="change-impact">💡 {change.impact}</p>}
@@ -3090,6 +3128,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
           align-items: center;
           justify-content: center;
           animation: overlay-fade-in 0.4s ease-out;
+          padding: 20px;
         }
 
         @keyframes overlay-fade-in {
@@ -3099,10 +3138,10 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
 
         .onboarding-spotlight {
           position: absolute;
-          top: 80px;
+          top: 140px;
           left: 20px;
-          width: 260px;
-          height: 220px;
+          width: 280px;
+          height: 280px;
           background: rgba(0, 242, 255, 0.08);
           border: 3px solid rgba(0, 242, 255, 0.6);
           border-radius: 16px;
@@ -3128,8 +3167,8 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
 
         .onboarding-tooltip {
           position: relative;
-          max-width: 500px;
-          margin-left: -100px;
+          max-width: 450px;
+          width: 100%;
           animation: tooltip-slide-in 0.5s ease-out 0.2s both;
         }
 
@@ -3316,351 +3355,8 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
           to { transform: rotate(360deg); }
         }
 
-        /* ================================ */
-        /* STAGE CARD V3 - Design Novo */
-        /* ================================ */
-        .stage-card-v3 {
-          position: relative;
-          background: linear-gradient(145deg, rgba(20, 28, 50, 0.9), rgba(12, 16, 30, 0.95));
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 12px;
-          padding: 16px;
-          padding-top: 20px;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          gap: 12px;
-          transition: all 0.3s ease;
-          overflow: hidden;
-          min-height: 280px;
-        }
+        /* STAGE CARD V3 styles moved to PipelineCard.css */
 
-        .stage-card-v3:hover {
-          border-color: rgba(255, 255, 255, 0.15);
-          transform: translateY(-2px);
-          box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
-        }
-
-        .stage-card-v3.active {
-          border-color: var(--card-color, var(--primary));
-          background: linear-gradient(145deg, rgba(0, 242, 255, 0.05), rgba(12, 16, 30, 0.95));
-        }
-
-        /* Barra accent no topo */
-        .card-top-accent {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 4px;
-          border-radius: 16px 16px 0 0;
-          transition: all 0.3s ease;
-          box-shadow: 0 0 10px var(--card-color, var(--primary));
-        }
-
-        /* Background Number */
-        .card-bg-number {
-          position: absolute;
-          top: 10px;
-          right: 15px;
-          font-size: 4rem;
-          font-weight: 800;
-          color: rgba(255, 255, 255, 0.03);
-          pointer-events: none;
-          font-family: 'JetBrains Mono', monospace;
-          z-index: 0;
-        }
-
-        /* Top Row Layout */
-        .card-top-row {
-          display: flex;
-          align-items: flex-start;
-          gap: 8px;
-          position: relative;
-          z-index: 1;
-        }
-
-        /* Ícone box */
-        .card-icon-box {
-          width: 48px;
-          height: 48px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 12px;
-          border: 1px solid;
-          flex-shrink: 0;
-          transition: all 0.3s ease;
-        }
-
-        .card-icon-box svg {
-          width: 26px;
-          height: 26px;
-        }
-
-        .stage-card-v3.active .card-icon-box {
-          transform: scale(1.05);
-          box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);
-        }
-
-        /* Texto block */
-        .card-text-block {
-          flex: 1;
-          min-width: 0;
-        }
-
-        .card-title-main {
-          font-size: 1.05rem;
-          font-weight: 700;
-          color: var(--text-main);
-          margin: 0;
-          line-height: 1.3;
-          letter-spacing: -0.3px;
-        }
-
-        .card-desc {
-          font-size: 0.8rem;
-          color: var(--text-secondary);
-          margin: 4px 0 0 0;
-          line-height: 1.3;
-          opacity: 0.8;
-        }
-
-        /* Status Badge */
-        .card-status-badge-container {
-          flex-shrink: 0;
-        }
-
-        .status-pill {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          padding: 4px 10px;
-          border-radius: 20px;
-          font-size: 0.6rem;
-          font-weight: 700;
-          letter-spacing: 0.5px;
-          text-transform: uppercase;
-          border: 1px solid transparent;
-          min-width: 80px;
-        }
-
-        .status-pill.pending {
-          background: rgba(255, 255, 255, 0.05);
-          color: rgba(255, 255, 255, 0.3);
-          border-color: rgba(255, 255, 255, 0.1);
-        }
-
-        .status-pill.active {
-          animation: status-blink 1.5s ease-in-out infinite;
-        }
-
-        @keyframes status-blink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.8; }
-        }
-
-        .status-pill.complete {
-          background: rgba(255, 255, 255, 0.05);
-          color: rgba(255, 255, 255, 0.3);
-          border-color: rgba(255, 255, 255, 0.1);
-        }
-
-        .status-pill.error {
-          background: rgba(255, 42, 109, 0.15);
-          color: var(--danger);
-          border-color: var(--danger);
-        }
-
-        /* Progress area */
-        .card-progress-area {
-          margin-top: auto;
-          position: relative;
-          z-index: 1;
-        }
-
-        .card-progress-track {
-          height: 4px;
-          background: rgba(255, 255, 255, 0.08);
-          border-radius: 2px;
-          overflow: hidden;
-          margin-bottom: 8px;
-        }
-
-        .card-progress-bar {
-          height: 100%;
-          border-radius: 2px;
-          transition: width 0.5s ease;
-          position: relative;
-        }
-
-        .stage-card-v3.active .card-progress-bar {
-          animation: progress-shimmer 2s ease-in-out infinite;
-        }
-
-        @keyframes progress-shimmer {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.7; }
-        }
-
-        .card-progress-labels {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-
-        .card-steps-count {
-          font-size: 0.75rem;
-          font-weight: 600;
-          color: var(--text-main);
-        }
-
-        .card-percent-value {
-          font-size: 0.8rem;
-          font-weight: 700;
-          color: var(--text-main);
-          font-family: 'JetBrains Mono', monospace;
-        }
-
-        .card-duration-display {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          margin-top: 8px;
-          padding: 6px 10px;
-          background: rgba(0, 242, 255, 0.08);
-          border-radius: 6px;
-          border: 1px solid rgba(0, 242, 255, 0.2);
-        }
-
-        .duration-icon {
-          font-size: 0.9rem;
-        }
-
-        .duration-time {
-          font-size: 0.75rem;
-          font-weight: 600;
-          color: #00f2ff;
-          font-family: 'JetBrains Mono', monospace;
-        }
-
-        /* Card Summary (clickable) */
-        .card-summary {
-          cursor: pointer;
-          list-style: none;
-          display: contents;
-        }
-
-        .card-summary::-webkit-details-marker {
-          display: none;
-        }
-
-        /* Substeps dentro do card */
-        .card-substeps {
-          margin-top: 16px;
-          padding-top: 16px;
-          border-top: 1px solid rgba(255, 255, 255, 0.06);
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-          max-height: none;
-          overflow-y: visible;
-        }
-
-        .substep-item {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 10px 14px;
-          background: rgba(255, 255, 255, 0.02);
-          border-radius: 8px;
-          font-size: 0.85rem;
-          transition: all 0.2s;
-        }
-
-        .substep-item:hover {
-          background: rgba(255, 255, 255, 0.04);
-        }
-
-        .substep-item.running {
-          background: rgba(0, 242, 255, 0.08);
-          border-left: 2px solid #00f2ff;
-        }
-
-        .substep-item.success {
-          opacity: 0.7;
-        }
-
-        .substep-item.error {
-          background: rgba(255, 42, 109, 0.08);
-          border-left: 2px solid var(--danger);
-        }
-
-        .substep-indicator {
-          width: 16px;
-          height: 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-        }
-
-        .substep-indicator svg {
-          width: 12px;
-          height: 12px;
-        }
-
-        .substep-dot {
-          width: 6px;
-          height: 6px;
-          background: rgba(255, 255, 255, 0.3);
-          border-radius: 50%;
-        }
-
-        .substep-name {
-          flex: 1;
-          color: var(--text-main);
-          font-weight: 500;
-        }
-
-        .substep-time {
-          font-size: 0.65rem;
-          color: #00f2ff;
-          font-family: 'JetBrains Mono', monospace;
-        }
-
-        .substep-time.warning {
-          color: var(--warning);
-          animation: time-pulse 1s ease-in-out infinite;
-        }
-
-        @keyframes time-pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.6; }
-        }
-
-        .substep-duration {
-          font-size: 0.65rem;
-          color: var(--text-secondary);
-          font-family: 'JetBrains Mono', monospace;
-        }
-
-        /* Glow pulse quando ativo */
-        .card-glow-pulse {
-          position: absolute;
-          inset: -2px;
-          border-radius: 18px;
-          border: 2px solid;
-          opacity: 0;
-          animation: glow-pulse 2s ease-in-out infinite;
-          pointer-events: none;
-          z-index: 2;
-        }
-
-        @keyframes glow-pulse {
-          0%, 100% { opacity: 0; transform: scale(1); }
-          50% { opacity: 0.4; transform: scale(1.01); }
-        }
 
         /* Saved Scripts Modal */
         .modal-overlay {

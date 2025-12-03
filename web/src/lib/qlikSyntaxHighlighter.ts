@@ -232,14 +232,26 @@ export function tokensToHtml(tokens: Token[]): string {
 }
 
 export function highlightQlikCode(code: string): string {
-  // Strip existing HTML tags and decode entities to prevent double-highlighting
+  // Ensure we are working with plain text.
+  // We strip HTML tags using a smart regex that preserves code like "WHERE Value < 10".
+  // It only removes tags that start with a letter (e.g. <span, <div, </span).
+
   const cleanCode = code
-    .replace(/<[^>]*>/g, '')
+    // First pass: strip HTML tags like <span class="...">text</span>
+    .replace(/<\/?\s*[a-zA-Z][^>]*>/g, '')
+    // Second pass: handle incomplete/broken tags from LLM hallucinations
+    .replace(/<span\s+[^>]*$/gm, '')  // Remove incomplete opening tags at line end
+    .replace(/^\s*<\/span>/gm, '')    // Remove orphan closing tags at line start
+    // Decode HTML entities
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&amp;/g, '&')
     .replace(/&quot;/g, '"')
-    .replace(/&#039;/g, "'");
+    .replace(/&#039;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    // Clean up any remaining malformed patterns
+    .replace(/class="[^"]*"/g, '')  // Remove orphan class attributes
+    .replace(/<\/?>/g, '');         // Remove empty tags
 
   const tokens = tokenizeQlikScript(cleanCode);
   return tokensToHtml(tokens);

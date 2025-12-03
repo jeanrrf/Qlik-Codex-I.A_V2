@@ -130,9 +130,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
   const copyTimeout = useRef<number | null>(null);
 
   const CONTACT_EMAIL = "rosso.jeandasilva@gmail.com";
-  const WHATSAPP_NUMBER = "+55 48 99937304";
+  const WHATSAPP_NUMBER = "+55 48 991937304";
   const WHATSAPP_URL =
-    "https://api.whatsapp.com/send?phone=5548999373041&text=Quero%20conhecer%20o%20Qlik%20Codex%20IA";
+    "https://api.whatsapp.com/send?phone=5548991937304&text=Quero%20conhecer%20o%20Qlik%20Codex%20IA";
   const contactCopyPayload = `Email: ${CONTACT_EMAIL}\nWhatsApp: ${WHATSAPP_NUMBER}`;
 
   const copyToClipboard = async (text: string) => {
@@ -274,25 +274,23 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             </div>
 
             <h1 className="hero-title">
-              <span className="title-line">A primeira IA</span>
+              <span className="title-line">Plataforma de</span>
               <span className="title-line title-highlight">
-                <span className="highlight-text">Especialista em Qlik</span>
+                <span className="highlight-text">Engenharia de Dados Qlik</span>
                 <span className="highlight-glow" />
               </span>
-              <span className="title-line">do Brasil.</span>
+              <span className="title-line">para times de BI e Dados.</span>
             </h1>
 
             {/* Badge AINEX - Compacto */}
             <div className="hero-ainex-compact">
-              <span className="ainex-tag">AINEX</span>
+              <span className="ainex-tag">AINEX ENGINE</span>
               <span className="ainex-separator">|</span>
-              <span className="ainex-desc">Agente neural especializado para Qlik</span>
+              <span className="ainex-desc">Otimização Neural para Qlik Sense & SaaS</span>
             </div>
 
             <p className="hero-description">
-              Treinada para <strong>Qlik Sense</strong> e <strong>Qlik SaaS</strong>,
-              feita para quem vive de script, modelo de dados e performance.
-              Ela lê seus scripts como um arquiteto de dados sênior.
+              Plataforma de IA especializada em Qlik para engenharia de dados. Analisa, refatora e documenta seus scripts com foco em desempenho, segurança e padronização.
             </p>
 
             <div className="hero-features">
@@ -342,17 +340,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
 
         {/* SUITE / FEATURES */}
         <section id="suite" className="suite-section">
-          <div className="section-header">
-            <span className="section-badge">SUITE COMPLETA</span>
-            <h2 className="section-title">
-              Poder de especialista.<br />
-              <span className="title-accent">Precisão de laboratório.</span>
-            </h2>
-            <p className="section-description">
-              Um conjunto de modos pensado para quem vive da comunidade Qlik e
-              não aceita dashboards lentos, scripts obscuros ou decisões no escuro.
-            </p>
-          </div>
+            <div className="section-header">
+              <span className="section-badge">SUITE COMPLETA</span>
+              <h2 className="section-title">
+                Suite de ferramentas para<br />
+                <span className="title-accent">Desenvolvedores Qlik.</span>
+              </h2>
+              <p className="section-description">
+                Conjunto de ferramentas para auditar, otimizar e documentar seus projetos Qlik Sense e SaaS.
+              </p>
+            </div>
 
           <div className="features-grid">
             <div className="feature-card feature-card-radar">
@@ -362,12 +359,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 <Icons.Radar />
                 <h3 className="card-title">Radar de Performance</h3>
                 <p className="card-description">
-                  Detecta joins pesados, cargas desnecessárias e padrões que
-                  derrubam a velocidade dos seus dashboards, antes do usuário sentir.
+                  Identifica gargalos de carga, joins explosivos e uso ineficiente de memória RAM.
                 </p>
                 <div className="card-tags">
                   <span className="tag tag-cyan">Otimização</span>
-                  <span className="tag tag-cyan">Velocidade</span>
+                  <span className="tag tag-cyan">Speed</span>
                 </div>
               </div>
             </div>
@@ -379,12 +375,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 <Icons.Scanner />
                 <h3 className="card-title">Scanner de Risco</h3>
                 <p className="card-description">
-                  Aponta trechos frágeis, dependências perigosas e incoerências
-                  de lógica antes de ir para produção. Sem drama, com clareza.
+                  Auditoria de segurança e boas práticas. Detecta loops, chaves sintéticas e vulnerabilidades.
                 </p>
                 <div className="card-tags">
                   <span className="tag tag-pink">Segurança</span>
-                  <span className="tag tag-pink">Validação</span>
+                  <span className="tag tag-pink">Audit</span>
                 </div>
               </div>
             </div>
@@ -394,14 +389,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               <div className="card-border" />
               <div className="card-content">
                 <Icons.Docs />
-                <h3 className="card-title">Documentação Viva</h3>
+                <h3 className="card-title">Documentação Automática</h3>
                 <p className="card-description">
-                  Transforma scripts em narrativa clara, conectando decisões
-                  técnicas com impacto de negócio. Ideal para onboardings e auditorias.
+                  Gera documentação técnica detalhada do seu script, incluindo linhagem e regras de negócio.
                 </p>
                 <div className="card-tags">
+                  <span className="tag tag-green">Docs</span>
                   <span className="tag tag-green">Governança</span>
-                  <span className="tag tag-green">Clareza</span>
                 </div>
               </div>
             </div>
@@ -411,14 +405,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               <div className="card-border" />
               <div className="card-content">
                 <Icons.Mentor />
-                <h3 className="card-title">Modo Mentor Qlik</h3>
+                <h3 className="card-title">Explicações Guiadas</h3>
                 <p className="card-description">
-                  Explica cada sugestão como um especialista que já quebrou
-                  ambiente em produção e agora te ajuda a não repetir os erros.
+                  Explicações objetivas para cada recomendação de melhoria, ajudando o time a entender e padronizar o código.
                 </p>
                 <div className="card-tags">
-                  <span className="tag tag-amber">Aprendizado</span>
-                  <span className="tag tag-amber">Mentoria</span>
+                  <span className="tag tag-amber">Ensino</span>
+                  <span className="tag tag-amber">Upskilling</span>
                 </div>
               </div>
             </div>
@@ -430,10 +423,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           <div className="section-header">
             <span className="section-badge">DIFERENCIAL AINEX</span>
             <h2 className="section-title">
-              Por que a AINEX é <span className="title-accent">diferente</span>?
+              Por que a AINEX se destaca?
             </h2>
             <p className="section-description">
-              Entenda o que torna a AINEX única no mercado de IA para Qlik
+              IAs genéricas podem gerar sintaxe incorreta; a AINEX foi desenhada para entender a engenharia do Qlik.
             </p>
           </div>
 
@@ -441,43 +434,31 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             <div className="comparison-card chatgpt">
               <div className="comparison-header">
                 <div className="comparison-icon">🤖</div>
-                <h3>ChatGPT / IAs Generalistas</h3>
+                <h3>LLMs Genéricos</h3>
+                <span className="comparison-sub">ChatGPT, Claude, etc.</span>
               </div>
               <ul className="comparison-list">
-                <li className="neutral">✓ Excelente IA generalista</li>
-                <li className="neutral">✓ Conhecimento amplo</li>
-                <li className="negative">✗ Não conhece limitações Qlik</li>
-                <li className="negative">✗ Sugere sintaxes incompatíveis</li>
-                <li className="negative">✗ Ignora estruturas específicas</li>
-                <li className="negative">✗ Sem contexto de arquitetura</li>
+                <li className="neutral">? Adequados para textos gerais</li>
+                <li className="negative">? Podem sugerir fun??es inexistentes</li>
+                <li className="negative">? N?o consideram performance de QVD e modelo</li>
+                <li className="negative">? N?o avaliam impacto de loops e chaves sint?ticas</li>
+                <li className="negative">? N?o entendem particularidades como "Preceding Load"</li>
               </ul>
             </div>
 
             <div className="comparison-card ainex featured">
               <div className="comparison-header">
                 <div className="comparison-icon">⚡</div>
-                <h3>AINEX (INX-K Engine)</h3>
-                <span className="featured-badge">Especializada</span>
+                <h3>AINEX Engine</h3>
+                <span className="featured-badge">Qlik Native</span>
               </div>
               <ul className="comparison-list">
-                <li className="positive">✓ Treinada especificamente em Qlik</li>
-                <li className="positive">✓ Entende limitações e sintaxes</li>
-                <li className="positive">✓ Detecta anti-patterns reais</li>
-                <li className="positive">✓ Otimiza QVD operations</li>
-                <li className="positive">✓ Conhece Qlik Sense/SaaS</li>
-                <li className="positive">✓ Validação de arquitetura</li>
+                <li className="positive">✓ Treinada em documentação técnica Qlik</li>
+                <li className="positive">✓ Valida sintaxe antes de sugerir</li>
+                <li className="positive">✓ Otimiza para Qlik Engine (RAM/CPU)</li>
+                <li className="positive">✓ Detecta gargalos de modelagem</li>
+                <li className="positive">✓ Gera documentação automática</li>
               </ul>
-            </div>
-          </div>
-
-          <div className="why-ainex-highlight">
-            <div className="highlight-icon">💡</div>
-            <div className="highlight-content">
-              <p className="highlight-text">
-                <strong>INX-K</strong> é o motor de conhecimento Qlik da AINEX.
-                Ela foi construída por especialistas que vivem de script, modelo de dados e performance.
-                Isso é o que nos diferencia no mercado e garante sugestões que <em>realmente funcionam</em> em Qlik.
-              </p>
             </div>
           </div>
         </section>
@@ -485,66 +466,62 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         {/* ✨ FREE TIER - EXPERIMENTE AGORA */}
         <section className="free-tier-section">
           <div className="section-header">
-            <span className="section-badge free">GRATUITO</span>
+            <span className="section-badge free">ACESSO GRATUITO</span>
             <h2 className="section-title">
-              Comece <span className="title-accent">gratuitamente</span>
+              Potência Enterprise.<br />
+              <span className="title-accent">Custo Zero.</span>
             </h2>
             <p className="section-description">
-              Teste o poder da AINEX sem compromisso. FREE TIER com recursos essenciais.
+              Experimente o poder do motor AINEX sem barreiras. Ideal para validações rápidas e aprendizado.
             </p>
           </div>
 
           <div className="free-tier-card">
             <div className="free-tier-glow" />
             <div className="free-tier-content">
-              <h3 className="free-tier-title">🚀 FREE TIER</h3>
-              <p className="free-tier-subtitle">Perfeito para experimentar e validar</p>
+              <div className="free-tier-header">
+                <h3 className="free-tier-title">🚀 COMMUNITY EDITION</h3>
+                <span className="free-tier-price">R$ 0<small>/mês</small></span>
+              </div>
 
               <div className="free-tier-features">
                 <div className="feature-item">
-                  <div className="feature-icon">✅</div>
+                  <div className="feature-icon">⚡</div>
                   <div className="feature-text">
-                    <strong>1 arquivo por vez</strong>
-                    <span>Upload único para análise focada</span>
+                    <strong>4 Otimizações Diárias</strong>
+                    <span>Renovadas a cada 24h automaticamente</span>
                   </div>
                 </div>
                 <div className="feature-item">
-                  <div className="feature-icon">✅</div>
+                  <div className="feature-icon">📝</div>
                   <div className="feature-text">
-                    <strong>Até 200 linhas</strong>
-                    <span>+ 20-30 extras para completar blocos</span>
+                    <strong>Até 200 Linhas de Código</strong>
+                    <span>Análise profunda de blocos lógicos</span>
                   </div>
                 </div>
                 <div className="feature-item">
-                  <div className="feature-icon">✅</div>
+                  <div className="feature-icon">🧠</div>
                   <div className="feature-text">
-                    <strong>Modo Analyze</strong>
-                    <span>Análise completa sem modificar código</span>
+                    <strong>Modo Ultra-Expert</strong>
+                    <span>O mesmo motor da versão Enterprise</span>
                   </div>
                 </div>
                 <div className="feature-item">
-                  <div className="feature-icon">✅</div>
+                  <div className="feature-icon">🛡️</div>
                   <div className="feature-text">
-                    <strong>Modo Ultra Expert</strong>
-                    <span>1 execução por arquivo com otimização profunda</span>
-                  </div>
-                </div>
-                <div className="feature-item">
-                  <div className="feature-icon">✅</div>
-                  <div className="feature-text">
-                    <strong>4 execuções/dia</strong>
-                    <span>Análise + Ultra Expert (total 4 por dia)</span>
+                    <strong>Validação de Segurança</strong>
+                    <span>Detecção de riscos e anti-patterns</span>
                   </div>
                 </div>
               </div>
 
               <button className="btn btn-free-start" onClick={onStart}>
-                <span className="btn-icon">🚀</span>
-                Começar Grátis Agora
+                <span className="btn-icon">👉</span>
+                Iniciar Agora
               </button>
 
               <p className="free-tier-note">
-                Sem cartão de crédito. Sem compromisso. Sem pegadinhas.
+                Não requer cartão de crédito. Acesso imediato.
               </p>
             </div>
           </div>
@@ -590,14 +567,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           <div className="contact-card">
             <div className="contact-glow" />
             <div className="contact-content">
-              <span className="contact-badge">CONTATO DIRETO</span>
+              <span className="contact-badge">FALE COM O CRIADOR</span>
               <h2 className="contact-title">
-                Quer levar o Qlik da sua empresa<br />
-                para <span className="text-gradient-cyan">outro nível</span>?
+                Precisa de uma solução<br />
+                <span className="text-gradient-cyan">Enterprise Personalizada?</span>
               </h2>
               <p className="contact-description">
-                Fale direto com quem criou o Qlik Codex I.A e entenda como
-                trazer essa IA especialista para o seu time, projeto ou cliente.
+                Vamos conversar sobre como a AINEX pode transformar a produtividade do seu time de dados.
               </p>
 
               <div className="contact-actions">

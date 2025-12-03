@@ -1,7 +1,7 @@
 import { logger } from "../lib/logger";
 import { sseEmitter } from "../lib/sseEmitter";
 // import { runQlikOptimizeAgent } from "../agents/qlikOptimizeAgent";
-import { CompactAuditReport } from "../agents/qlikConsultancyAgent";
+import { CompactAuditReport, calculateDiffStats } from "../agents/qlikConsultancyAgent";
 // import { calculateROI, formatROIExecutiveSummary } from "./roiCalculator";
 import {
   // analyzeScriptCharacteristics,
@@ -71,6 +71,9 @@ async function runUltraExpertMode(
   // Run the pipeline
   const megaResult = await optimizer.run();
 
+  // Calculate diff stats properly using the shared utility
+  const diffStats = calculateDiffStats(script, megaResult.optimizedScript);
+
   // Map results to FullOptimizeResult
   return {
     originalScript: script,
@@ -110,17 +113,17 @@ async function runUltraExpertMode(
       id: Date.now().toString(),
       version: "1.0",
       generatedAt: new Date().toISOString(),
-      processingTimeMs: 0,
+      processingTimeMs: megaResult.metrics.totalTime, // Use actual processing time
       timeline: [],
       phases: [],
-      cronogram: { totalDuration: 0, fastestPhase: 'analysis', slowestPhase: 'analysis' },
+      cronogram: { totalDuration: megaResult.metrics.totalTime, fastestPhase: 'analysis', slowestPhase: 'analysis' },
       executiveSummary: {
         title: "Optimization Report",
         analyst: "Qlik Codex AI",
         date: new Date().toISOString(),
         overview: megaResult.report.executiveSummary,
-        keyFindings: [],
-        criticalAlerts: [],
+        keyFindings: megaResult.analysis.optimizationOpportunities || [],
+        criticalAlerts: megaResult.analysis.bottlenecks?.filter((b: any) => b.severity === 'Critical' || b.severity === 'High').map((b: any) => `${b.severity}: ${b.description}`) || [],
         overallRisk: megaResult.plan.riskLevel as any,
         overallHealth: 'good',
         recommendedAction: 'review'
@@ -129,7 +132,7 @@ async function runUltraExpertMode(
         originalCode: script,
         optimizedCode: megaResult.optimizedScript,
         markers: [],
-        diffStats: { linesAdded: 0, linesRemoved: 0, linesModified: 0, totalOriginal: originalLines, totalOptimized: megaResult.optimizedScript.split('\n').length }
+        diffStats: diffStats // Use calculated stats
       },
       qualitativeGains: [],
       recommendations: megaResult.plan.planSteps.map((s: any) => ({
@@ -137,8 +140,9 @@ async function runUltraExpertMode(
         title: s.title,
         description: s.details,
         impact: 'high',
-        effort: 'medium',
-        category: 'performance'
+        effort: s.estimatedEffort ? s.estimatedEffort.toLowerCase() : 'medium',
+        category: 'performance',
+        actionItems: s.details ? s.details.split('. ').map((d: string) => d.trim()).filter((d: string) => d.length > 0) : []
       })),
       tips: [],
       fullDocumentation: megaResult.report.technicalDetails,
