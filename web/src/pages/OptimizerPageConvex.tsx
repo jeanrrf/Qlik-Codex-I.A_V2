@@ -34,6 +34,12 @@ export default function OptimizerPageConvex({ onBackToLanding }: Props) {
 
   return (
     <div className="optimizer-page">
+      {/* Background Effects */}
+      <div className="opt-bg">
+        <div className="bg-gradient" />
+        <div className="bg-grid" />
+      </div>
+
       {/* Header */}
       <header className="optimizer-header">
         <div className="header-left">

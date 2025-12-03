@@ -23,7 +23,7 @@ import type { ConsultancyDocument } from "../types/consultancy";
 import { UploadedFileMeta, UploadedFilePayload } from "../types/ui";
 import ScriptCaptureModal from "../components/ScriptCaptureModal";
 import DownloadModal from "../components/DownloadModal";
-import { useOptimizationProgress } from "../hooks/useOptimizationProgress";
+import { useOptimizationAdapter } from "../hooks/useOptimizationAdapter";
 import { useSessionPersistence } from "../hooks/useSessionPersistence";
 import { highlightQlikCode } from "../lib/qlikSyntaxHighlighter";
 
@@ -182,8 +182,19 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
 
   // === HOOKS ===
   const { user } = useAuth();
-  const optimization = useOptimizationProgress();
+  const optimization = useOptimizationAdapter();
   const session = useSessionPersistence();
+
+  // Sync Convex result to local state
+  useEffect(() => {
+    if (optimization.convexResult) {
+      const { consultancyDocument, ...optResult } = optimization.convexResult;
+      setResult(optResult);
+      if (consultancyDocument) {
+        setConsultancyDoc(consultancyDocument);
+      }
+    }
+  }, [optimization.convexResult]);
 
   // Check if user is OWNER (has full features)
   const isOwner = user?.role === UserRole.OWNER;
