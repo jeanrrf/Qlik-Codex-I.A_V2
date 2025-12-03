@@ -6,9 +6,14 @@ import { LoginPage } from "./pages/LoginPage";
 import { AuthCallback } from "./pages/AuthCallback";
 import LandingPage from "./pages/LandingPage";
 import OptimizerPageV2 from "./pages/OptimizerPageV2";
+import OptimizerPageConvex from "./pages/OptimizerPageConvex";
 import { ProfilePage } from "./pages/ProfilePage";
+import { USE_CONVEX } from "./lib/config";
 
 type View = "landing" | "optimizer" | "profile";
+
+// Escolhe a página de otimização baseado na configuração
+const OptimizerPage = USE_CONVEX ? OptimizerPageConvex : OptimizerPageV2;
 
 const AppContent: React.FC = () => {
   const [view, setView] = useState<View>("landing");
@@ -71,7 +76,7 @@ const AppContent: React.FC = () => {
     <NavigationProvider onNavigate={setView}>
       {view === "landing" && <LandingPage onStart={() => setView("optimizer")} />}
       {view === "profile" && <ProfilePage />}
-      {view === "optimizer" && <OptimizerPageV2 onBackToLanding={() => setView("landing")} />}
+      {view === "optimizer" && <OptimizerPage onBackToLanding={() => setView("landing")} />}
     </NavigationProvider>
   );
 };

@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as auth from "../auth.js";
 import type * as history from "../history.js";
 import type * as optimizer from "../optimizer.js";
 import type * as sessions from "../sessions.js";
@@ -19,6 +20,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  auth: typeof auth;
   history: typeof history;
   optimizer: typeof optimizer;
   sessions: typeof sessions;

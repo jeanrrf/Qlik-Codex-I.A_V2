@@ -1,20 +1,18 @@
 /**
  * Authentication Context
- * Gerencia estado de autenticação globalmente no frontend
+ * Gerencia estado de autenticação globalmente no frontend (Convex Edition)
  */
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
 
 import { User, AuthContextValue, AuthState } from "../types/auth";
-import {
-  checkAuthStatus,
-  getCurrentUser,
-  getGoogleAuthUrl,
-  loginWithToken,
-  logout as logoutApi
-} from "../api/authClient";
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+// Chave para persistir auth no localStorage
+const AUTH_STORAGE_KEY = "qlik-codex-auth";
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -28,18 +26,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     error: null
   });
 
+  const loginWithTokenMutation = useMutation(api.auth.loginWithToken);
+
   /**
-   * Verifica autenticação ao carregar a aplicação
+   * Verifica autenticação ao carregar a aplicação (via localStorage)
    */
   useEffect(() => {
-    const initAuth = async () => {
+    const initAuth = () => {
       try {
-        const status = await checkAuthStatus();
-
-        if (status.authenticated && status.user) {
-          const userData = await getCurrentUser();
+        const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+        if (stored) {
+          const userData = JSON.parse(stored);
           setState({
-            user: userData.user as User,
+            user: userData as User,
             isAuthenticated: true,
             isLoading: false,
             error: null
@@ -58,7 +57,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           user: null,
           isAuthenticated: false,
           isLoading: false,
-          error: "Failed to check authentication status"
+          error: null
         });
       }
     };
@@ -73,10 +72,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
-      const response = await loginWithToken(token);
+      const response = await loginWithTokenMutation({ token });
+
+      const user = response.user as User;
+
+      // Persistir no localStorage
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
 
       setState({
-        user: response.user as User,
+        user,
         isAuthenticated: true,
         isLoading: false,
         error: null
@@ -94,71 +98,40 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   /**
-   * Login com Google OAuth
+   * Login com Google OAuth (não suportado no Convex free - usar token)
    */
   const loginWithGoogle = async () => {
-    try {
-      setState((prev) => ({ ...prev, isLoading: true, error: null }));
-
-      const authUrl = await getGoogleAuthUrl();
-
-      // Redirecionar para URL de autenticação do Google
-      window.location.href = authUrl;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Google login failed";
-      setState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error: errorMessage
-      }));
-      throw err;
-    }
+    setState((prev) => ({
+      ...prev,
+      isLoading: false,
+      error: "Google OAuth não disponível. Use o token de acesso."
+    }));
   };
 
   /**
    * Logout
    */
   const logout = async () => {
-    try {
-      await logoutApi();
-
-      setState({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        error: null
-      });
-    } catch (err) {
-      console.error("Logout error:", err);
-      // Forçar logout local mesmo se API falhar
-      setState({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        error: null
-      });
-    }
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    setState({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: null
+    });
   };
 
   /**
    * Recarregar dados do usuário
    */
   const refreshUser = async () => {
-    try {
-      const userData = await getCurrentUser();
+    // No Convex, dados vêm do localStorage
+    const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (stored) {
       setState((prev) => ({
         ...prev,
-        user: userData.user as User
+        user: JSON.parse(stored) as User
       }));
-    } catch (err) {
-      console.error("Refresh user error:", err);
-      // Se falhar ao recarregar, pode ser que sessão expirou
-      setState({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        error: "Session expired"
-      });
     }
   };
 
