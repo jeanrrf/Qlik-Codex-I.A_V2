@@ -72,8 +72,8 @@ router.post(
     try {
       const result = await scriptService.optimizeScript(payload, abortController.signal);
 
-      // Coleta os sub-steps do modo correto
-      const stepSource = payload.mode === "analysis" ? "analysis" : "optimization";
+      // Coleta os sub-steps do modo ultra-expert
+      const stepSource = "optimization";
       const completedSubSteps: SubStepExecution[] = stepTimingService.getCompletedSubSteps(stepSource);
 
       logger.debug("SubSteps collected", { mode: payload.mode, count: completedSubSteps.length });

@@ -5,8 +5,7 @@
 
 import { getSqliteDb } from "../lib/sqliteDb";
 import { logger } from "../lib/logger";
-
-export type OptimizeMode = "analysis" | "ultra-expert";
+import type { OptimizeMode } from "../types/qlik";
 export type LLMProviderName = "ainex" | "google" | "nvidia";
 
 export interface ActiveSession {

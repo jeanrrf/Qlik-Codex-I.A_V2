@@ -16,6 +16,7 @@ import {
 } from "../services/authService";
 import { checkDailyQuota } from "../services/usageQuotaService";
 import { User, UserRole, RolePermissions, RoleUsageLimits } from "../types/auth";
+import type { OptimizeMode } from "../types/qlik";
 
 /**
  * Request estendido com informações de autenticação
@@ -273,29 +274,29 @@ export function checkUsageLimits(req: AuthRequest, res: Response, next: NextFunc
   logger.debug("[FREE TIER] checkUsageLimits iniciado", {
     userId: req.user.id,
     userRole: req.user.role,
-    limits: limits
+    limits
   });
 
-  // Owner tem limites ilimitados
   if (req.user.role === UserRole.OWNER) {
     logger.debug("[FREE TIER] Owner detectado - bypass de limites");
     next();
     return;
   }
 
-  // Verificar modo solicitado
-  if (req.body.mode && limits.enabledModes && !limits.enabledModes.includes(req.body.mode)) {
+  const requestedMode = req.body.mode as OptimizeMode | undefined;
+
+  if (requestedMode && limits.enabledModes && !limits.enabledModes.includes(requestedMode)) {
     res.status(403).json({
       error: "Access denied",
-      message: `Your role does not have access to mode: ${req.body.mode}`,
+      message: `Your role does not have access to mode: ${requestedMode}`,
       allowedModes: limits.enabledModes
     });
     return;
   }
 
-  // ✨ FREE TIER: Validar limite de linhas (com flexibilidade inteligente)
   if (req.body.script && limits.maxScriptLines > 0) {
-    const scriptLines = req.body.script.split(/\r?\n/).length;
+    const scriptLines = req.body.script.split(/?
+/).length;
 
     logger.debug("[FREE TIER] Verificando limite de linhas", {
       scriptLines,
@@ -304,14 +305,12 @@ export function checkUsageLimits(req: AuthRequest, res: Response, next: NextFunc
     });
 
     if (scriptLines > limits.maxScriptLines) {
-      // Não bloqueia - apenas marca para truncamento inteligente
       logger.warn(`FREE TIER: Script excede ${limits.maxScriptLines} linhas (${scriptLines} linhas). Aplicando truncamento inteligente.`, {
         userId: req.user.id,
         scriptLines,
         limit: limits.maxScriptLines
       });
 
-      // Marca no request para processamento inteligente
       req.body.applySmartTruncation = true;
       req.body.lineLimit = limits.maxScriptLines;
 
@@ -322,7 +321,6 @@ export function checkUsageLimits(req: AuthRequest, res: Response, next: NextFunc
     }
   }
 
-  // Verificar tamanho do script (se aplicável)
   if (req.body.script && limits.maxScriptSizeKB > 0) {
     const scriptSizeKB = Buffer.byteLength(req.body.script, "utf8") / 1024;
     if (scriptSizeKB > limits.maxScriptSizeKB) {
@@ -336,39 +334,36 @@ export function checkUsageLimits(req: AuthRequest, res: Response, next: NextFunc
     }
   }
 
-  // ✨ FREE TIER: Verificar quota diária de otimizações
-  const mode = req.body.mode as "analysis" | "ultra-expert";
-  if (mode) {
-    const quotaCheck = checkDailyQuota(req.user, mode);
+  const mode: OptimizeMode = requestedMode ?? "ultra-expert";
+  const quotaCheck = checkDailyQuota(req.user, mode);
 
-    if (!quotaCheck.allowed) {
-      logger.warn("[FREE TIER] Quota diária excedida", {
-        userId: req.user.id,
-        mode,
-        usedToday: quotaCheck.usedToday,
-        limit: quotaCheck.limit
-      });
-
-      res.status(429).json({
-        error: "Daily quota exceeded",
-        message: `Você atingiu o limite FREE TIER de ${quotaCheck.limit} otimizações por dia (200 linhas). Limite renova em: ${new Date(quotaCheck.resetAt).toLocaleString('pt-BR')}`,
-        quota: {
-          used: quotaCheck.usedToday,
-          limit: quotaCheck.limit,
-          remaining: quotaCheck.remaining,
-          resetAt: quotaCheck.resetAt
-        }
-      });
-      return;
-    }
-
-    logger.debug("[FREE TIER] Quota OK", {
+  if (!quotaCheck.allowed) {
+    logger.warn("[FREE TIER] Quota di?ria excedida", {
       userId: req.user.id,
       mode,
-      remaining: quotaCheck.remaining,
+      usedToday: quotaCheck.usedToday,
       limit: quotaCheck.limit
     });
+
+    res.status(429).json({
+      error: "Daily quota exceeded",
+      message: `Voc? atingiu o limite FREE TIER de ${quotaCheck.limit} otimiza??es por dia (200 linhas). Limite renova em: ${new Date(quotaCheck.resetAt).toLocaleString("pt-BR")}`,
+      quota: {
+        used: quotaCheck.usedToday,
+        limit: quotaCheck.limit,
+        remaining: quotaCheck.remaining,
+        resetAt: quotaCheck.resetAt
+      }
+    });
+    return;
   }
+
+  logger.debug("[FREE TIER] Quota OK", {
+    userId: req.user.id,
+    mode,
+    remaining: quotaCheck.remaining,
+    limit: quotaCheck.limit
+  });
 
   next();
 }

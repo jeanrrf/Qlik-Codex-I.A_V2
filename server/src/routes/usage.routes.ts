@@ -24,28 +24,18 @@ router.get(
       return;
     }
 
-    // Verifica quota para ambos os modos
-    const analysisQuota = checkDailyQuota(req.user, "analysis");
+    // Verifica quota para modo único
     const ultraExpertQuota = checkDailyQuota(req.user, "ultra-expert");
 
     logger.debug("[USAGE API] Quota consultada", {
       userId: req.user.id,
-      analysis: analysisQuota,
       ultraExpert: ultraExpertQuota
     });
 
     res.json({
       success: true,
       data: {
-        analysis: analysisQuota,
-        ultraExpert: ultraExpertQuota,
-        combined: {
-          // Total diário (analysis + ultra-expert contam juntos)
-          used: analysisQuota.usedToday,
-          limit: analysisQuota.limit,
-          remaining: analysisQuota.remaining,
-          resetAt: analysisQuota.resetAt
-        }
+        ultraExpert: ultraExpertQuota
       }
     });
   })

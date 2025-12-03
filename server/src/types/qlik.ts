@@ -1,4 +1,4 @@
-export type OptimizeMode = "analysis" | "ultra-expert";
+export type OptimizeMode = "ultra-expert";
 
 export type BreakingRisk = "none" | "low" | "medium" | "high";
 

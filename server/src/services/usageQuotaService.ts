@@ -18,7 +18,7 @@ export interface UsageQuotaCheck {
 /**
  * Verifica se o usuário pode executar uma otimização
  */
-export function checkDailyQuota(user: User, mode: "analysis" | "ultra-expert"): UsageQuotaCheck {
+export function checkDailyQuota(user: User, mode: "ultra-expert"): UsageQuotaCheck {
   // Owner tem acesso ilimitado
   if (user.role === UserRole.OWNER) {
     return {
@@ -71,7 +71,7 @@ export function checkDailyQuota(user: User, mode: "analysis" | "ultra-expert"): 
 /**
  * Registra uma execução de otimização
  */
-export function recordUsage(userId: string, mode: "analysis" | "ultra-expert"): void {
+export function recordUsage(userId: string, mode: "ultra-expert"): void {
   const db = getSqliteDb();
   const now = new Date().toISOString();
 
@@ -166,7 +166,6 @@ export function getUserUsageStats(userId: string): {
   last24h: number;
   last7days: number;
   last30days: number;
-  analysisModeCount: number;
   ultraExpertModeCount: number;
 } {
   const db = getSqliteDb();
@@ -201,12 +200,6 @@ export function getUserUsageStats(userId: string): {
     `);
     const count30d = (stmt30d.get(userId, last30days.toISOString()) as { count: number }).count;
 
-    const stmtAnalysis = db.prepare(`
-      SELECT COUNT(*) as count FROM user_daily_usage
-      WHERE user_id = ? AND mode = 'analysis'
-    `);
-    const analysisCount = (stmtAnalysis.get(userId) as { count: number }).count;
-
     const stmtUltraExpert = db.prepare(`
       SELECT COUNT(*) as count FROM user_daily_usage
       WHERE user_id = ? AND mode = 'ultra-expert'
@@ -217,7 +210,6 @@ export function getUserUsageStats(userId: string): {
       last24h: count24h,
       last7days: count7d,
       last30days: count30d,
-      analysisModeCount: analysisCount,
       ultraExpertModeCount: ultraExpertCount
     };
   } catch (err) {
@@ -226,7 +218,6 @@ export function getUserUsageStats(userId: string): {
       last24h: 0,
       last7days: 0,
       last30days: 0,
-      analysisModeCount: 0,
       ultraExpertModeCount: 0
     };
   }
