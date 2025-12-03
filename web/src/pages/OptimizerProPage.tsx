@@ -164,13 +164,13 @@ export function OptimizerProPage() {
           <div className="pro-progress-container" style={{ textAlign: 'center', marginTop: '4rem' }}>
             <div className="spinner-large" style={{
               width: '80px', height: '80px', border: '4px solid rgba(255,255,255,0.1)',
-              borderTopColor: selectedPersona === 'engineer' ? '#ffb800' : '#00f2ff',
+              borderTopColor: '#00f2ff',
               borderRadius: '50%', margin: '0 auto 2rem', animation: 'spin 1s linear infinite'
             }} />
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
             <h2 style={{ fontSize: '2rem', marginBottom: '1rem' }}>
-              {selectedPersona === 'engineer' ? 'Engenheiro Trabalhando...' : 'Arquiteto Analisando...'}
+              Otimizando seu Script...
             </h2>
 
             <div className="progress-steps" style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'left' }}>
@@ -180,7 +180,7 @@ export function OptimizerProPage() {
                   padding: '1rem',
                   marginBottom: '0.5rem',
                   borderRadius: '8px',
-                  borderLeft: `4px solid ${stage.status === 'success' ? '#00ff9d' : stage.status === 'running' ? (selectedPersona === 'engineer' ? '#ffb800' : '#00f2ff') : 'transparent'}`,
+                  borderLeft: `4px solid ${stage.status === 'success' ? '#00ff9d' : stage.status === 'running' ? '#00f2ff' : 'transparent'}`,
                   opacity: stage.status === 'pending' ? 0.5 : 1
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -201,47 +201,49 @@ export function OptimizerProPage() {
             {/* Hero Section */}
             <div className="pro-hero" style={{ textAlign: 'center', marginBottom: '3rem' }}>
               <h1 style={{ fontSize: '2.5rem', background: 'linear-gradient(to right, #fff, #aaa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '1rem' }}>
-                Escolha seu Especialista
+                AINEX Ultra Expert
               </h1>
               <p style={{ color: '#666', fontSize: '1.1rem' }}>
-                A inteligência artificial da AINEX atua com diferentes personalidades para resolver seu problema.
+                Otimização profunda, refatoração de código e documentação técnica em um único fluxo inteligente.
               </p>
             </div>
 
-            {/* Persona Selection */}
-            <div className="persona-grid" style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', marginBottom: '3rem' }}>
+            {/* Single Capability Card */}
+            <div className="persona-grid" style={{ display: 'flex', justifyContent: 'center', marginBottom: '3rem' }}>
+              <div style={{
+                background: 'linear-gradient(145deg, rgba(0, 242, 255, 0.05), rgba(10,10,10,0.8))',
+                border: '1px solid rgba(0, 242, 255, 0.2)',
+                padding: '2rem',
+                borderRadius: '16px',
+                maxWidth: '600px',
+                width: '100%'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                  <div style={{
+                    width: '50px', height: '50px', borderRadius: '12px',
+                    background: 'rgba(0, 242, 255, 0.1)', color: '#00f2ff', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <Icons.Zap />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#fff' }}>Full Optimization Pipeline</h3>
+                    <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '1px' }}>POWERED BY GEMINI 2.5 FLASH</span>
+                  </div>
+                </div>
 
-              <PersonaCard
-                title="The Architect"
-                description="Foco total em documentação, mapeamento de dados e análise de riscos. Ideal para entender legados e auditar projetos."
-                icon={<Icons.Search />}
-                color="#00f2ff"
-                selected={selectedPersona === 'architect'}
-                onClick={() => setSelectedPersona('architect')}
-                features={[
-                  "Documentação Técnica Completa (Markdown)",
-                  "Diagramas de Linhagem (Mermaid.js)",
-                  "Dicionário de Dados Automático",
-                  "Análise de Riscos & Compliance",
-                  "Zero alterações no código (Read-Only)"
-                ]}
-              />
-
-              <PersonaCard
-                title="Lead Engineer"
-                description="O pacote completo. Realiza a auditoria do Arquiteto e aplica refatoração profunda para performance e boas práticas."
-                icon={<Icons.Zap />}
-                color="#ffb800"
-                selected={selectedPersona === 'engineer'}
-                onClick={() => setSelectedPersona('engineer')}
-                features={[
-                  "Tudo do modo Architect incluso",
-                  "Refatoração de Código (Performance)",
-                  "Correção de Anti-Patterns",
-                  "Explicação Educacional ('Por que mudei?')",
-                  "Código pronto para Produção"
-                ]}
-              />
+                <div className="persona-features">
+                  {[
+                    "Análise Profunda de Estrutura & Dados",
+                    "Refatoração de Performance & Anti-Patterns",
+                    "Documentação Técnica Automática",
+                    "Relatório de Consultoria Completo"
+                  ].map((feat: string, i: number) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#aaa' }}>
+                      <span style={{ color: '#00f2ff' }}>✓</span> {feat}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* Upload Area */}
@@ -265,17 +267,17 @@ export function OptimizerProPage() {
                 style={{ display: 'none' }}
                 accept=".qvs,.txt,.qvw"
               />
-              <div style={{ marginBottom: '1rem', color: selectedPersona === 'engineer' ? '#ffb800' : '#00f2ff' }}>
+              <div style={{ marginBottom: '1rem', color: '#00f2ff' }}>
                 <Icons.Upload />
               </div>
               <h3 style={{ color: '#fff', marginBottom: '0.5rem' }}>Carregar Script Qlik (.qvs ou .txt)</h3>
               <p style={{ color: '#666' }}>
                 Arraste seu arquivo ou clique para selecionar.
-                O agente <strong>{selectedPersona === 'engineer' ? 'Lead Engineer' : 'Architect'}</strong> irá processá-lo.
+                O agente <strong>Ultra Expert</strong> irá processá-lo.
               </p>
               <button className="btn-primary" style={{
                 marginTop: '1.5rem',
-                background: selectedPersona === 'engineer' ? '#ffb800' : '#00f2ff',
+                background: '#00f2ff',
                 color: '#000',
                 border: 'none',
                 padding: '0.8rem 2rem',

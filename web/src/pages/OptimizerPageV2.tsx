@@ -191,7 +191,7 @@ const highlightQlikSyntax = (line: string): string => {
 const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
   // === STATE ===
   const [script, setScript] = useState<string>("");
-  const [mode, setMode] = useState<OptimizeMode>("analysis");
+  const [mode, setMode] = useState<OptimizeMode>("ultra-expert");
   const [llmOptionId, setLlmOptionId] = useState<string>(LLM_OPTIONS[0].id);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<OptimizeResult | null>(null);
@@ -233,6 +233,13 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
     optimization.updateMode(newMode); // Atualiza as stages visíveis
   };
 
+  // Force Ultra Expert mode on mount
+  useEffect(() => {
+    if (mode !== 'ultra-expert') {
+      handleModeChange('ultra-expert');
+    }
+  }, []);
+
   const selectedLLM = useMemo(() => getLLMOptionById(llmOptionId), [llmOptionId]);
 
   // === AUTO SHOW SCRIPT INFO WHEN SCRIPT IS LOADED ===
@@ -273,7 +280,8 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
         if (restored && restored.progressData) {
           console.warn("✓ Sessão ativa restaurada");
           setScript(restored.script);
-          setMode(restored.mode);
+          // Force Ultra Expert as Analysis mode is deprecated
+          setMode("ultra-expert");
           if (restored.llmProvider) {
             const llmOption = LLM_OPTIONS.find(opt => opt.provider === restored.llmProvider);
             if (llmOption) setLlmOptionId(llmOption.id);
@@ -440,13 +448,6 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
   const canOptimize = script?.trim().length > 0 && !optimization.isRunning;
 
   const modeInfo = {
-    analysis: {
-      title: "Análise",
-      icon: <Icons.Search />,
-      color: "#00f2ff",
-      risk: "Nenhum (Read-Only)",
-      description: "Analisa profundamente sem modificar nada"
-    },
     "ultra-expert": {
       title: "Ultra Expert",
       icon: <Icons.Zap />,
@@ -512,7 +513,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
       )}
 
       {/* Control Panel Master - Layout Grid Redesigned */}
-      <div className={`control-panel-master-compact ${mode === 'ultra-expert' ? 'expert-mode' : ''}`}>
+      <div className={`control-panel-master-compact expert-mode`}>
         {/* Coluna Esquerda: Modo + Status */}
         <div className="control-left-section">
           {/* Modos */}
@@ -520,27 +521,11 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
             <div className="section-icon-compact">🎯</div>
             <div className="mode-cards-horizontal">
               <button
-                className={`mode-card-compact ${mode === 'analysis' ? 'active' : ''}`}
-                onClick={() => handleModeChange('analysis')}
-              >
-                <div className="mode-card-icon-compact analysis-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="m21 21-4.35-4.35" />
-                  </svg>
-                </div>
-                <div className="mode-card-text-compact">
-                  <h4>Análise</h4>
-                  <p>Read-only</p>
-                </div>
-                {mode === 'analysis' && <div className="mode-active-dot" />}
-              </button>
-
-              <button
-                className={`mode-card-compact ${mode === 'ultra-expert' ? 'active expert' : ''} ${!isOwner && !hasUltraExpertQuotaLeft ? 'disabled-quota' : ''}`}
-                onClick={() => handleModeChange('ultra-expert')}
+                className={`mode-card-compact active expert ${!isOwner && !hasUltraExpertQuotaLeft ? 'disabled-quota' : ''}`}
+                onClick={() => { }}
                 disabled={!isOwner && !hasUltraExpertQuotaLeft}
                 title={!isOwner && !hasUltraExpertQuotaLeft ? 'Quota diária de Ultra Expert esgotada. Limite geral: 4 execuções/dia. Aguarde renovação.' : undefined}
+                style={{ cursor: 'default', width: '100%' }}
               >
                 <div className="mode-card-icon-compact expert-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -559,12 +544,8 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                     </div>
                   )}
                 </div>
-                {mode === 'ultra-expert' && (
-                  <>
-                    <div className="mode-active-dot expert" />
-                    <div className="expert-flame-mini" />
-                  </>
-                )}
+                <div className="mode-active-dot expert" />
+                <div className="expert-flame-mini" />
               </button>
             </div>
           </div>
