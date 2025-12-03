@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from "react";
+import { API_BASE_URL } from "../lib/config";
 
 import { OptimizeScriptApiResponse, OptimizeMode, LLMProviderName } from "../types/api";
 
@@ -596,7 +597,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
     try {
 
-      const response = await fetch("/api/scripts/optimize", {
+      const response = await fetch(`${API_BASE_URL}/api/scripts/optimize`, {
 
         method: "POST",
 

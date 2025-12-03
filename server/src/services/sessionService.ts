@@ -1,9 +1,9 @@
 /**
  * Serviço de Gerenciamento de Sessões Ativas
- * Persiste estado de otimizações em andamento no SQLite
+ * Persiste estado de otimizações em andamento no Firestore
  */
 
-import { getSqliteDb } from "../lib/sqliteDb";
+import { getFirestore } from "../lib/firestoreDb";
 import { logger } from "../lib/logger";
 import type { OptimizeMode } from "../types/qlik";
 export type LLMProviderName = "ainex" | "google" | "nvidia";
@@ -27,37 +27,27 @@ const SESSION_EXPIRY_HOURS = 24; // Sessões expiram após 24 horas
 /**
  * Cria ou atualiza uma sessão ativa
  */
-export function saveActiveSession(session: Omit<ActiveSession, "createdAt" | "updatedAt" | "expiresAt">): void {
-  const db = getSqliteDb();
+export async function saveActiveSession(session: Omit<ActiveSession, "createdAt" | "updatedAt" | "expiresAt">): Promise<void> {
+  const db = getFirestore();
 
-  const now = new Date().toISOString();
-  const expiresAt = new Date(Date.now() + SESSION_EXPIRY_HOURS * 60 * 60 * 1000).toISOString();
+  const now = new Date();
+  const expiresAt = new Date(Date.now() + SESSION_EXPIRY_HOURS * 60 * 60 * 1000);
 
   try {
-    // Scripts NÃO são persistidos, apenas metadados da sessão
-    const stmt = db.prepare(`
-      INSERT INTO active_sessions (
-        id, user_id, mode, llm_provider, llm_model,
-        progress_data, status, created_at, updated_at, expires_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        progress_data = excluded.progress_data,
-        status = excluded.status,
-        updated_at = excluded.updated_at
-    `);
+    const sessionData = {
+      id: session.id,
+      user_id: session.userId || null,
+      mode: session.mode,
+      llm_provider: session.llmProvider || null,
+      llm_model: session.llmModel || null,
+      progress_data: session.progressData ?? {},
+      status: session.status,
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
+      expires_at: expiresAt.toISOString()
+    };
 
-    stmt.run(
-      session.id,
-      session.userId || null,
-      session.mode,
-      session.llmProvider || null,
-      session.llmModel || null,
-      JSON.stringify(session.progressData ?? {}),
-      session.status,
-      now,
-      now,
-      expiresAt
-    );
+    await db.collection("active_sessions").doc(session.id).set(sessionData, { merge: true });
 
     logger.info(`Sessão ${session.id} salva com sucesso`, { status: session.status });
   } catch (error) {
@@ -69,33 +59,35 @@ export function saveActiveSession(session: Omit<ActiveSession, "createdAt" | "up
 /**
  * Recupera uma sessão ativa por ID
  */
-export function getActiveSession(sessionId: string): ActiveSession | null {
-  const db = getSqliteDb();
+export async function getActiveSession(sessionId: string): Promise<ActiveSession | null> {
+  const db = getFirestore();
 
   try {
-    const stmt = db.prepare(`
-      SELECT * FROM active_sessions 
-      WHERE id = ? AND expires_at > datetime('now')
-    `);
+    const doc = await db.collection("active_sessions").doc(sessionId).get();
 
-    const row = stmt.get(sessionId) as any;
+    if (!doc.exists) {
+      return null;
+    }
 
-    if (!row) {
+    const data = doc.data();
+    if (!data) return null;
+
+    // Verificar expiração
+    if (new Date(data.expires_at) < new Date()) {
       return null;
     }
 
     return {
-      id: row.id,
-      userId: row.user_id,
-      mode: row.mode,
-      // script não retornado (não é mais persistido)
-      llmProvider: row.llm_provider,
-      llmModel: row.llm_model,
-      progressData: row.progress_data ? JSON.parse(row.progress_data) : {},
-      status: row.status,
-      createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at),
-      expiresAt: new Date(row.expires_at)
+      id: data.id,
+      userId: data.user_id,
+      mode: data.mode,
+      llmProvider: data.llm_provider,
+      llmModel: data.llm_model,
+      progressData: data.progress_data,
+      status: data.status,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at),
+      expiresAt: new Date(data.expires_at)
     };
   } catch (error) {
     logger.error(`Erro ao recuperar sessão ${sessionId}`, error);
@@ -106,34 +98,43 @@ export function getActiveSession(sessionId: string): ActiveSession | null {
 /**
  * Lista sessões ativas do usuário (últimas 5)
  */
-export function getUserActiveSessions(userId?: string): ActiveSession[] {
-  const db = getSqliteDb();
+export async function getUserActiveSessions(userId?: string): Promise<ActiveSession[]> {
+  const db = getFirestore();
 
   try {
-    const stmt = db.prepare(`
-      SELECT * FROM active_sessions 
-      WHERE (user_id = ? OR user_id IS NULL)
-        AND expires_at > datetime('now')
-        AND status IN ('running', 'paused')
-      ORDER BY updated_at DESC
-      LIMIT 5
-    `);
+    let query = db.collection("active_sessions")
+      .where("status", "in", ["running", "paused"])
+      .orderBy("updated_at", "desc")
+      .limit(5);
 
-    const rows = stmt.all(userId || null) as any[];
+    if (userId) {
+      query = query.where("user_id", "==", userId);
+    }
 
-    return rows.map(row => ({
-      id: row.id,
-      userId: row.user_id,
-      mode: row.mode as OptimizeMode,
-      script: row.script,
-      llmProvider: row.llm_provider as LLMProviderName,
-      llmModel: row.llm_model,
-      progressData: row.progress_data ? JSON.parse(row.progress_data) : {},
-      status: row.status,
-      createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at),
-      expiresAt: new Date(row.expires_at)
-    }));
+    const snapshot = await query.get();
+
+    const sessions: ActiveSession[] = [];
+    const now = new Date();
+
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      if (new Date(data.expires_at) > now) {
+        sessions.push({
+          id: data.id,
+          userId: data.user_id,
+          mode: data.mode as OptimizeMode,
+          llmProvider: data.llm_provider as LLMProviderName,
+          llmModel: data.llm_model,
+          progressData: data.progress_data,
+          status: data.status,
+          createdAt: new Date(data.created_at),
+          updatedAt: new Date(data.updated_at),
+          expiresAt: new Date(data.expires_at)
+        });
+      }
+    });
+
+    return sessions;
   } catch (error) {
     logger.error("Erro ao listar sessões ativas", error);
     return [];
@@ -143,17 +144,14 @@ export function getUserActiveSessions(userId?: string): ActiveSession[] {
 /**
  * Atualiza o status de uma sessão
  */
-export function updateSessionStatus(sessionId: string, status: ActiveSession["status"]): void {
-  const db = getSqliteDb();
+export async function updateSessionStatus(sessionId: string, status: ActiveSession["status"]): Promise<void> {
+  const db = getFirestore();
 
   try {
-    const stmt = db.prepare(`
-      UPDATE active_sessions 
-      SET status = ?, updated_at = ?
-      WHERE id = ?
-    `);
-
-    stmt.run(status, new Date().toISOString(), sessionId);
+    await db.collection("active_sessions").doc(sessionId).update({
+      status: status,
+      updated_at: new Date().toISOString()
+    });
     logger.info(`Status da sessão ${sessionId} atualizado para ${status}`);
   } catch (error) {
     logger.error(`Erro ao atualizar status da sessão ${sessionId}`, error);
@@ -163,12 +161,11 @@ export function updateSessionStatus(sessionId: string, status: ActiveSession["st
 /**
  * Remove uma sessão (quando completada ou cancelada)
  */
-export function deleteSession(sessionId: string): void {
-  const db = getSqliteDb();
+export async function deleteSession(sessionId: string): Promise<void> {
+  const db = getFirestore();
 
   try {
-    const stmt = db.prepare("DELETE FROM active_sessions WHERE id = ?");
-    stmt.run(sessionId);
+    await db.collection("active_sessions").doc(sessionId).delete();
     logger.info(`Sessão ${sessionId} removida`);
   } catch (error) {
     logger.error(`Erro ao remover sessão ${sessionId}`, error);
@@ -178,16 +175,23 @@ export function deleteSession(sessionId: string): void {
 /**
  * Limpa sessões expiradas (chamado periodicamente)
  */
-export function cleanExpiredSessions(): void {
-  const db = getSqliteDb();
+export async function cleanExpiredSessions(): Promise<void> {
+  const db = getFirestore();
 
   try {
-    const stmt = db.prepare("DELETE FROM active_sessions WHERE expires_at < datetime('now')");
-    const result = stmt.run();
+    const now = new Date().toISOString();
+    const snapshot = await db.collection("active_sessions")
+      .where("expires_at", "<", now)
+      .limit(100)
+      .get();
 
-    if (result.changes > 0) {
-      logger.info(`${result.changes} sessões expiradas removidas`);
-    }
+    if (snapshot.empty) return;
+
+    const batch = db.batch();
+    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+
+    logger.info(`${snapshot.size} sessões expiradas removidas`);
   } catch (error) {
     logger.error("Erro ao limpar sessões expiradas", error);
   }

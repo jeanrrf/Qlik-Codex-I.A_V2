@@ -1,5 +1,6 @@
 // web/src/hooks/useSystemValidation.ts
 import { useState, useCallback, useRef, useEffect } from "react";
+import { API_BASE_URL } from "../lib/config";
 
 export interface ValidationStage {
   id: string;
@@ -104,7 +105,7 @@ export function useSystemValidation(): UseSystemValidationReturn {
     }, 200);
 
     try {
-      const response = await fetch("/api/validate/system", {
+      const response = await fetch(`${API_BASE_URL}/api/validate/system`, {
         method: "GET",
         signal: abortControllerRef.current.signal
       });
@@ -143,7 +144,7 @@ export function useSystemValidation(): UseSystemValidationReturn {
 
   const quickValidate = useCallback(async (): Promise<boolean> => {
     try {
-      const response = await fetch("/api/validate/quick", {
+      const response = await fetch(`${API_BASE_URL}/api/validate/quick`, {
         method: "GET"
       });
 

@@ -1,11 +1,11 @@
 /**
  * Qlik Codex I.A - History Service
- * Gerencia histórico de otimizações no SQLite
+ * Gerencia histórico de otimizações no Firestore
  */
 
 import { randomUUID } from "node:crypto";
 
-import { getSqliteDb, transaction } from "../lib/sqliteDb";
+import { getFirestore } from "../lib/firestoreDb";
 import { logger } from "../lib/logger";
 import type { OptimizeResult } from "../types/qlik";
 
@@ -36,63 +36,45 @@ class HistoryService {
   /**
    * Salva uma otimização completa no histórico
    */
-  saveOptimization(result: OptimizeResult, durationMs: number, provider: string): string {
+  async saveOptimization(result: OptimizeResult, durationMs: number, provider: string): Promise<string> {
     const id = randomUUID();
     const createdAt = new Date().toISOString();
 
     try {
-      transaction((db) => {
-        // Inserir registro de otimização (SEM salvar scripts por segurança)
-        const stmt = db.prepare(`
-          INSERT INTO optimization_history (
-            id, mode, original_lines, optimized_lines, breaking_risk,
-            changes_count, duration_ms, llm_provider, success, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `);
+      const db = getFirestore();
 
-        stmt.run(
-          id,
-          result.analysis.mode || "conservative",
-          result.originalScript.split("\n").length,
-          result.optimizedScript.split("\n").length,
-          result.analysis.breakingRisk,
-          result.analysis.changes.length,
-          durationMs,
-          provider,
-          1, // success
-          createdAt
-        );
+      const record: OptimizationRecord = {
+        id,
+        mode: result.analysis.mode || "conservative",
+        original_lines: result.originalScript.split("\n").length,
+        optimized_lines: result.optimizedScript.split("\n").length,
+        breaking_risk: result.analysis.breakingRisk,
+        changes_count: result.analysis.changes.length,
+        duration_ms: durationMs,
+        llm_provider: provider,
+        success: 1,
+        created_at: createdAt
+      };
 
-        logger.info("Optimization saved to history", { id, provider, duration: durationMs });
-      });
+      await db.collection("optimization_history").doc(id).set(record);
+
+      logger.info("Optimization saved to history", { id, provider, duration: durationMs });
 
       return id;
     } catch (err) {
       logger.error("Failed to save optimization history", err);
-      throw err;
+      // Não lançar erro para não quebrar o fluxo principal se o log falhar
+      return id;
     }
   }
 
   /**
    * Salva métricas de performance de uma fase
    */
-  savePerformanceMetric(metric: PerformanceMetric): void {
+  async savePerformanceMetric(metric: PerformanceMetric): Promise<void> {
     try {
-      const db = getSqliteDb();
-      const stmt = db.prepare(`
-        INSERT INTO performance_metrics (
-          optimization_id, phase, duration_ms, status, error_message, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?)
-      `);
-
-      stmt.run(
-        metric.optimization_id,
-        metric.phase,
-        metric.duration_ms,
-        metric.status,
-        metric.error_message || null,
-        metric.created_at
-      );
+      const db = getFirestore();
+      await db.collection("performance_metrics").add(metric);
     } catch (err) {
       logger.warn("Failed to save performance metric", err);
     }
@@ -101,16 +83,15 @@ class HistoryService {
   /**
    * Busca histórico de otimizações (últimas N)
    */
-  getRecentOptimizations(limit = 50): OptimizationRecord[] {
+  async getRecentOptimizations(limit = 50): Promise<OptimizationRecord[]> {
     try {
-      const db = getSqliteDb();
-      const stmt = db.prepare(`
-        SELECT * FROM optimization_history
-        ORDER BY created_at DESC
-        LIMIT ?
-      `);
+      const db = getFirestore();
+      const snapshot = await db.collection("optimization_history")
+        .orderBy("created_at", "desc")
+        .limit(limit)
+        .get();
 
-      return stmt.all(limit) as OptimizationRecord[];
+      return snapshot.docs.map(doc => doc.data() as OptimizationRecord);
     } catch (err) {
       logger.error("Failed to get optimization history", err);
       return [];
@@ -119,33 +100,30 @@ class HistoryService {
 
   /**
    * Estatísticas gerais
+   * Nota: Firestore não tem agregação nativa eficiente para SUM/AVG em tempo real sem custo.
+   * Implementação simplificada.
    */
-  getStatistics(): {
+  async getStatistics(): Promise<{
     total_optimizations: number;
     total_lines_saved: number;
     avg_duration_ms: number;
     most_used_provider: string;
-  } {
+  }> {
     try {
-      const db = getSqliteDb();
+      const db = getFirestore();
 
-      const stats = db.prepare(`
-        SELECT 
-          COUNT(*) as total_optimizations,
-          SUM(original_lines - optimized_lines) as total_lines_saved,
-          AVG(duration_ms) as avg_duration_ms,
-          (SELECT llm_provider FROM optimization_history 
-           GROUP BY llm_provider 
-           ORDER BY COUNT(*) DESC 
-           LIMIT 1) as most_used_provider
-        FROM optimization_history
-      `).get() as any;
+      // Para estatísticas reais em Firestore, o ideal é incrementar contadores em um documento separado
+      // Aqui faremos uma query limitada para estimativa ou count() se disponível
 
+      const snapshot = await db.collection("optimization_history").count().get();
+      const total = snapshot.data().count;
+
+      // Retornando dados parciais pois scan completo é caro
       return {
-        total_optimizations: stats.total_optimizations || 0,
-        total_lines_saved: stats.total_lines_saved || 0,
-        avg_duration_ms: Math.round(stats.avg_duration_ms || 0),
-        most_used_provider: stats.most_used_provider || "gemini"
+        total_optimizations: total,
+        total_lines_saved: 0, // Requer agregação
+        avg_duration_ms: 0, // Requer agregação
+        most_used_provider: "gemini" // Placeholder
       };
     } catch (err) {
       logger.error("Failed to get statistics", err);
@@ -161,19 +139,25 @@ class HistoryService {
   /**
    * Limpa otimizações antigas (mais de N dias)
    */
-  cleanOldRecords(daysToKeep = 90): number {
+  async cleanOldRecords(daysToKeep = 90): Promise<number> {
     try {
-      const db = getSqliteDb();
+      const db = getFirestore();
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
 
-      const result = db.prepare(`
-        DELETE FROM optimization_history
-        WHERE created_at < ?
-      `).run(cutoffDate.toISOString());
+      const snapshot = await db.collection("optimization_history")
+        .where("created_at", "<", cutoffDate.toISOString())
+        .limit(500) // Limite para batch
+        .get();
 
-      logger.info(`Cleaned ${result.changes} old optimization records`);
-      return result.changes;
+      if (snapshot.empty) return 0;
+
+      const batch = db.batch();
+      snapshot.docs.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+
+      logger.info(`Cleaned ${snapshot.size} old optimization records`);
+      return snapshot.size;
     } catch (err) {
       logger.error("Failed to clean old records", err);
       return 0;

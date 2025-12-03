@@ -1,9 +1,10 @@
 import type { ContactRequest, ContactResponse } from "../types/contact";
+import { API_BASE_URL } from "../lib/config";
 
 export async function sendContact(
   payload: ContactRequest
 ): Promise<ContactResponse> {
-  const resp = await fetch("/api/contact", {
+  const resp = await fetch(`${API_BASE_URL}/api/contact`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"

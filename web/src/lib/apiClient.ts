@@ -5,11 +5,12 @@ import {
   QlikFormatterRequestBody,
   QlikFormatterResponse
 } from "../types/api";
+import { API_BASE_URL } from "./config";
 
 export async function optimizeScript(
   body: OptimizeScriptRequestBody
 ): Promise<OptimizeScriptApiResponse> {
-  const resp = await fetch("/api/scripts/optimize", {
+  const resp = await fetch(`${API_BASE_URL}/api/scripts/optimize`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -37,7 +38,7 @@ export async function optimizeScript(
 export async function requestQlikFormatter(
   body: QlikFormatterRequestBody
 ): Promise<QlikFormatterResponse> {
-  const resp = await fetch("/api/tools/qlik-formatter", {
+  const resp = await fetch(`${API_BASE_URL}/api/tools/qlik-formatter`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -65,7 +66,7 @@ export async function requestQlikFormatterStream(
   body: QlikFormatterRequestBody,
   onProgress?: (percent: number, message?: string) => void
 ): Promise<QlikFormatterResponse> {
-  const resp = await fetch("/api/tools/qlik-formatter/stream", {
+  const resp = await fetch(`${API_BASE_URL}/api/tools/qlik-formatter/stream`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"

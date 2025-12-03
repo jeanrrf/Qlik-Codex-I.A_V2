@@ -9,8 +9,10 @@ import cookieParser from "cookie-parser";
 
 import { config } from "./lib/config";
 import { logger } from "./lib/logger";
-import { initSqliteDb, closeSqliteDb } from "./lib/sqliteDb";
+import { initFirestore } from "./lib/firestoreDb";
+// import { initSqliteDb, closeSqliteDb } from "./lib/sqliteDb"; // REMOVIDO
 import { errorHandler } from "./middleware/errorHandler";
+
 import { healthRouter } from "./routes/health.routes";
 import { contactRouter } from "./routes/contact.routes";
 import { router as scriptsRouter } from "./routes/scripts.routes";
@@ -90,29 +92,31 @@ if (fs.existsSync(webBuildPath)) {
 
 app.use(errorHandler);
 
-// Inicializar banco de dados SQLite
+// Inicializar Firestore
 try {
-  initSqliteDb();
+  initFirestore();
 } catch (err) {
-  logger.error("Failed to initialize SQLite database", err);
+  logger.error("Failed to initialize Firestore", err);
 }
 
 // Graceful shutdown
 process.on("SIGTERM", () => {
-  logger.info("SIGTERM received, closing SQLite database...");
-  closeSqliteDb();
+  logger.info("SIGTERM received");
   process.exit(0);
 });
 
 process.on("SIGINT", () => {
-  logger.info("SIGINT received, closing SQLite database...");
-  closeSqliteDb();
+  logger.info("SIGINT received");
   process.exit(0);
 });
 
-app.listen(config.port, () => {
-  logger.info("Qlik Codex I.A server rodando", {
-    port: config.port,
-    env: config.nodeEnv
+if (require.main === module) {
+  app.listen(config.port, () => {
+    logger.info("Qlik Codex I.A server rodando", {
+      port: config.port,
+      env: config.nodeEnv
+    });
   });
-});
+}
+
+export default app;
