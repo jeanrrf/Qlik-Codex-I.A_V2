@@ -1,10 +1,10 @@
 import { logger } from "../lib/logger";
 import { sseEmitter } from "../lib/sseEmitter";
-import { runQlikOptimizeAgent } from "../agents/qlikOptimizeAgent";
-import { generateCompactAuditReport, CompactAuditReport } from "../agents/qlikConsultancyAgent";
-import { calculateROI, formatROIExecutiveSummary } from "./roiCalculator";
+// import { runQlikOptimizeAgent } from "../agents/qlikOptimizeAgent";
+import { CompactAuditReport } from "../agents/qlikConsultancyAgent";
+// import { calculateROI, formatROIExecutiveSummary } from "./roiCalculator";
 import {
-  analyzeScriptCharacteristics,
+  // analyzeScriptCharacteristics,
   applySmartTruncation,
   SmartTruncationResult
 } from "../lib/scriptAnalyzer";
@@ -12,10 +12,10 @@ import type { OptimizeMode, OptimizeResult } from "../types/qlik";
 import type { ConsultancyDocument } from "../types/consultancy";
 import type { GenerateStructuredJsonOptions } from "../lib/llmClient";
 import { stepTimingService } from "./stepTimingService";
-import { calculateRealMetrics, getCriticalIssuesFromMetrics, formatMetricsCompact } from "./metricsCalculator";
+// import { calculateRealMetrics, getCriticalIssuesFromMetrics, formatMetricsCompact } from "./metricsCalculator";
 import {
   parseQlikScript,
-  detectSyntheticKeys,
+  // detectSyntheticKeys,
   calculateQualityMetrics,
   type ParsedScript,
   type AntiPattern
@@ -47,11 +47,7 @@ function checkAborted(signal?: AbortSignal, context?: string): void {
 }
 
 /**
- * MODO 1: ANÁLISE (Read-Only)
- * Analisa profundamente sem modificar nada
- */
-/**
- * MODO 2: ULTRA EXPERT (Full Power)
+ * MODO ÚNICO: ULTRA EXPERT (Full Power)
  * Otimização profunda com todas as análises implementadas
  */
 async function runUltraExpertMode(
@@ -243,7 +239,7 @@ async function runUltraExpertProMode(
  */
 export async function optimizeScript(
   script: string,
-  mode: OptimizeMode,
+  mode: OptimizeMode, // Mantido para compatibilidade de API, mas ignorado internamente
   llmOptions?: GenerateStructuredJsonOptions,
   generateConsultancy = true,
   shouldTruncate?: boolean,
@@ -255,7 +251,7 @@ export async function optimizeScript(
   // Debug: Log parâmetros recebidos
   const originalLines = script.split(/\r?\n/).length;
   logger.debug("optimizeScript called", {
-    mode,
+    mode: "FORCED_ULTRA_EXPERT",
     originalLines,
     shouldTruncate,
     lineLimit
@@ -299,6 +295,7 @@ export async function optimizeScript(
   // Continua processamento normal com script (possivelmente truncado)
   let result: FullOptimizeResult;
 
+  // Always force Ultra Expert Mode for now as it is the new standard
   logger.info("MODO ULTRA EXPERT - Pipeline Avancado");
   result = await runUltraExpertMode(finalScript, llmOptions, generateConsultancy, truncationInfo?.wasTruncated || false, abortSignal);
 
@@ -310,8 +307,7 @@ export async function optimizeScript(
 }
 
 /**
- * MODO ANÁLISE CHUNKED - Para arquivos grandes QVD/QVS
- * Processa o script em chunks para evitar timeout mantendo precisão
+ * Service Factory
  */
 function createOptimizerService() {
   const runOptimization = (

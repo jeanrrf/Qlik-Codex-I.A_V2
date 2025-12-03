@@ -6,6 +6,7 @@
 import { getSqliteDb } from "../lib/sqliteDb";
 import { logger } from "../lib/logger";
 import { UserRole, RoleUsageLimits, User } from "../types/auth";
+import type { OptimizeMode } from "../types/qlik";
 
 export interface UsageQuotaCheck {
   allowed: boolean;
@@ -18,7 +19,7 @@ export interface UsageQuotaCheck {
 /**
  * Verifica se o usuário pode executar uma otimização
  */
-export function checkDailyQuota(user: User, mode: "ultra-expert"): UsageQuotaCheck {
+export function checkDailyQuota(user: User, mode: OptimizeMode): UsageQuotaCheck {
   // Owner tem acesso ilimitado
   if (user.role === UserRole.OWNER) {
     return {
@@ -172,13 +173,13 @@ export function getUserUsageStats(userId: string): {
 
   try {
     const now = new Date();
-    
+
     const last24h = new Date(now);
     last24h.setHours(last24h.getHours() - 24);
-    
+
     const last7days = new Date(now);
     last7days.setDate(last7days.getDate() - 7);
-    
+
     const last30days = new Date(now);
     last30days.setDate(last30days.getDate() - 30);
 

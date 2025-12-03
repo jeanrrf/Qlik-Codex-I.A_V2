@@ -94,28 +94,16 @@ interface OptimizationOptions {
 
 
 
-// Sub-steps para modo ANÁLISE (ana_*)
-
-// IDs alinhados com optimizerService + stepTimingService
-
 // Sub-steps para modo ULTRA EXPERT (opt_*)
 const ULTRA_EXPERT_STAGES: OptimizationStage[] = [
   {
-    id: "DEEP_ANALYSIS",
-    name: "Deep Analysis (Mega-Prompt)",
+    id: "ANALYSIS_AND_PLAN",
+    name: "Analysis & Strategy (Fusion)",
     status: "pending",
     visible: true,
     subSteps: [
-      { id: "DEEP_ANALYSIS", name: "Analyzing Script Structure & Logic", status: "pending" }
-    ]
-  },
-  {
-    id: "STRATEGIC_PLAN",
-    name: "Strategic Planning",
-    status: "pending",
-    visible: true,
-    subSteps: [
-      { id: "STRATEGIC_PLAN", name: "Developing Optimization Strategy", status: "pending" }
+      { id: "DEEP_ANALYSIS", name: "Deep Analysis", status: "pending" },
+      { id: "STRATEGIC_PLAN", name: "Strategic Planning", status: "pending" }
     ]
   },
   {
@@ -128,21 +116,12 @@ const ULTRA_EXPERT_STAGES: OptimizationStage[] = [
     ]
   },
   {
-    id: "VALIDATION",
-    name: "Multi-Layer Validation",
+    id: "FINAL_DELIVERY",
+    name: "Final Delivery & Report",
     status: "pending",
     visible: true,
     subSteps: [
-      { id: "VALIDATION", name: "Validating Syntax & Logic", status: "pending" }
-    ]
-  },
-  {
-    id: "FINAL_REPORT",
-    name: "Final Report & Metrics",
-    status: "pending",
-    visible: true,
-    subSteps: [
-      { id: "FINAL_REPORT", name: "Compiling Final Report", status: "pending" }
+      { id: "FINAL_DELIVERY", name: "Validating, Documenting & Reporting", status: "pending" }
     ]
   }
 ];

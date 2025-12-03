@@ -300,7 +300,7 @@ function generateRecommendations(
   optimizedAnalysis: ScriptAnalysis
 ): Recommendation[] {
   const recommendations: Recommendation[] = [];
-  const { breakingRisk, mode, changes, safeToApply } = optimizeResult.analysis;
+  const { breakingRisk, changes, safeToApply } = optimizeResult.analysis;
 
   // Recomendação baseada no risco REAL
   if (breakingRisk === 'high') {

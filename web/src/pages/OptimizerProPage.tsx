@@ -103,7 +103,6 @@ const PersonaCard = ({
 
 export function OptimizerProPage() {
   const { user, signOut } = useAuth();
-  const [selectedPersona, setSelectedPersona] = useState<'architect' | 'engineer'>('engineer');
   const [script, setScript] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -117,8 +116,7 @@ export function OptimizerProPage() {
     const text = await file.text();
     setScript(text);
 
-    // Start optimization using Ultra Expert mode for both (since it has the Mega Prompt)
-    // We can differentiate later in the UI result
+    // Start optimization using Ultra Expert mode
     optimization.startOptimization({
       script: text,
       mode: 'ultra-expert',

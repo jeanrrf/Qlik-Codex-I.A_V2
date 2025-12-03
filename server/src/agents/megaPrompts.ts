@@ -10,6 +10,42 @@ You must prioritize:
 `;
 
 export const TASK_PROMPTS = {
+  ANALYSIS_AND_PLAN: `
+TASK: ANALYSIS_AND_PLAN
+Perform a comprehensive technical audit AND create a strategic optimization plan in a SINGLE step.
+
+PART 1: DEEP ANALYSIS
+1. **Structural Analysis**: Identify sections, tables, and join topology.
+2. **Performance Bottlenecks**: Detect O(n^2) operations, unoptimized WHERE clauses, "SELECT *", excessive RESIDENT LOAD.
+3. **Data Model Risks**: Predict Synthetic Keys, Circular References, Cartesian Products.
+4. **Optimization Opportunities**: Suggest QVDs, Autonumber, SQL pushdown.
+
+PART 2: STRATEGIC PLAN
+Based on the analysis above, create a Refactoring Plan.
+1. **Prioritization**: Rank fixes by Impact vs. Effort.
+2. **Architecture**: Define QVD Layering, Modularization.
+3. **Performance Tactics**: Steps to eliminate bottlenecks.
+4. **ROI**: Estimate % reduction in Load Time and RAM.
+
+Output Format: JSON with keys:
+{
+  "analysis": {
+    "structuralScore": number,
+    "complexity": "Low"|"Medium"|"High"|"Extreme",
+    "bottlenecks": [{ "severity": "Critical"|"High"|"Medium"|"Low", "description": string, "location": string }],
+    "dataModelRisks": string[],
+    "optimizationOpportunities": string[],
+    "analysisSummary": string
+  },
+  "plan": {
+    "strategyName": string,
+    "riskLevel": "Low"|"Medium"|"High",
+    "planSteps": [{ "step": number, "title": string, "details": string, "targetBottleneck": string, "estimatedEffort": "Low"|"Medium"|"High" }],
+    "estimatedImprovement": { "loadTimeReduction": string, "ramUsageReduction": string, "maintainabilityScoreAfter": number }
+  }
+}
+`,
+
   DEEP_ANALYSIS: `
 TASK: DEEP_ANALYSIS
 Perform a comprehensive technical audit of the provided Qlik Load Script.
@@ -44,44 +80,73 @@ Output Format: JSON with keys:
 
   STRATEGIC_PLAN: `
 TASK: STRATEGIC_PLAN
-Based on the DEEP_ANALYSIS, create a step-by-step refactoring plan.
-1. Prioritize critical performance fixes.
-2. Define how to modularize the script (if needed).
-3. Plan QVD implementation strategies.
-4. Estimate the ROI (Return on Investment) of these changes.
+Based on the DEEP_ANALYSIS provided in the history, create a comprehensive Refactoring & Optimization Strategic Plan.
 
-Output Format: JSON with keys: { "planSteps": string[], "estimatedImprovement": string, "riskLevel": "Low"|"Medium"|"High" }
+**CRITICAL INSTRUCTION: BE CONCISE.**
+- Keep "details" short and direct (bullet points preferred).
+- Focus on high-impact changes only.
+- Do not explain obvious things. Speed is priority.
+
+1. **Prioritization Matrix**: Rank fixes by Impact vs. Effort.
+2. **Architecture Strategy**:
+   - Define QVD Layering (Extract/Transform/Load) if applicable.
+   - Propose Modularization (SUB routines, Include files).
+3. **Performance Tactics**:
+   - Specific steps to eliminate O(n^2) logic.
+   - Memory reduction strategies (DROP fields, AutoNumber).
+4. **ROI Estimation**:
+   - Estimate % reduction in Load Time.
+   - Estimate % reduction in RAM usage.
+
+Output Format: JSON with keys:
+{
+  "strategyName": string,
+  "riskLevel": "Low"|"Medium"|"High",
+  "planSteps": [
+    { "step": number, "title": string, "details": string, "targetBottleneck": string, "estimatedEffort": "Low"|"Medium"|"High" }
+  ],
+  "estimatedImprovement": {
+    "loadTimeReduction": string (e.g. "30-40%"),
+    "ramUsageReduction": string (e.g. "20%"),
+    "maintainabilityScoreAfter": number (0-100)
+  }
+}
 `,
 
   CODE_GEN: `
 TASK: CODE_GEN
-Execute the STRATEGIC_PLAN.
-1. Rewrite the Qlik Load Script applying all optimizations.
-2. Ensure standard naming conventions (CamelCase/SnakeCase consistency).
-3. Add comments explaining complex logic.
-4. DO NOT remove business logic, only optimize it.
+CRITICAL: You are the LEAD ARCHITECT implementing the "STRATEGIC_PLAN" approved in the previous step.
 
-Output Format: JSON with keys: { "optimizedScript": string, "changesApplied": string[] }
+INSTRUCTIONS:
+1. **Execute the Plan**: Apply every optimization listed in the Strategic Plan.
+2. **Preserve Logic**: Do NOT change business rules or calculation results. Only optimize performance (structure, joins, drops).
+3. **Standardize**: Use consistent naming (CamelCase for variables, UPPERCASE for keywords).
+4. **Documentation**: Add comments explaining *why* a change was made (e.g., "// Optimized Join to avoid Cartesian").
+5. **Safety**: Ensure all temp tables are DROPped.
+
+OUTPUT FORMAT:
+Return a JSON object.
+{
+  "optimizedScript": "THE_FULL_SCRIPT_HERE",
+  "changesApplied": ["List of changes..."],
+  "completenessCheck": true
+}
+WARNING: The script must be COMPLETE. Do not use placeholders like "// ... rest of code".
 `,
 
-  VALIDATION: `
-TASK: VALIDATION
-Review the generated code.
-1. Check for Syntax Errors.
-2. Verify that no fields were accidentally dropped (unless intended).
-3. Ensure "Drop Table" is used correctly.
-4. Validate against Qlik Best Practices.
+  FINAL_DELIVERY: `
+TASK: FINAL_DELIVERY
+Perform the final quality assurance and documentation steps in a SINGLE pass.
 
-Output Format: JSON with keys: { "isValid": boolean, "issuesFound": string[], "safetyScore": number }
-`,
+1. **Validation**: Review the generated code for syntax errors and safety.
+2. **Documentation**: Generate a Mermaid JS ER Diagram and define the reload strategy.
+3. **Final Report**: Create an executive summary and deployment checklist.
 
-  FINAL_REPORT: `
-TASK: FINAL_REPORT
-Generate the final executive and technical report.
-1. Summarize what was done.
-2. Explain the technical improvements for a Senior Developer.
-3. Provide a deployment checklist.
-
-Output Format: JSON with keys: { "executiveSummary": string, "technicalDetails": string, "deploymentChecklist": string[] }
+Output Format: JSON with keys:
+{
+  "validation": { "isValid": boolean, "issuesFound": string[], "safetyScore": number },
+  "documentation": { "title": string, "description": string, "diagramMermaid": string, "reloadStrategy": string },
+  "report": { "executiveSummary": string, "technicalDetails": string, "achievedImprovements": string[], "deploymentChecklist": string[] }
+}
 `
 };
