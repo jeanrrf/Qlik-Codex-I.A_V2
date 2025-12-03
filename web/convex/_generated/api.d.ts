@@ -8,7 +8,8 @@
  * @module
  */
 
-import type * as actions from "../actions.js";
+import type * as history from "../history.js";
+import type * as optimizer from "../optimizer.js";
 import type * as sessions from "../sessions.js";
 
 import type {
@@ -18,7 +19,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  actions: typeof actions;
+  history: typeof history;
+  optimizer: typeof optimizer;
   sessions: typeof sessions;
 }>;
 

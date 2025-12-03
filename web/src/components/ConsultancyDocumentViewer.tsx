@@ -6,7 +6,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { ConsultancyDocument } from '../types/consultancy';
 import { highlightQlikCode } from '../lib/qlikSyntaxHighlighter';
-import { formatDuration } from '../../../server/src/lib/formatTime';
+import { formatDuration } from '../lib/formatTime';
 
 // Simple Markdown Renderer Component
 const SimpleMarkdown: React.FC<{ content: string }> = ({ content }) => {

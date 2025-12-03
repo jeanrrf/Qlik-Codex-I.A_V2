@@ -1,50 +1,66 @@
-# Guia de Migração para Vercel + Convex
+# Deploy Completo: Vercel + Convex (Zero Reais)
 
-Você escolheu a stack moderna: **Vercel** (Frontend) + **Convex** (Backend/Database).
+A migração para Convex foi completada! Agora você tem uma arquitetura 100% serverless.
 
-## O que foi feito até agora:
-1.  Instalamos o `convex` no projeto `web`.
-2.  Criamos a estrutura `web/convex` com:
-    -   `schema.ts`: Definição das tabelas (Users, Sessions, History).
-    -   `sessions.ts`: Mutações para gerenciar estado.
-    -   `actions.ts`: Ação (backend function) para rodar a otimização.
+## Arquitetura Final
 
-## Próximos Passos (Manual):
+```
+┌─────────────────┐      ┌─────────────────┐
+│   Vercel        │      │   Convex        │
+│   (Frontend)    │ ───► │   (Backend)     │
+│   React + Vite  │      │   + Database    │
+└─────────────────┘      │   + Gemini API  │
+                         └─────────────────┘
+```
 
-### 1. Inicializar Convex
-No terminal, dentro da pasta `web`:
+## O que foi feito:
+
+1. ✅ **Convex inicializado** - Projeto configurado localmente
+2. ✅ **Schema criado** - Tabelas: `users`, `sessions`, `history`
+3. ✅ **Actions migradas** - Lógica do `qlikMegaOptimizer.ts` portada para `convex/optimizer.ts`
+4. ✅ **ConvexProvider** - Frontend conectado ao Convex
+5. ✅ **Hook reativo** - `useConvexOptimization.ts` para atualizações em tempo real
+
+## Próximos Passos (Para Publicar):
+
+### 1. Criar conta e vincular projeto
 ```bash
-npx convex dev
-```
-Isso vai pedir para você fazer login e criar um projeto no Convex. Ele vai gerar a pasta `convex/_generated`.
-
-### 2. Migrar a Lógica de IA
-O arquivo `web/convex/actions.ts` atualmente é um esqueleto. Para que a IA funcione igual ao servidor antigo, você precisa:
-1.  Copiar a lógica de `server/src/agents/qlikMegaOptimizer.ts` para dentro de `web/convex/`.
-2.  Adaptar as chamadas de API (fetch) para rodar no ambiente do Convex (que é Node.js-like).
-3.  Configurar as variáveis de ambiente (GEMINI_API_KEY, etc.) no painel do Convex (Settings > Environment Variables).
-
-### 3. Conectar o Frontend
-No arquivo `web/src/main.tsx`, envolva seu App com o `ConvexProvider`:
-
-```tsx
-import { ConvexProvider, ConvexReactClient } from "convex/react";
-const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
-
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <ConvexProvider client={convex}>
-    <App />
-  </ConvexProvider>
-);
+cd web
+npx convex login
+npx convex deploy
 ```
 
-### 4. Deploy na Vercel
-1.  Faça o push para o GitHub.
-2.  Importe o projeto `web` na Vercel.
-3.  Nas configurações de Build da Vercel, o comando de build deve ser `npx convex deploy && tsc && vite build`.
-4.  Adicione as variáveis de ambiente (`VITE_CONVEX_URL`, etc.).
+### 2. Configurar Variáveis de Ambiente no Convex Dashboard
+Após o deploy, vá em **Settings > Environment Variables** no painel do Convex e adicione:
+- `GEMINI_API_KEY` = sua chave do Google AI Studio
 
-## Vantagens desta abordagem
--   **Realtime Nativo**: O frontend atualiza automaticamente quando o Convex muda os dados (sem precisar de SSE manual).
--   **Sem Servidor para Gerenciar**: Não precisa do Render nem do Firebase Functions.
--   **Escalabilidade**: Convex escala automaticamente.
+### 3. Deploy na Vercel
+1. Faça push do código para o GitHub
+2. Importe o projeto `web` na Vercel
+3. Configure as variáveis de ambiente:
+   - `VITE_CONVEX_URL` = (URL do seu deployment Convex - ex: `https://your-project.convex.cloud`)
+   - `VITE_USE_CONVEX` = `true`
+
+### 4. Pronto!
+O frontend na Vercel vai se conectar automaticamente ao backend no Convex.
+
+## Comandos Úteis
+
+```bash
+# Rodar localmente (dev)
+cd web
+npx convex dev  # Inicia backend Convex local
+npm run dev     # Inicia frontend Vite
+
+# Deploy para produção
+npx convex deploy
+vercel --prod
+```
+
+## Vantagens desta Stack
+
+- **Realtime nativo**: Dados atualizam automaticamente no frontend (sem polling/SSE manual)
+- **Escalabilidade**: Convex escala automaticamente
+- **Zero servidor**: Não precisa gerenciar Express, Render, etc.
+- **Custo zero**: Ambos têm planos gratuitos generosos
+- **Type-safe**: TypeScript end-to-end
