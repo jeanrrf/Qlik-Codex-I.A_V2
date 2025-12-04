@@ -83,6 +83,11 @@ export interface OptimizeResult {
   documentationMarkdown: string;
   explanation?: string;
   consultancyDocument?: ConsultancyDocument;
+  diffStats?: {
+    linesAdded: number;
+    linesRemoved: number;
+    linesModified: number;
+  };
 }
 
 export interface OptimizeScriptRequestBody {

@@ -126,6 +126,7 @@ INSTRUÇÕES:
    - **NÃO** adicione comentários explicativos ou didáticos no meio do código.
    - **NÃO** comente sobre as otimizações realizadas (isso já está no relatório).
    - Adicione **APENAS** comentários técnicos essenciais para outros desenvolvedores no **TOPO** do script (Header).
+   - **PROIBIDO**: Não inclua assinaturas como "Gerado por AINEX", "Otimizado por Gemini" ou nomes de empresas. O cabeçalho deve ser neutro e profissional.
    - O corpo do script deve ser limpo, contendo apenas o código Qlik.
 5. **Segurança**: Garanta que todas as tabelas temporárias sejam DROPadas.
 
@@ -138,7 +139,10 @@ Retorne um objeto JSON.
 }
 AVISO: O script deve estar COMPLETO. Não use placeholders como "// ... resto do código".
 AVISO CRÍTICO: O 'optimizedScript' deve ser TEXTO PURO (Plain Text). NÃO use Markdown (\`\`\`), NÃO use HTML, NÃO use tags <span>.
-AVISO DE FORMATAÇÃO: MANTENHA QUEBRAS DE LINHA (\\n) E INDENTAÇÃO CORRETA. O código NÃO pode ficar em uma única linha.
+AVISO DE FORMATAÇÃO: 
+- MANTENHA QUEBRAS DE LINHA (\\n) E INDENTAÇÃO CORRETA.
+- ALINHAMENTO IMPECÁVEL: Alinhe verticalmente as palavras-chave 'AS', os sinais de igual '=' e os comentários laterais para máxima legibilidade.
+- O código NÃO pode ficar em uma única linha.
 `,
 
   FINAL_DELIVERY: `

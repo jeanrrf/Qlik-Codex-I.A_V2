@@ -111,4 +111,9 @@ export interface OptimizeResult {
   explanation?: string;
   consultancyDocument?: any; // ConsultancyDocument type
   analysisOnly?: any; // Para modo analysis
+  diffStats?: {
+    linesAdded: number;
+    linesRemoved: number;
+    linesModified: number;
+  };
 }

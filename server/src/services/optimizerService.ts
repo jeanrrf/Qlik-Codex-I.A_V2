@@ -98,6 +98,7 @@ async function runUltraExpertMode(
     originalScript: script,
     optimizedScript: megaResult.optimizedScript,
     summary: megaResult.report.executiveSummary || "Optimization completed successfully.",
+    diffStats, // Add diffStats to top level result
     explanation: megaResult.report.technicalDetails || "See technical details.",
     documentationMarkdown: megaResult.report.technicalDetails || "",
     analysis: {
@@ -264,10 +265,14 @@ ${script}
         timestamp: new Date().toISOString()
       });
 
+      // Calculate diff stats
+      const diffStats = calculateDiffStats(script, optimizedScript);
+
       return {
         originalScript: script,
         optimizedScript,
         summary: `NVIDIA Fast Mode (${model}) concluído em ${duration}ms`,
+        diffStats,
         documentationMarkdown: "",
         analysis: {
           changes: [],

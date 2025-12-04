@@ -2242,20 +2242,28 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
         .cd-code-line {
           display: flex;
           gap: 10px;
-          padding: 2px 16px;
+          padding: 0 16px; /* Reduced vertical padding, controlled by line-height */
           border-left: 3px solid transparent;
+          align-items: flex-start; /* Fix alignment issues */
+          line-height: 1.5; /* Consistent line height */
         }
 
         .cd-code-line-number {
           width: 40px;
           text-align: right;
           color: var(--text-tertiary);
-          font-size: 0.7rem;
+          font-size: 0.75rem; /* Match content font size */
+          line-height: 1.5;
+          user-select: none;
+          padding-top: 2px; /* Micro-adjustment for visual alignment */
         }
 
         .cd-code-line-content {
           flex: 1;
           white-space: pre;
+          font-size: 0.75rem;
+          line-height: 1.5;
+          padding-top: 2px; /* Match number padding */
         }
 
         /* Qlik Syntax Highlighting */

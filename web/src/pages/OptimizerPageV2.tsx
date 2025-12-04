@@ -476,7 +476,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
 
   // === RENDER ===
   return (
-    <div className="opt-page">
+    <div className={`opt-page ${mode === 'nvidia-fast' ? 'nvidia-mode-active' : ''} ${optimization.isOptimizing && mode === 'nvidia-fast' ? 'optimizing-pulse' : ''}`}>
       {/* Background */}
       <div className="opt-bg">
         <div className="bg-gradient" />
@@ -1046,6 +1046,27 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                   <p>{result.summary}</p>
                 </div>
 
+                {/* Diff Stats Box - Lines Changed */}
+                {result.diffStats && (
+                  <div className="diff-stats-card">
+                    <div className="diff-stat added">
+                      <span className="diff-icon">+</span>
+                      <span className="diff-value">{result.diffStats.linesAdded}</span>
+                      <span className="diff-label">Adicionadas</span>
+                    </div>
+                    <div className="diff-stat removed">
+                      <span className="diff-icon">-</span>
+                      <span className="diff-value">{result.diffStats.linesRemoved}</span>
+                      <span className="diff-label">Removidas</span>
+                    </div>
+                    <div className="diff-stat modified">
+                      <span className="diff-icon">~</span>
+                      <span className="diff-value">{result.diffStats.linesModified}</span>
+                      <span className="diff-label">Modificadas</span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Code Comparison com Scroll Sincronizado */}
                 <div className="code-comparison">
                   <div className="code-panel original">
@@ -1055,10 +1076,13 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                         <span className="line-count">{result.originalScript.split('\n').length} linhas</span>
                         <button
                           className="copy-btn"
-                          onClick={() => {
-                            navigator.clipboard.writeText(result.originalScript);
-                            const btn = document.querySelector('.code-panel.original .copy-btn') as HTMLButtonElement;
-                            if (btn) { btn.textContent = '✓ Copiado'; setTimeout(() => btn.textContent = '📋 Copiar', 2000); }
+                          onClick={(e) => {
+                            const btn = e.currentTarget;
+                            navigator.clipboard.writeText(result.originalScript).then(() => {
+                              const originalText = btn.innerHTML;
+                              btn.innerHTML = '✓ Copiado';
+                              setTimeout(() => btn.innerHTML = originalText, 2000);
+                            });
                           }}
                           title="Copiar código original"
                         >
@@ -1066,40 +1090,39 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                         </button>
                       </div>
                     </div>
-                    <div
-                      className="code-content-wrapper"
-                      onScroll={(e) => {
-                        const target = e.currentTarget.querySelector('.code-scroll-area') as HTMLDivElement;
-                        const lineNumbers = e.currentTarget.querySelector('.line-numbers-column') as HTMLDivElement;
-                        const optimizedWrapper = e.currentTarget.parentElement?.parentElement?.querySelector('.optimized .code-content-wrapper') as HTMLDivElement;
-                        if (lineNumbers && target) {
-                          lineNumbers.scrollTop = target.scrollTop;
-                        }
-                        if (optimizedWrapper) {
-                          const optimizedScroll = optimizedWrapper.querySelector('.code-scroll-area') as HTMLDivElement;
-                          const optimizedLines = optimizedWrapper.querySelector('.line-numbers-column') as HTMLDivElement;
-                          if (optimizedScroll) {
-                            optimizedScroll.scrollTop = target.scrollTop;
-                            optimizedScroll.scrollLeft = target.scrollLeft;
-                          }
-                          if (optimizedLines) optimizedLines.scrollTop = target.scrollTop;
-                        }
-                      }}
-                    >
+                    <div className="code-content-wrapper">
                       <div className="line-numbers-column">
-                        {result.originalScript.split('\\n').map((_, idx) => (
+                        {result.originalScript.split(/\r?\n/).map((_, idx) => (
                           <span key={idx} className="line-number">{idx + 1}</span>
                         ))}
                       </div>
-                      <div className="code-scroll-area" onScroll={(e) => {
-                        const target = e.currentTarget;
-                        const wrapper = target.parentElement as HTMLDivElement;
-                        const lineNumbers = wrapper?.querySelector('.line-numbers-column') as HTMLDivElement;
-                        if (lineNumbers) lineNumbers.scrollTop = target.scrollTop;
-                      }}>
+                      <div
+                        className="code-scroll-area"
+                        onScroll={(e) => {
+                          const target = e.currentTarget;
+                          const wrapper = target.parentElement as HTMLDivElement;
+                          const lineNumbers = wrapper?.querySelector('.line-numbers-column') as HTMLDivElement;
+                          if (lineNumbers) lineNumbers.scrollTop = target.scrollTop;
+
+                          // Sync with optimized panel
+                          const optimizedWrapper = wrapper?.parentElement?.parentElement?.querySelector('.optimized .code-content-wrapper') as HTMLDivElement;
+                          if (optimizedWrapper) {
+                            const optimizedScroll = optimizedWrapper.querySelector('.code-scroll-area') as HTMLDivElement;
+                            const optimizedLines = optimizedWrapper.querySelector('.line-numbers-column') as HTMLDivElement;
+
+                            if (optimizedScroll && Math.abs(optimizedScroll.scrollTop - target.scrollTop) > 1) {
+                              optimizedScroll.scrollTop = target.scrollTop;
+                              optimizedScroll.scrollLeft = target.scrollLeft;
+                            }
+                            if (optimizedLines) optimizedLines.scrollTop = target.scrollTop;
+                          }
+                        }}
+                      >
                         <pre className="code-content qlik-syntax">
-                          {result.originalScript.split('\\n').map((line, idx) => (
-                            <div key={idx} className="code-line" dangerouslySetInnerHTML={{ __html: highlightQlikSyntax(line) || '&nbsp;' }} />
+                          {result.originalScript.split(/\r?\n/).map((line, idx) => (
+                            <div key={idx} className="code-line">
+                              <div className="code-line-content" dangerouslySetInnerHTML={{ __html: highlightQlikSyntax(line) || '&nbsp;' }} />
+                            </div>
                           ))}
                         </pre>
                       </div>
@@ -1109,13 +1132,16 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                     <div className="code-panel-header">
                       <span className="panel-label">✨ Otimizado</span>
                       <div className="panel-actions">
-                        <span className="line-count">{result.optimizedScript.split('\\n').length} linhas</span>
+                        <span className="line-count">{result.optimizedScript.split(/\r?\n/).length} linhas</span>
                         <button
                           className="copy-btn"
-                          onClick={() => {
-                            navigator.clipboard.writeText(result.optimizedScript);
-                            const btn = document.querySelector('.code-panel.optimized .copy-btn') as HTMLButtonElement;
-                            if (btn) { btn.textContent = '✓ Copiado'; setTimeout(() => btn.textContent = '📋 Copiar', 2000); }
+                          onClick={(e) => {
+                            const btn = e.currentTarget;
+                            navigator.clipboard.writeText(result.optimizedScript).then(() => {
+                              const originalText = btn.innerHTML;
+                              btn.innerHTML = '✓ Copiado';
+                              setTimeout(() => btn.innerHTML = originalText, 2000);
+                            });
                           }}
                           title="Copiar código otimizado"
                         >
@@ -1123,40 +1149,39 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                         </button>
                       </div>
                     </div>
-                    <div
-                      className="code-content-wrapper"
-                      onScroll={(e) => {
-                        const target = e.currentTarget.querySelector('.code-scroll-area') as HTMLDivElement;
-                        const lineNumbers = e.currentTarget.querySelector('.line-numbers-column') as HTMLDivElement;
-                        const originalWrapper = e.currentTarget.parentElement?.parentElement?.querySelector('.original .code-content-wrapper') as HTMLDivElement;
-                        if (lineNumbers && target) {
-                          lineNumbers.scrollTop = target.scrollTop;
-                        }
-                        if (originalWrapper) {
-                          const originalScroll = originalWrapper.querySelector('.code-scroll-area') as HTMLDivElement;
-                          const originalLines = originalWrapper.querySelector('.line-numbers-column') as HTMLDivElement;
-                          if (originalScroll) {
-                            originalScroll.scrollTop = target.scrollTop;
-                            originalScroll.scrollLeft = target.scrollLeft;
-                          }
-                          if (originalLines) originalLines.scrollTop = target.scrollTop;
-                        }
-                      }}
-                    >
+                    <div className="code-content-wrapper">
                       <div className="line-numbers-column">
-                        {result.optimizedScript.split('\\n').map((_, idx) => (
+                        {result.optimizedScript.split(/\r?\n/).map((_, idx) => (
                           <span key={idx} className="line-number">{idx + 1}</span>
                         ))}
                       </div>
-                      <div className="code-scroll-area" onScroll={(e) => {
-                        const target = e.currentTarget;
-                        const wrapper = target.parentElement as HTMLDivElement;
-                        const lineNumbers = wrapper?.querySelector('.line-numbers-column') as HTMLDivElement;
-                        if (lineNumbers) lineNumbers.scrollTop = target.scrollTop;
-                      }}>
+                      <div
+                        className="code-scroll-area"
+                        onScroll={(e) => {
+                          const target = e.currentTarget;
+                          const wrapper = target.parentElement as HTMLDivElement;
+                          const lineNumbers = wrapper?.querySelector('.line-numbers-column') as HTMLDivElement;
+                          if (lineNumbers) lineNumbers.scrollTop = target.scrollTop;
+
+                          // Sync with original panel
+                          const originalWrapper = wrapper?.parentElement?.parentElement?.querySelector('.original .code-content-wrapper') as HTMLDivElement;
+                          if (originalWrapper) {
+                            const originalScroll = originalWrapper.querySelector('.code-scroll-area') as HTMLDivElement;
+                            const originalLines = originalWrapper.querySelector('.line-numbers-column') as HTMLDivElement;
+
+                            if (originalScroll && Math.abs(originalScroll.scrollTop - target.scrollTop) > 1) {
+                              originalScroll.scrollTop = target.scrollTop;
+                              originalScroll.scrollLeft = target.scrollLeft;
+                            }
+                            if (originalLines) originalLines.scrollTop = target.scrollTop;
+                          }
+                        }}
+                      >
                         <pre className="code-content qlik-syntax">
-                          {result.optimizedScript.split('\\n').map((line, idx) => (
-                            <div key={idx} className="code-line" dangerouslySetInnerHTML={{ __html: highlightQlikSyntax(line) || '&nbsp;' }} />
+                          {result.optimizedScript.split(/\r?\n/).map((line, idx) => (
+                            <div key={idx} className="code-line">
+                              <div className="code-line-content" dangerouslySetInnerHTML={{ __html: highlightQlikSyntax(line) || '&nbsp;' }} />
+                            </div>
                           ))}
                         </pre>
                       </div>
@@ -3548,11 +3573,28 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
         }
 
         .code-content-wrapper {
+          display: flex;
           flex: 1;
-          overflow: auto;
+          overflow: hidden;
           max-height: 500px;
           background: rgba(0, 0, 0, 0.4);
           position: relative;
+        }
+
+        .line-numbers-column {
+          display: flex;
+          flex-direction: column;
+          padding: 0;
+          background: rgba(0, 0, 0, 0.2);
+          border-right: 1px solid rgba(255, 255, 255, 0.05);
+          overflow: hidden;
+          min-width: 50px;
+          user-select: none;
+        }
+
+        .code-scroll-area {
+          flex: 1;
+          overflow: auto;
         }
 
         .code-content {
@@ -3562,12 +3604,13 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
           font-size: 13px;
           line-height: 1.6;
           color: #c9d1d9;
+          min-width: max-content; /* Ensure content doesn't wrap if we want horizontal scroll */
         }
 
         .code-line {
           display: flex;
           min-height: 22px;
-          padding: 1px 14px;
+          padding: 0; /* Remove padding here, handle in children */
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           border-left: 2px solid transparent;
         }
@@ -3589,14 +3632,22 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
 
         .line-number {
           flex-shrink: 0;
-          width: 52px;
+          width: 100%; /* Fill column */
           text-align: right;
-          padding-right: 18px;
+          padding-right: 12px;
+          padding-left: 8px;
           color: rgba(255, 255, 255, 0.35);
           user-select: none;
           font-size: 12px;
           font-weight: 600;
           transition: all 0.2s;
+          line-height: 22px; /* Match code line height */
+          height: 22px;
+        }
+
+        .code-line-content {
+           padding-left: 12px;
+           line-height: 22px;
         }
 
         .code-line:hover .line-number {
@@ -5357,6 +5408,105 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
 
           .warning-content p {
             font-size: 0.8rem;
+          }
+        }
+
+        /* Diff Stats Card */
+        .diff-stats-card {
+          display: flex;
+          gap: 16px;
+          padding: 16px;
+          background: rgba(0, 0, 0, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 12px;
+          margin-bottom: 16px;
+        }
+
+        .diff-stat {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 12px;
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid transparent;
+        }
+
+        .diff-stat.added {
+          border-color: rgba(0, 255, 157, 0.2);
+          background: rgba(0, 255, 157, 0.05);
+        }
+
+        .diff-stat.removed {
+          border-color: rgba(255, 42, 109, 0.2);
+          background: rgba(255, 42, 109, 0.05);
+        }
+
+        .diff-stat.modified {
+          border-color: rgba(255, 184, 0, 0.2);
+          background: rgba(255, 184, 0, 0.05);
+        }
+
+        .diff-icon {
+          font-size: 1.2rem;
+          font-weight: 700;
+          margin-bottom: 4px;
+        }
+
+        .diff-stat.added .diff-icon { color: var(--success); }
+        .diff-stat.removed .diff-icon { color: var(--danger); }
+        .diff-stat.modified .diff-icon { color: var(--warning); }
+
+        .diff-value {
+          font-size: 1.5rem;
+          font-weight: 700;
+          font-family: 'JetBrains Mono', monospace;
+          color: var(--text-main);
+        }
+
+        .diff-label {
+          font-size: 0.7rem;
+          text-transform: uppercase;
+          color: var(--text-secondary);
+          margin-top: 4px;
+        }
+
+        /* NVIDIA Mode Styles */
+        .opt-page.nvidia-mode-active {
+          --primary: #39ff14;
+          --primary-glow: rgba(57, 255, 20, 0.5);
+        }
+
+        .opt-page.nvidia-mode-active .mode-toggle-thumb {
+          background: linear-gradient(135deg, #39ff14 0%, #00ff00 100%);
+          box-shadow: 0 0 20px rgba(57, 255, 20, 0.6);
+        }
+
+        .opt-page.nvidia-mode-active .action-btn.primary {
+          background: linear-gradient(135deg, #39ff14 0%, #00cc00 100%);
+          color: #000;
+          box-shadow: 0 0 20px rgba(57, 255, 20, 0.4);
+        }
+
+        .opt-page.nvidia-mode-active.optimizing-pulse .opt-bg {
+          animation: nvidia-pulse 0.8s ease-in-out infinite alternate;
+        }
+
+        .opt-page.nvidia-mode-active.optimizing-pulse .opt-main {
+          box-shadow: inset 0 0 100px rgba(57, 255, 20, 0.1);
+        }
+
+        @keyframes nvidia-pulse {
+          from { 
+            opacity: 0.8;
+            filter: brightness(1);
+          }
+          to { 
+            opacity: 1;
+            filter: brightness(1.2);
+            box-shadow: inset 0 0 50px rgba(57, 255, 20, 0.2);
           }
         }
       `}</style>
