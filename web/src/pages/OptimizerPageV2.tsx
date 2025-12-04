@@ -474,12 +474,48 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
     }
   };
 
-  // NVIDIA Logo Component
+  // NVIDIA Official Logo (Simplified Eye)
   const NvidiaLogo = () => (
-    <svg className="nvidia-logo-svg" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M21.6 10.8c-0.2-0.1-0.3-0.2-0.5-0.2 -0.1 0-0.2 0-0.3 0.1 -0.1 0.1-0.2 0.2-0.2 0.3 0 0.1 0 0.2 0.1 0.3 0.3 0.5 0.5 1.1 0.5 1.7 0 1.9-1.5 3.4-3.4 3.4 -1.9 0-3.4-1.5-3.4-3.4 0-1.9 1.5-3.4 3.4-3.4 0.5 0 1 0.1 1.4 0.3 0.1 0.1 0.2 0.1 0.3 0 0.1-0.1 0.1-0.2 0.1-0.3 0-0.1-0.1-0.2-0.2-0.2 -0.5-0.3-1.1-0.4-1.7-0.4 -2.3 0-4.1 1.8-4.1 4.1 0 2.3 1.8 4.1 4.1 4.1 2.3 0 4.1-1.8 4.1-4.1C21.9 12.1 21.8 11.4 21.6 10.8z" />
-      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zM12 20c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8S16.4 20 12 20z" />
-      <path d="M14.5 7.5c-0.1 0-0.2 0.1-0.2 0.2 0 0.1 0.1 0.2 0.2 0.2 1.4 0 2.5 1.1 2.5 2.5 0 0.1 0.1 0.2 0.2 0.2 0.1 0 0.2-0.1 0.2-0.2C17.4 8.8 16.1 7.5 14.5 7.5z" />
+    <svg className="nvidia-logo-svg" viewBox="0 0 351.5 67.1" fill="currentColor">
+      <path d="M128.5,3.5c-16.2,0.9-30.4,7.7-40.9,19.5c-1.7,1.9-3.2,3.9-4.5,6c-1.3-2.1-2.8-4.1-4.5-6C68.1,11.2,54,4.4,37.7,3.5C17,2.4,0.2,18.5,0.2,39.2v24.4h24.6V39.2c0-8.5,6.3-15.5,14.8-15.5c8.9,0.5,16.1,6.8,17.9,15.5c0.3,1.5,0.5,3,0.5,4.6v19.8h24.6V43.8c0-1.6,0.2-3.1,0.5-4.6c1.8-8.7,9-15,17.9-15.5c8.5,0,14.8,7,14.8,15.5v24.4h24.6V39.2C140.4,18.5,149.2,2.4,128.5,3.5z" />
+      <path d="M176.2,3.5h-24.6v60.1h24.6V3.5z" />
+      <path d="M230.4,3.5h-30.3l-27.6,60.1h26.2l4.3-9.8h24.5l4.3,9.8h26.2L230.4,3.5z M209.3,41.5l6-13.7l6,13.7H209.3z" />
+    </svg>
+  );
+
+  // Qlik Codex Brand Logo Component
+  const QlikCodexLogo = () => (
+    <svg className="qlik-codex-logo" viewBox="0 0 100 100" fill="none">
+      {/* Circuit Board Background Pattern */}
+      <defs>
+        <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#00f2ff" />
+          <stop offset="50%" stopColor="#7000ff" />
+          <stop offset="100%" stopColor="#00f2ff" />
+        </linearGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+          <feMerge>
+            <feMergeNode in="coloredBlur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      {/* Hexagon Base */}
+      <polygon
+        points="50,5 90,27.5 90,72.5 50,95 10,72.5 10,27.5"
+        fill="rgba(0,242,255,0.1)"
+        stroke="url(#logo-gradient)"
+        strokeWidth="2"
+        filter="url(#glow)"
+      />
+      {/* Q Letter Stylized */}
+      <circle cx="50" cy="45" r="18" stroke="url(#logo-gradient)" strokeWidth="4" fill="none" filter="url(#glow)" />
+      <line x1="58" y1="53" x2="70" y2="65" stroke="url(#logo-gradient)" strokeWidth="4" strokeLinecap="round" filter="url(#glow)" />
+      {/* AI Indicator Dots */}
+      <circle cx="50" cy="75" r="3" fill="#00f2ff" filter="url(#glow)" />
+      <circle cx="40" cy="75" r="2" fill="#7000ff" filter="url(#glow)" />
+      <circle cx="60" cy="75" r="2" fill="#7000ff" filter="url(#glow)" />
     </svg>
   );
 
@@ -501,7 +537,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
             </svg>
           </button>
           <div className="brand-logo-unified">
-            <div className="brand-logo-gradient" />
+            <QlikCodexLogo />
             <div className="brand-logo-content">
               <span className="brand-name-text">QLIK CODEX I.A</span>
               <span className="brand-beta-tag">BETA</span>
@@ -4997,16 +5033,41 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
           gap: 12px;
         }
 
+        /* Qlik Codex Logo SVG */
+        .qlik-codex-logo {
+          width: 36px;
+          height: 36px;
+          margin-right: 4px;
+          filter: drop-shadow(0 0 8px rgba(0, 242, 255, 0.4));
+          animation: logo-float 4s ease-in-out infinite;
+        }
+
+        @keyframes logo-float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-2px); }
+        }
+
         /* Logo Oficial Unificado - Escurecimento Progressivo + BETA Verde */
         .brand-logo-unified {
           position: relative;
           display: flex;
           align-items: center;
-          padding: 10px 14px 10px 18px;
+          padding: 10px 14px 10px 12px;
           border-radius: 10px;
           overflow: hidden;
           cursor: pointer;
           transition: all 0.3s ease;
+          background: linear-gradient(90deg, 
+            rgba(45, 50, 60, 0.98) 0%,
+            rgba(35, 40, 50, 0.98) 25%,
+            rgba(25, 30, 40, 0.99) 50%,
+            rgba(18, 22, 30, 1) 75%,
+            rgba(12, 15, 22, 1) 100%);
+          border: 1px solid rgba(100, 116, 139, 0.25);
+          box-shadow: 
+            0 6px 24px rgba(0, 0, 0, 0.5),
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            inset 0 -1px 0 rgba(0, 0, 0, 0.2);
         }
 
         .brand-logo-gradient {
@@ -5555,6 +5616,186 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
           font-size: 0.8rem;
           color: #39ff14;
           letter-spacing: 1px;
+        }
+
+        /* =============================================== */
+        /* NVIDIA COMPUTING POWER - RIVER FLOW EFFECT     */
+        /* =============================================== */
+
+        /* River Flow Container */
+        .opt-page.nvidia-mode-active.optimizing-pulse::before {
+          content: '';
+          position: fixed;
+          top: 0;
+          left: -100%;
+          width: 300%;
+          height: 100%;
+          background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(57, 255, 20, 0.03) 10%,
+            rgba(57, 255, 20, 0.08) 20%,
+            rgba(0, 255, 100, 0.15) 35%,
+            rgba(57, 255, 20, 0.25) 50%,
+            rgba(0, 255, 100, 0.15) 65%,
+            rgba(57, 255, 20, 0.08) 80%,
+            rgba(57, 255, 20, 0.03) 90%,
+            transparent 100%
+          );
+          animation: nvidia-river-flow 3s linear infinite;
+          pointer-events: none;
+          z-index: 1;
+        }
+
+        @keyframes nvidia-river-flow {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(33.33%); }
+        }
+
+        /* Particle Grid Overlay */
+        .opt-page.nvidia-mode-active.optimizing-pulse .bg-grid {
+          background-image: 
+            linear-gradient(rgba(57, 255, 20, 0.08) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(57, 255, 20, 0.08) 1px, transparent 1px);
+          animation: grid-pulse-green 1.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes grid-pulse-green {
+          from { 
+            opacity: 0.4;
+            background-size: 40px 40px;
+          }
+          to { 
+            opacity: 1;
+            background-size: 42px 42px;
+          }
+        }
+
+        /* Power Bars - Computing Visualization */
+        .opt-page.nvidia-mode-active.optimizing-pulse::after {
+          content: '';
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 4px;
+          background: linear-gradient(
+            90deg,
+            transparent 0%,
+            #39ff14 20%,
+            #00ff00 40%,
+            #39ff14 60%,
+            #00ff44 80%,
+            transparent 100%
+          );
+          animation: power-bar-flow 1.2s linear infinite;
+          pointer-events: none;
+          z-index: 1000;
+          box-shadow: 
+            0 0 10px rgba(57, 255, 20, 0.8),
+            0 0 20px rgba(57, 255, 20, 0.6),
+            0 0 40px rgba(57, 255, 20, 0.4);
+        }
+
+        @keyframes power-bar-flow {
+          0% { 
+            background-position: -200% 0;
+            opacity: 0.6;
+          }
+          50% { opacity: 1; }
+          100% { 
+            background-position: 200% 0;
+            opacity: 0.6;
+          }
+        }
+
+        /* Enhanced Button Glow when Running */
+        .opt-page.nvidia-mode-active.optimizing-pulse .btn-execute-main {
+          background: linear-gradient(135deg, #39ff14 0%, #00ff00 50%, #39ff14 100%);
+          background-size: 200% 100%;
+          animation: btn-glow-shift 1s linear infinite;
+          box-shadow: 
+            0 0 20px rgba(57, 255, 20, 0.6),
+            0 0 40px rgba(57, 255, 20, 0.4),
+            inset 0 0 10px rgba(255, 255, 255, 0.2);
+        }
+
+        @keyframes btn-glow-shift {
+          0% { background-position: 0% 50%; }
+          100% { background-position: 200% 50%; }
+        }
+
+        /* Stage Cards Green Border Animation */
+        .opt-page.nvidia-mode-active.optimizing-pulse .stage-card.active {
+          border-color: #39ff14 !important;
+          box-shadow: 
+            0 0 15px rgba(57, 255, 20, 0.3),
+            inset 0 0 20px rgba(57, 255, 20, 0.05);
+        }
+
+        .opt-page.nvidia-mode-active.optimizing-pulse .stage-card-top-bar.active {
+          background: linear-gradient(90deg, #39ff14, #00ff00, #39ff14);
+          background-size: 200% 100%;
+          animation: top-bar-flow 1s linear infinite;
+        }
+
+        @keyframes top-bar-flow {
+          0% { background-position: 0% 50%; }
+          100% { background-position: 200% 50%; }
+        }
+
+        /* Category Items Green Border */
+        .opt-page.nvidia-mode-active.optimizing-pulse .category-item.active {
+          border-color: rgba(57, 255, 20, 0.4) !important;
+          background: rgba(57, 255, 20, 0.03);
+        }
+
+        .opt-page.nvidia-mode-active.optimizing-pulse .category-left-bar.active {
+          background: #39ff14;
+          box-shadow: 0 0 10px rgba(57, 255, 20, 0.8);
+        }
+
+        /* Header Badge Enhanced during Execution */
+        .opt-page.nvidia-mode-active.optimizing-pulse .nvidia-header-badge {
+          background: rgba(57, 255, 20, 0.2);
+          border-color: rgba(57, 255, 20, 0.6);
+          box-shadow: 
+            0 0 20px rgba(57, 255, 20, 0.5),
+            inset 0 0 10px rgba(57, 255, 20, 0.1);
+          animation: badge-intense-pulse 0.6s ease-in-out infinite alternate;
+        }
+
+        @keyframes badge-intense-pulse {
+          from { 
+            transform: scale(1);
+            box-shadow: 0 0 20px rgba(57, 255, 20, 0.5);
+          }
+          to { 
+            transform: scale(1.02);
+            box-shadow: 0 0 35px rgba(57, 255, 20, 0.8);
+          }
+        }
+
+        /* Code Line Highlight in Green */
+        .opt-page.nvidia-mode-active .code-line:hover {
+          background: rgba(57, 255, 20, 0.06);
+          border-left-color: rgba(57, 255, 20, 0.6);
+        }
+
+        .opt-page.nvidia-mode-active .code-line:hover .line-number {
+          color: #39ff14;
+          text-shadow: 0 0 8px rgba(57, 255, 20, 0.5);
+        }
+
+        /* Syntax Highlighting Override for NVIDIA Mode */
+        .opt-page.nvidia-mode-active .syntax-keyword {
+          color: #39ff14;
+          text-shadow: 0 0 6px rgba(57, 255, 20, 0.5);
+        }
+
+        .opt-page.nvidia-mode-active .syntax-function {
+          color: #00ff88;
+          text-shadow: 0 0 6px rgba(0, 255, 136, 0.4);
         }
       `}</style>
     </div >
