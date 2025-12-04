@@ -6,6 +6,7 @@ import { ZodSchema } from "zod";
 import { AnalysisAndPlanSchema, CodeGenSchema, FinalDeliverySchema } from "../validators/megaOptimizerSchemas";
 import { createHash } from "crypto";
 import type { OptimizationStepId } from "../types/optimization";
+import { QlikGranularOptimizer } from "./qlikGranularOptimizer";
 
 // Performance constants
 const MAX_HISTORY_TOKENS = 500; // Limite de chars para resumo do histórico
@@ -381,5 +382,13 @@ ${promptTemplate}
         providerStats: orchestratorStats.providerStats
       }
     };
+  }
+
+  /**
+   * Executa otimização granular usando a nova Base de Conhecimento
+   */
+  public async runGranularOptimization(stepIds: OptimizationStepId[]): Promise<any> {
+    const granularOptimizer = new QlikGranularOptimizer(this.script, { signal: this.abortSignal });
+    return await granularOptimizer.executeSequence(stepIds);
   }
 }
