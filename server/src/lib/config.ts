@@ -10,13 +10,21 @@ const llmProvidersEnv = (process.env.LLM_PROVIDERS ?? "google")
   .filter((provider) => provider.length > 0);
 const llmProviders = llmProvidersEnv.length > 0 ? llmProvidersEnv : ["google"];
 
+const normalizeOrigin = (origin: string) => origin.replace(/\/*$/, "");
+const corsOriginRaw = process.env.CORS_ORIGIN ?? "*";
+const parsedCorsOrigins = corsOriginRaw
+  .split(",")
+  .map((origin) => normalizeOrigin(origin.trim()))
+  .filter((origin) => origin.length > 0);
+
 export const config = {
   nodeEnv: (process.env.NODE_ENV || "development") as
     | "development"
     | "production"
     | "test",
   isDevelopment: process.env.NODE_ENV !== "production",
-  corsOrigin: process.env.CORS_ORIGIN ?? "*",
+  corsOrigin: corsOriginRaw,
+  corsOrigins: parsedCorsOrigins,
   port: Number.isNaN(rawPort) ? 3000 : rawPort,
   geminiApiKey: process.env.GEMINI_API_KEY || "",
   geminiModel: process.env.GEMINI_MODEL_NAME || "gemini-2.5-flash",

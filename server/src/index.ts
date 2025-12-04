@@ -26,7 +26,7 @@ const corsOptions =
   config.corsOrigin === "*"
     ? { origin: "*" as const }
     : {
-      origin: config.corsOrigin.split(",").map((origin) => origin.trim()),
+      origin: config.corsOrigins,
       credentials: true as const
     };
 const webBuildPath = path.resolve(__dirname, "..", "..", "web", "dist");
