@@ -10,6 +10,36 @@ import type {
 } from "./types";
 
 const MODEL_NAME = config.geminiModel;
+const GEMINI_TIMEOUT_MS = 120000; // 2 minutos para prompts grandes
+
+function raceWithAbort<T>(promise: Promise<T>, signal?: AbortSignal, operation = "Google Gemini API"): Promise<T> {
+  if (!signal) {
+    return promise;
+  }
+
+  if (signal.aborted) {
+    return Promise.reject(new Error(`${operation} aborted by signal`));
+  }
+
+  return new Promise<T>((resolve, reject) => {
+    const abortHandler = () => {
+      signal.removeEventListener("abort", abortHandler);
+      reject(new Error(`${operation} aborted by signal`));
+    };
+
+    signal.addEventListener("abort", abortHandler, { once: true });
+
+    promise
+      .then((value) => {
+        signal.removeEventListener("abort", abortHandler);
+        resolve(value);
+      })
+      .catch((error) => {
+        signal.removeEventListener("abort", abortHandler);
+        reject(error);
+      });
+  });
+}
 
 let client: GoogleGenAI | undefined;
 
@@ -26,9 +56,8 @@ async function generate(prompt: string, options?: ProviderCallOptions): Promise<
 
   const modelToUse = options?.model || MODEL_NAME;
 
-  // OTIMIZAÇÃO: Timeout de 60s para Gemini 2.5 Flash
-  // Gemini é rápido mas scripts grandes podem demorar
-  const response = await withTimeout(
+  // Timeout maior para evitar aborts prematuros em scripts grandes
+  const timedResponse = withTimeout(
     client.models.generateContent({
       model: modelToUse,
       contents: [
@@ -43,9 +72,11 @@ async function generate(prompt: string, options?: ProviderCallOptions): Promise<
         temperature: 0.1,
       }
     }),
-    60000, // 60s timeout - balanceado para scripts grandes
+    GEMINI_TIMEOUT_MS,
     'Google Gemini API'
   );
+
+  const response = await raceWithAbort(timedResponse, options?.signal, "Google Gemini API");
 
   if (!response.text) {
     throw new Error("Google provider returned empty text");

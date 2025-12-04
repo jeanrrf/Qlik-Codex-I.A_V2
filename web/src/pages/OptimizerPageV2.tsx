@@ -3506,9 +3506,9 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
         .changes-count .badge.danger { background: rgba(255, 42, 109, 0.15); color: var(--danger); }
 
         .code-comparison {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 1rem;
+          display: flex;
+          flex-direction: column;
+          gap: 1.5rem;
           flex: 1;
           min-height: 300px;
         }
@@ -3865,7 +3865,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
           }
 
           .code-comparison {
-            grid-template-columns: 1fr;
+            flex-direction: column;
           }
         }
 

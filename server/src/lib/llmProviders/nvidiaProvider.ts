@@ -8,6 +8,36 @@ import type {
 } from "./types";
 
 const NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1";
+const NVIDIA_TIMEOUT_MS = 150000; // 2.5 minutos para Kimi K2 e modelos grandes
+
+function raceWithAbort<T>(promise: Promise<T>, signal?: AbortSignal, operation = "NVIDIA NIM API"): Promise<T> {
+  if (!signal) {
+    return promise;
+  }
+
+  if (signal.aborted) {
+    return Promise.reject(new Error(`${operation} aborted by signal`));
+  }
+
+  return new Promise<T>((resolve, reject) => {
+    const abortHandler = () => {
+      signal.removeEventListener("abort", abortHandler);
+      reject(new Error(`${operation} aborted by signal`));
+    };
+
+    signal.addEventListener("abort", abortHandler, { once: true });
+
+    promise
+      .then((value) => {
+        signal.removeEventListener("abort", abortHandler);
+        resolve(value);
+      })
+      .catch((error) => {
+        signal.removeEventListener("abort", abortHandler);
+        reject(error);
+      });
+  });
+}
 
 // Helper to extract JSON from potentially messy text (markdown, thinking blocks, etc)
 function extractJsonFromText(text: string): string {
@@ -99,15 +129,15 @@ export function extractContent(content?: NvidiaMessageContent): string | undefin
 
 async function callNvidiaWithModel(
   prompt: string,
-  modelName: string
+  modelName: string,
+  signal?: AbortSignal
 ): Promise<ProviderResult> {
   const endpoint = `${NVIDIA_BASE_URL}/chat/completions`;
 
   logger.info("NVIDIA API: Tentando modelo", { model: modelName });
 
-  // OTIMIZAÇÃO: Timeout de 60s para Kimi K2 (modelo grande com reasoning)
-  // Kimi K2 é um modelo MoE de 1T parâmetros com capacidades avançadas
-  const response = await withTimeout(
+  // Timeout ampliado para modelos com reasoning profundo (Kimi K2, etc.)
+  const timedResponse = withTimeout(
     fetch(endpoint, {
       method: "POST",
       headers: {
@@ -129,11 +159,14 @@ async function callNvidiaWithModel(
         top_p: 0.95,
         max_tokens: 16384,  // Aumentado para scripts grandes
         stream: false
-      })
+      }),
+      signal
     }),
-    60000, // 60s timeout - Kimi K2 precisa de mais tempo para reasoning
+    NVIDIA_TIMEOUT_MS,
     'NVIDIA NIM API'
   );
+
+  const response = await raceWithAbort(timedResponse, signal, "NVIDIA NIM API");
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -204,7 +237,7 @@ async function callNvidia(
   // We no longer force a specific "Thinking" model hardcoded here.
   const modelToUse = options?.model ?? config.nvidiaModel;
 
-  return callNvidiaWithModel(prompt, modelToUse);
+  return callNvidiaWithModel(prompt, modelToUse, options?.signal);
 }
 
 export const nvidiaProvider: LLMProvider = {

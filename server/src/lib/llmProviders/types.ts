@@ -8,6 +8,7 @@ export interface ProviderResult {
 
 export interface ProviderCallOptions {
   model?: string;
+  signal?: AbortSignal;
 }
 
 export interface LLMProvider {

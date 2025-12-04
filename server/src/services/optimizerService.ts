@@ -214,7 +214,7 @@ ${script}
     timestamp: new Date().toISOString()
   });
 
-  const response = await nvidiaProvider.generateStructuredJson(prompt, { model });
+  const response = await nvidiaProvider.generateStructuredJson(prompt, { model, signal: abortSignal });
 
   checkAborted(abortSignal, "NVIDIA Fast mode after LLM");
 

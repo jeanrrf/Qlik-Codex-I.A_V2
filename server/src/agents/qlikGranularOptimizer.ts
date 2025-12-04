@@ -101,7 +101,8 @@ export class QlikGranularOptimizer {
       const response = await this.orchestrator.executeWithRotation(
         stepId,
         prompt,
-        stepDef.timeout || 60000
+        stepDef.timeout || 60000,
+        this.abortSignal
       );
 
       if (!response.result) {

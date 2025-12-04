@@ -52,13 +52,21 @@ export class ProviderOrchestrator {
   async executeWithRotation(
     stepId: OptimizationStepId,
     prompt: string,
-    timeout: number
+    timeout: number,
+    abortSignal?: AbortSignal
   ): Promise<{
     result?: string;
     attempts: ProviderAttempt[];
     fallbackTriggered: boolean;
     fallbackReason?: string;
   }> {
+    const ensureNotAborted = () => {
+      if (abortSignal?.aborted) {
+        logger.warn("Rotação de provedores abortada pelo sinal externo", { stepId });
+        throw new Error("ABORTED");
+      }
+    };
+
     const stepAttempts: ProviderAttempt[] = [];
     const usedProviders = new Set<string>();
     let attemptCount = 0;
@@ -93,6 +101,8 @@ export class ProviderOrchestrator {
     ];
 
     for (const plan of attemptPlan) {
+      ensureNotAborted();
+
       if (attemptCount >= this.rotationConfig.maxAttemptsPerStep) {
         logger.warn("Limite de tentativas atingido", {
           stepId,
@@ -134,7 +144,8 @@ export class ProviderOrchestrator {
           prompt,
           adjustedTimeout,
           plan.model,
-          plan.label
+          plan.label,
+          abortSignal
         );
 
         const attempt: ProviderAttempt = {
@@ -178,6 +189,10 @@ export class ProviderOrchestrator {
         });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
+
+        if (errorMessage === "ABORTED") {
+          throw error;
+        }
 
         logger.error("Erro critico ao chamar provedor", {
           stepId,
@@ -227,11 +242,13 @@ export class ProviderOrchestrator {
     prompt: string,
     timeout: number,
     modelOverride?: string,
-    label?: string
+    label?: string,
+    abortSignal?: AbortSignal
   ): Promise<ProviderAttemptResult> {
     const startTime = Date.now();
     let warningTimer: NodeJS.Timeout | undefined;
     let criticalTimer: NodeJS.Timeout | undefined;
+    let abortCleanup: (() => void) | undefined;
 
     try {
       // Verifica disponibilidade
@@ -249,6 +266,21 @@ export class ProviderOrchestrator {
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error("TIMEOUT")), timeout);
       });
+
+      const abortPromise = abortSignal
+        ? new Promise<never>((_, reject) => {
+          if (abortSignal.aborted) {
+            reject(new Error("ABORTED"));
+            return;
+          }
+          const handler = () => {
+            abortSignal.removeEventListener("abort", handler);
+            reject(new Error("ABORTED"));
+          };
+          abortCleanup = () => abortSignal.removeEventListener("abort", handler);
+          abortSignal.addEventListener("abort", handler, { once: true });
+        })
+        : null;
 
       // Avisos de longa duração
       warningTimer = setTimeout(() => {
@@ -272,13 +304,16 @@ export class ProviderOrchestrator {
       }, 120000);
 
       const callPromise = provider.generateStructuredJson(prompt, {
-        model: modelOverride
+        model: modelOverride,
+        signal: abortSignal
       });
 
-      const result = await Promise.race([callPromise, timeoutPromise]);
+      const races = abortPromise ? [callPromise, timeoutPromise, abortPromise] : [callPromise, timeoutPromise];
+      const result = await Promise.race(races);
 
       if (warningTimer) clearTimeout(warningTimer);
       if (criticalTimer) clearTimeout(criticalTimer);
+      if (abortCleanup) abortCleanup();
 
       const duration = Date.now() - startTime;
 
@@ -297,6 +332,11 @@ export class ProviderOrchestrator {
 
       if (warningTimer) clearTimeout(warningTimer);
       if (criticalTimer) clearTimeout(criticalTimer);
+      if (abortCleanup) abortCleanup();
+
+      if (errorMessage === "ABORTED") {
+        throw error;
+      }
 
       return {
         success: false,

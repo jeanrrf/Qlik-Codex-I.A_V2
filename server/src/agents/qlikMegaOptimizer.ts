@@ -190,7 +190,8 @@ ${promptTemplate}
     const orchestratorResult = await this.orchestrator.executeWithRotation(
       stepId,
       fullPrompt,
-      timeout
+      timeout,
+      this.abortSignal
     );
 
     // Verifica abort após chamada LLM
