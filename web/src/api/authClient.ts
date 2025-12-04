@@ -47,9 +47,10 @@ export interface TokenLoginResponse {
 /**
  * Inicia fluxo de autenticação Google
  */
-export async function getGoogleAuthUrl(): Promise<string> {
+export async function getGoogleAuthUrl(token?: string): Promise<string> {
   const response = await fetch(`${API_BASE}/api/auth/google`, {
-    credentials: "include"
+    credentials: "include",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined
   });
 
   if (!response.ok) {
@@ -63,9 +64,10 @@ export async function getGoogleAuthUrl(): Promise<string> {
 /**
  * Verifica status de autenticação
  */
-export async function checkAuthStatus(): Promise<AuthStatusResponse> {
+export async function checkAuthStatus(token?: string): Promise<AuthStatusResponse> {
   const response = await fetch(`${API_BASE}/api/auth/status`, {
-    credentials: "include"
+    credentials: "include",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined
   });
 
   if (!response.ok) {
@@ -78,9 +80,10 @@ export async function checkAuthStatus(): Promise<AuthStatusResponse> {
 /**
  * Busca dados do usuário autenticado
  */
-export async function getCurrentUser(): Promise<UserResponse> {
+export async function getCurrentUser(token?: string): Promise<UserResponse> {
   const response = await fetch(`${API_BASE}/api/auth/me`, {
-    credentials: "include"
+    credentials: "include",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined
   });
 
   if (!response.ok) {

@@ -3,6 +3,7 @@ import { useState, useCallback, useRef } from "react";
 import { OptimizeScriptApiResponse, OptimizeMode, LLMProviderName } from "../types/api";
 
 import { SubStepExecution } from "../types/api";
+import { useAuth } from "../contexts/AuthContext";
 
 
 
@@ -289,6 +290,8 @@ export interface UseOptimizationProgressReturn {
  */
 
 export function useOptimizationProgress(): UseOptimizationProgressReturn {
+
+  const { accessToken } = useAuth();
 
   const [currentMode, setCurrentMode] = useState<OptimizeMode>("ultra-expert");
 
@@ -608,6 +611,8 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
     try {
 
+      const authHeaders = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+
       const response = await fetch("/api/scripts/optimize", {
 
         method: "POST",
@@ -616,7 +621,8 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
           "Content-Type": "application/json",
 
-          "Accept": "text/event-stream"
+          "Accept": "text/event-stream",
+          ...authHeaders
 
         },
 

@@ -20,12 +20,15 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+const ACCESS_TOKEN_KEY = "qlik-codex-access-token";
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [state, setState] = useState<AuthState>({
     user: null,
     isAuthenticated: false,
     isLoading: true,
-    error: null
+    error: null,
+    accessToken: null
   });
 
   /**
@@ -34,22 +37,31 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const status = await checkAuthStatus();
+        let storedToken: string | undefined;
+        try {
+          storedToken = localStorage.getItem(ACCESS_TOKEN_KEY) || undefined;
+        } catch {
+          storedToken = undefined;
+        }
+
+        const status = await checkAuthStatus(storedToken);
 
         if (status.authenticated && status.user) {
-          const userData = await getCurrentUser();
+          const userData = await getCurrentUser(storedToken);
           setState({
             user: userData.user as User,
             isAuthenticated: true,
             isLoading: false,
-            error: null
+            error: null,
+            accessToken: storedToken || null
           });
         } else {
           setState({
             user: null,
             isAuthenticated: false,
             isLoading: false,
-            error: null
+            error: null,
+            accessToken: null
           });
         }
       } catch (err) {
@@ -58,7 +70,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           user: null,
           isAuthenticated: false,
           isLoading: false,
-          error: "Failed to check authentication status"
+          error: "Failed to check authentication status",
+          accessToken: null
         });
       }
     };
@@ -74,12 +87,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       const response = await loginWithToken(token);
+      try {
+        localStorage.setItem(ACCESS_TOKEN_KEY, response.tokens.accessToken);
+      } catch {
+        // ignore storage failures
+      }
 
       setState({
         user: response.user as User,
         isAuthenticated: true,
         isLoading: false,
-        error: null
+        error: null,
+        accessToken: response.tokens.accessToken
       });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Login failed";
@@ -87,7 +106,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         user: null,
         isAuthenticated: false,
         isLoading: false,
-        error: errorMessage
+        error: errorMessage,
+        accessToken: null
       });
       throw err;
     }
@@ -100,7 +120,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
-      const authUrl = await getGoogleAuthUrl();
+      const authUrl = await getGoogleAuthUrl(state.accessToken || undefined);
 
       // Redirecionar para URL de autenticação do Google
       window.location.href = authUrl;
@@ -121,12 +141,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logout = async () => {
     try {
       await logoutApi();
+      try {
+        localStorage.removeItem(ACCESS_TOKEN_KEY);
+      } catch {
+        // ignore storage errors
+      }
 
       setState({
         user: null,
         isAuthenticated: false,
         isLoading: false,
-        error: null
+        error: null,
+        accessToken: null
       });
     } catch (err) {
       console.error("Logout error:", err);
@@ -135,7 +161,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         user: null,
         isAuthenticated: false,
         isLoading: false,
-        error: null
+        error: null,
+        accessToken: null
       });
     }
   };
@@ -145,10 +172,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
    */
   const refreshUser = async () => {
     try {
-      const userData = await getCurrentUser();
+      const token =
+        state.accessToken ||
+        (() => {
+          try {
+            return localStorage.getItem(ACCESS_TOKEN_KEY);
+          } catch {
+            return null;
+          }
+        })() ||
+        undefined;
+
+      const userData = await getCurrentUser(token);
       setState((prev) => ({
         ...prev,
-        user: userData.user as User
+        user: userData.user as User,
+        accessToken: token || prev.accessToken || null
       }));
     } catch (err) {
       console.error("Refresh user error:", err);
@@ -157,7 +196,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         user: null,
         isAuthenticated: false,
         isLoading: false,
-        error: "Session expired"
+        error: "Session expired",
+        accessToken: null
       });
     }
   };

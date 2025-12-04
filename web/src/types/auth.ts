@@ -28,6 +28,7 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  accessToken?: string | null;
 }
 
 export interface AuthContextValue extends AuthState {
