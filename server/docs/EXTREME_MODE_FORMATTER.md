@@ -57,23 +57,40 @@ FROM dados;
 
 ### ✔ 2) ALINHAMENTO VERTICAL DE "AS"
 
-Obrigatório alinhar verticalmente o conjunto `campo AS novo_nome`:
+Obrigatório alinhar verticalmente o conjunto `campo AS novo_nome` dentro de cada bloco. O alinhamento deve se basear no campo mais longo do bloco.
+
+**Exemplo Correto (Template Oficial):**
 
 ```qlik
-// ANTES
-load id as ID, nome_completo_muito_grande as Nome, x as Valor from dados;
-
-// DEPOIS (EXTREME MODE)
+Fato_Entrada:
 LOAD
-    id                         AS ID,
-    nome_completo_muito_grande AS Nome,
-    x                          AS Valor
-FROM dados;
+    codEmp           AS "Fato_Entrada.Empresa",
+    codFil           AS "Fato_Entrada.Filial",
+    codFor           AS "Fato_Entrada.CodFornecedor",
+    numNfc           AS "Fato_Entrada.NumeroNota",
+    codSnf           AS "Fato_Entrada.SerieNota",
+    %ChaveNotaFiscal AS "Fato_Entrada.ChaveNotaFiscal",
+    tnsPro           AS "Fato_Entrada.cfop",
+    pesLiq           AS "Fato_Entrada.PesoLiquido",
+    DataEntrada      AS "Fato_Entrada.DataEntrada",
+    DataEmissao      AS "Fato_Entrada.DataEmissao",
+    codPro           AS "Fato_Entrada.CodProduto",
+    codDer           AS "Fato_Entrada.CodDerivacao",
+    proFor           AS "Fato_Entrada.CodProdutoFornecedor",
+    cplIpc           AS "Fato_Entrada.DescricaoComplementar",
+    NUM(qtdRec)      AS "Fato_Entrada.Qtd",
+    uniNfc           AS "Fato_Entrada.UnidadeMedida",
+    NUM(preUni)      AS "Fato_Entrada.PrecoUnitario",
+    NUM(vlrBru)      AS "Fato_Entrada.ValorBruto",
+    NUM(vlrDsc)      AS "Fato_Entrada.ValorDesconto",
+    NUM(vlrLiq)      AS "Fato_Entrada.ValorLiquido"
+FROM [lib://Dados/Entradas.qvd]
+(qvd);
 ```
 
 **Pontos-chave:**
 - Colunas visualmente alinhadas
-- Todos os `AS` na mesma coluna
+- Todos os `AS` na mesma coluna dentro do bloco
 - Vírgula perfeitamente posicionada
 - **Extreme estética = Extreme credibilidade**
 

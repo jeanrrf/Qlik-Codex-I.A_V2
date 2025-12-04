@@ -41,9 +41,14 @@ function getGoogleClient(): OAuth2Client {
 /**
  * Gera JWT token de acesso
  */
-export function generateAccessToken(payload: JWTPayload): string {
+export function generateAccessToken(
+  payload: JWTPayload,
+  expiresInOverride?: string | number
+): string {
+  const expiresIn = expiresInOverride ?? config.jwtExpiresIn;
+
   return jwt.sign(payload, config.jwtSecret, {
-    expiresIn: config.jwtExpiresIn
+    expiresIn
   } as jwt.SignOptions);
 }
 
@@ -51,9 +56,14 @@ export function generateAccessToken(payload: JWTPayload): string {
  * Gera refresh token
  */
 export function generateRefreshToken(): string {
+  // Alinhar refresh token com a longevidade configurada das sessões (limitada ao máximo que navegadores suportam)
+  const refreshExpiresIn = Number.isFinite(config.effectiveAuthDurationDays)
+    ? `${config.effectiveAuthDurationDays}d`
+    : "400d";
+
   return jwt.sign({ type: "refresh", jti: uuidv4() }, config.jwtSecret, {
-    expiresIn: "30d"
-  });
+    expiresIn: refreshExpiresIn
+  } as jwt.SignOptions);
 }
 
 /**
@@ -147,18 +157,27 @@ export async function createAuthSession(
   const now = new Date().toISOString();
   const sessionId = uuidv4();
 
-  // Gerar tokens
-  const accessToken = generateAccessToken({
-    userId: user.id,
-    email: user.email,
-    role: user.role,
-    sessionId
-  });
+  // Configurar duração extremamente longa para manter o token persistente
+  const sessionDurationDays = Number.isFinite(config.effectiveAuthDurationDays)
+    ? config.effectiveAuthDurationDays
+    : 400;
+  const sessionDurationMs = sessionDurationDays * 24 * 60 * 60 * 1000;
+
+  // Gerar tokens com duração alinhada à sessão
+  const accessToken = generateAccessToken(
+    {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      sessionId
+    },
+    `${sessionDurationDays}d`
+  );
 
   const refreshToken = generateRefreshToken();
 
-  // Calcular expiração (15 dias para sessão)
-  const expiresAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString();
+  // Calcular expiração (padrão: ~10 anos para nunca expirar na prática)
+  const expiresAt = new Date(Date.now() + sessionDurationMs).toISOString();
 
   try {
     db.prepare(`
@@ -191,7 +210,7 @@ export async function createAuthSession(
     const tokens: AuthTokens = {
       accessToken,
       refreshToken,
-      expiresIn: 15 * 24 * 60 * 60 // 15 dias em segundos
+      expiresIn: Math.floor(sessionDurationMs / 1000) // segundos totais da sessão
     };
 
     logger.info("Auth session created", { sessionId, userId: user.id });

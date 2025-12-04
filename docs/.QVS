@@ -1,0 +1,32 @@
+// PASSO 3: Une os dados do cabeçalho à tabela de itens.
+// Agora, a tabela Fato_EntradaItens_Temp contém TODOS os campos necessários para os cálculos.
+left join(Fato_EntradaItens_Temp) load %ChaveNotaFiscal,codFor,DataEntrada,
+  DataEmissao,ValorFreteTotal,
+    ValorSeguroTotal,ValorEmbalagemTotal,ValorOutrasDespesasTotal,ValorBrutoProdutos resident Fato_EntradaNF_Temp;
+
+// A tabela de cabeçalho já cumpriu seu papel e pode ser removida.
+drop table Fato_EntradaNF_Temp;
+
+// PASSO 4: Cria a tabela FATO final, com todos os cálculos, a partir da tabela de itens já enriquecida.
+Fato_Entrada:
+LoaD codEmp as "Fato_Entrada.Empresa",codFil as "Fato_Entrada.Filial",
+codFor as "Fato_Entrada.CodFornecedor",numNfc as "Fato_Entrada.NumeroNota",
+    codSnf as "Fato_Entrada.SerieNota",%ChaveNotaFiscal as "Fato_Entrada.ChaveNotaFiscal",
+  tnsPro as "Fato_Entrada.cfop",pesLiq as "Fato_Entrada.PesoLiquido",
+DataEntrada as "Fato_Entrada.DataEntrada",DataEmissao as "Fato_Entrada.DataEmissao",
+    codPro as "Fato_Entrada.CodProduto",codDer as "Fato_Entrada.CodDerivacao",
+proFor as "Fato_Entrada.CodProdutoFornecedor",cplIpc as "Fato_Entrada.DescricaoComplementar",
+  Num(qtdRec) as "Fato_Entrada.Qtd",uniNfc as "Fato_Entrada.UnidadeMedida",
+Num(preUni) as "Fato_Entrada.PrecoUnitario",Num(vlrBru) as "Fato_Entrada.ValorBruto",
+    Num(vlrDsc) as "Fato_Entrada.ValorDesconto",Num(vlrLiq) as "Fato_Entrada.ValorLiquido",
+Num((vlrLiq+vlrIpi+vlrIcs+vlrIim+(If(ValorBrutoProdutos>0,vlrBru/ValorBrutoProdutos,0)*(ValorFreteTotal+ValorSeguroTotal+ValorEmbalagemTotal+ValorOutrasDespesasTotal)))) as "Fato_Entrada.CustoTotalEntrada",
+  Num(If(qtdRec>0,(vlrLiq+vlrIpi+vlrIcs+vlrIim+(If(ValorBrutoProdutos>0,vlrBru/ValorBrutoProdutos,0)*(ValorFreteTotal+ValorSeguroTotal+ValorEmbalagemTotal+ValorOutrasDespesasTotal)))/qtdRec,0)) as "Fato_Entrada.CustoUnitarioEntrada"
+resident Fato_EntradaItens_Temp;
+
+// A tabela de itens temporária também já pode ser removida.
+drop table Fato_EntradaItens_Temp;
+
+// Armazena a tabela final em QVD
+Store * from [Fato_Entrada] into [lib://Dados - Transformações:DataFiles/NotaFiscal_DevolucaoSaida.qvd](qvd);
+// Descarta a tabela temporária de cabeçalho
+drop table [Fato_Entrada];

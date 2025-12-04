@@ -17,6 +17,15 @@ const llmProvidersEnv = (process.env.LLM_PROVIDERS ?? "google")
   .filter((provider) => provider.length > 0);
 const llmProviders = llmProvidersEnv.length > 0 ? llmProvidersEnv : ["google"];
 
+const MAX_BROWSER_AUTH_DAYS = 400;
+const rawAuthSessionDurationDays = Number(
+  process.env.AUTH_SESSION_DURATION_DAYS ?? `${MAX_BROWSER_AUTH_DAYS}`
+);
+const safeAuthSessionDurationDays = Number.isFinite(rawAuthSessionDurationDays)
+  ? rawAuthSessionDurationDays
+  : MAX_BROWSER_AUTH_DAYS;
+const effectiveAuthDurationDays = Math.min(safeAuthSessionDurationDays, MAX_BROWSER_AUTH_DAYS);
+
 // CORS
 const normalizeOrigin = (origin: string) => {
   const trimmed = origin.trim();
@@ -79,9 +88,17 @@ export const config = {
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
   googleRedirectUri: process.env.GOOGLE_REDIRECT_URI || "http://localhost:3000/api/auth/google/callback",
 
-  // JWT Configuration
+  // JWT Configuration (padrão: tokens longos para não expirar na prática, respeitando limites de navegador)
   jwtSecret: process.env.JWT_SECRET || "qlik-codex-ia-secret-change-in-production",
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || "15d",
+
+  // Auth session configuration (long-lived por padrão, porém limitada ao máximo que navegadores persistem cookies ~400 dias)
+  authSessionDurationDays: safeAuthSessionDurationDays,
+
+  // Duração efetiva respeitando limites de persistência de cookies dos navegadores (Chrome/Firefox ~400 dias)
+  effectiveAuthDurationDays,
+
+  // Expiração padrão do JWT alinhada à duração efetiva (em dias)
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || `${effectiveAuthDurationDays}d`,
 
   // Owner Access (bypass OAuth)
   ownerAccessToken: process.env.OWNER_ACCESS_TOKEN || "",

@@ -643,7 +643,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               </p>
 
               <div className="contact-actions">
-                <button className="btn btn-contact-primary" onClick={handleEmail}>
+                <button className="btn btn-contact-primary" onClick={() => window.location.href = 'mailto:rosso.jeandasilva@gmail.com'}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect width="20" height="16" x="2" y="4" rx="2" />
                     <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
@@ -2134,23 +2134,23 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         }
 
         /* ===================== */
-        /* NVIDIA ACCELERATED    */
+        /* NVIDIA SECTION        */
         /* ===================== */
 
-        .nvidia-accelerated-section {
+        .nvidia-section {
+          position: relative;
           padding: 100px 60px;
           background: linear-gradient(180deg, 
             rgba(0, 0, 0, 0) 0%, 
-            rgba(57, 255, 20, 0.03) 30%, 
+            rgba(57, 255, 20, 0.02) 20%,
             rgba(57, 255, 20, 0.05) 50%, 
-            rgba(57, 255, 20, 0.03) 70%, 
+            rgba(57, 255, 20, 0.02) 80%,
             rgba(0, 0, 0, 0) 100%
           );
-          position: relative;
           overflow: hidden;
         }
 
-        .nvidia-accelerated-section::before {
+        .nvidia-section::before {
           content: '';
           position: absolute;
           top: 0;
@@ -2164,7 +2164,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           );
         }
 
-        .nvidia-accelerated-section::after {
+        .nvidia-section::after {
           content: '';
           position: absolute;
           bottom: 0;
@@ -2178,246 +2178,196 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           );
         }
 
-        .nvidia-acc-card {
-          max-width: 1100px;
-          margin: 0 auto;
-          background: linear-gradient(135deg, 
-            rgba(10, 15, 10, 0.9) 0%, 
-            rgba(15, 25, 15, 0.85) 50%,
-            rgba(10, 20, 10, 0.9) 100%
+        /* River Effect */
+        .nvidia-river-effect {
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 300%;
+          height: 100%;
+          background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(57, 255, 20, 0.02) 10%,
+            rgba(57, 255, 20, 0.06) 25%,
+            rgba(0, 255, 100, 0.1) 40%,
+            rgba(57, 255, 20, 0.15) 50%,
+            rgba(0, 255, 100, 0.1) 60%,
+            rgba(57, 255, 20, 0.06) 75%,
+            rgba(57, 255, 20, 0.02) 90%,
+            transparent 100%
           );
-          border-radius: 32px;
-          border: 1px solid rgba(57, 255, 20, 0.25);
-          position: relative;
+          animation: river-flow 4s linear infinite;
+          pointer-events: none;
+        }
+
+        @keyframes river-flow {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(33.33%); }
+        }
+
+        /* Particles */
+        .nvidia-particles {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
           overflow: hidden;
-          box-shadow: 
-            0 0 60px rgba(57, 255, 20, 0.08),
-            0 25px 50px rgba(0, 0, 0, 0.4),
-            inset 0 1px 0 rgba(57, 255, 20, 0.1);
         }
 
-        .nvidia-acc-glow {
+        .nvidia-particle {
           position: absolute;
-          top: -100px;
-          right: -100px;
-          width: 400px;
-          height: 400px;
-          background: radial-gradient(circle, 
-            rgba(57, 255, 20, 0.15) 0%, 
-            rgba(118, 185, 0, 0.08) 40%,
-            transparent 70%
-          );
-          filter: blur(60px);
-          animation: nvidia-pulse 4s ease-in-out infinite;
-          pointer-events: none;
-        }
-
-        .nvidia-acc-glow-2 {
-          position: absolute;
-          bottom: -80px;
-          left: -80px;
-          width: 300px;
-          height: 300px;
-          background: radial-gradient(circle, 
-            rgba(118, 185, 0, 0.12) 0%, 
-            transparent 60%
-          );
-          filter: blur(50px);
-          animation: nvidia-pulse 5s ease-in-out infinite reverse;
-          pointer-events: none;
-        }
-
-        @keyframes nvidia-pulse {
-          0%, 100% { opacity: 0.6; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.1); }
-        }
-
-        .nvidia-acc-content {
-          position: relative;
-          z-index: 1;
-          padding: 60px;
-          display: grid;
-          grid-template-columns: 1fr 1.2fr;
-          gap: 50px;
-          align-items: center;
-        }
-
-        .nvidia-acc-left {
-          display: flex;
-          flex-direction: column;
-          gap: 24px;
-        }
-
-        .nvidia-logo-large {
-          width: 180px;
-          height: auto;
-          filter: drop-shadow(0 0 20px rgba(57, 255, 20, 0.4));
-          animation: nvidia-glow-logo 3s ease-in-out infinite;
-        }
-
-        @keyframes nvidia-glow-logo {
-          0%, 100% { filter: drop-shadow(0 0 20px rgba(57, 255, 20, 0.4)); }
-          50% { filter: drop-shadow(0 0 35px rgba(57, 255, 20, 0.7)); }
-        }
-
-        .nvidia-acc-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          background: linear-gradient(135deg, 
-            rgba(57, 255, 20, 0.15) 0%, 
-            rgba(118, 185, 0, 0.1) 100%
-          );
-          border: 1px solid rgba(57, 255, 20, 0.3);
-          border-radius: 20px;
-          padding: 8px 16px;
-          font-size: 0.75rem;
-          font-weight: 700;
-          color: #39ff14;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          width: fit-content;
-        }
-
-        .nvidia-acc-badge::before {
-          content: '';
-          width: 8px;
-          height: 8px;
+          width: 4px;
+          height: 4px;
           background: #39ff14;
           border-radius: 50%;
-          animation: nvidia-dot-pulse 1.5s ease-in-out infinite;
+          opacity: 0;
+          animation: particle-float 3s ease-in-out infinite;
+          box-shadow: 0 0 10px rgba(57, 255, 20, 0.8);
         }
 
-        @keyframes nvidia-dot-pulse {
-          0%, 100% { opacity: 0.5; box-shadow: 0 0 4px #39ff14; }
-          50% { opacity: 1; box-shadow: 0 0 12px #39ff14; }
+        @keyframes particle-float {
+          0% { 
+            transform: translateY(100vh) scale(0);
+            opacity: 0;
+          }
+          20% { opacity: 0.8; }
+          80% { opacity: 0.6; }
+          100% { 
+            transform: translateY(-100px) scale(1);
+            opacity: 0;
+          }
         }
 
-        .nvidia-acc-title {
-          font-size: 2.2rem;
-          font-weight: 800;
-          background: linear-gradient(135deg, #39ff14 0%, #76b900 40%, #39ff14 100%);
-          background-clip: text;
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          line-height: 1.2;
-          text-shadow: 0 0 40px rgba(57, 255, 20, 0.3);
+        /* Content */
+        .nvidia-content {
+          position: relative;
+          z-index: 10;
+          max-width: 900px;
+          margin: 0 auto;
+          text-align: left;
         }
 
-        .nvidia-acc-description {
-          color: rgba(255, 255, 255, 0.75);
-          font-size: 1.05rem;
-          line-height: 1.7;
-          max-width: 400px;
-        }
-
-        .nvidia-powered-tag {
+        /* Badge Hero */
+        .nvidia-badge-hero {
           display: inline-flex;
           align-items: center;
           gap: 10px;
-          background: rgba(0, 0, 0, 0.4);
-          border: 1px solid rgba(57, 255, 20, 0.2);
-          border-radius: 8px;
-          padding: 10px 18px;
-          width: fit-content;
-          margin-top: 8px;
-        }
-
-        .nvidia-powered-tag svg {
-          width: 80px;
-          height: auto;
-          opacity: 0.9;
-        }
-
-        .nvidia-powered-tag span {
-          color: rgba(255, 255, 255, 0.6);
-          font-size: 0.7rem;
-          font-weight: 600;
-          letter-spacing: 0.05em;
-          text-transform: uppercase;
-        }
-
-        .nvidia-acc-right {
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-        }
-
-        .nvidia-feature-row {
-          display: flex;
-          align-items: center;
-          gap: 18px;
-          padding: 20px 24px;
-          background: linear-gradient(135deg, 
-            rgba(57, 255, 20, 0.06) 0%, 
-            rgba(57, 255, 20, 0.02) 100%
-          );
-          border: 1px solid rgba(57, 255, 20, 0.12);
-          border-radius: 16px;
-          transition: all 0.3s ease;
-        }
-
-        .nvidia-feature-row:hover {
           background: linear-gradient(135deg, 
             rgba(57, 255, 20, 0.12) 0%, 
-            rgba(57, 255, 20, 0.05) 100%
+            rgba(118, 185, 0, 0.08) 100%
           );
-          border-color: rgba(57, 255, 20, 0.3);
-          transform: translateX(8px);
-          box-shadow: 0 0 30px rgba(57, 255, 20, 0.1);
+          border: 1px solid rgba(57, 255, 20, 0.35);
+          border-radius: 24px;
+          padding: 10px 20px;
+          margin-bottom: 24px;
+          animation: badge-glow 2s ease-in-out infinite;
         }
 
-        .nvidia-feature-icon {
-          width: 48px;
-          height: 48px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: linear-gradient(135deg, 
-            rgba(57, 255, 20, 0.2) 0%, 
-            rgba(118, 185, 0, 0.15) 100%
-          );
-          border-radius: 12px;
-          color: #39ff14;
-          flex-shrink: 0;
+        @keyframes badge-glow {
+          0%, 100% { 
+            box-shadow: 0 0 15px rgba(57, 255, 20, 0.2);
+            border-color: rgba(57, 255, 20, 0.35);
+          }
+          50% { 
+            box-shadow: 0 0 30px rgba(57, 255, 20, 0.4);
+            border-color: rgba(57, 255, 20, 0.6);
+          }
         }
 
-        .nvidia-feature-icon svg {
+        .nvidia-logo-hero {
           width: 24px;
           height: 24px;
+          color: #39ff14;
+          filter: drop-shadow(0 0 8px rgba(57, 255, 20, 0.6));
         }
 
-        .nvidia-feature-text h4 {
-          font-size: 1rem;
-          font-weight: 700;
+        .nvidia-badge-hero span {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 0.8rem;
+          font-weight: 800;
+          color: #39ff14;
+          letter-spacing: 0.1em;
+          text-shadow: 0 0 10px rgba(57, 255, 20, 0.5);
+        }
+
+        /* Title */
+        .nvidia-title {
+          font-size: 2.8rem;
+          font-weight: 800;
           color: #fff;
-          margin-bottom: 4px;
+          line-height: 1.2;
+          margin-bottom: 20px;
         }
 
-        .nvidia-feature-text p {
-          font-size: 0.85rem;
-          color: rgba(255, 255, 255, 0.6);
-          margin: 0;
-          line-height: 1.5;
+        .nvidia-highlight {
+          background: linear-gradient(135deg, #39ff14 0%, #76b900 50%, #39ff14 100%);
+          background-clip: text;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          text-shadow: none;
+          position: relative;
         }
 
-        .nvidia-stats-row {
+        .nvidia-highlight::after {
+          content: 'GPU-Powered';
+          position: absolute;
+          left: 0;
+          top: 0;
+          background: linear-gradient(135deg, #39ff14 0%, #76b900 50%, #39ff14 100%);
+          background-clip: text;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          filter: blur(20px);
+          opacity: 0.5;
+          z-index: -1;
+        }
+
+        /* Description */
+        .nvidia-description {
+          font-size: 1.1rem;
+          color: rgba(255, 255, 255, 0.7);
+          line-height: 1.7;
+          max-width: 600px;
+          margin-bottom: 36px;
+        }
+
+        .nvidia-description strong {
+          color: #39ff14;
+          font-weight: 700;
+        }
+
+        /* Stats */
+        .nvidia-stats {
           display: flex;
-          gap: 16px;
-          margin-top: 10px;
+          gap: 24px;
+          margin-bottom: 36px;
         }
 
         .nvidia-stat {
-          flex: 1;
+          padding: 20px 28px;
+          background: linear-gradient(135deg, 
+            rgba(57, 255, 20, 0.08) 0%, 
+            rgba(57, 255, 20, 0.03) 100%
+          );
+          border: 1px solid rgba(57, 255, 20, 0.2);
+          border-radius: 16px;
           text-align: center;
-          padding: 18px 12px;
-          background: rgba(0, 0, 0, 0.3);
-          border: 1px solid rgba(57, 255, 20, 0.15);
-          border-radius: 12px;
+          transition: all 0.3s ease;
+        }
+
+        .nvidia-stat:hover {
+          background: linear-gradient(135deg, 
+            rgba(57, 255, 20, 0.15) 0%, 
+            rgba(57, 255, 20, 0.06) 100%
+          );
+          border-color: rgba(57, 255, 20, 0.4);
+          transform: translateY(-4px);
+          box-shadow: 0 10px 30px rgba(57, 255, 20, 0.15);
         }
 
         .nvidia-stat-value {
-          font-size: 1.8rem;
+          display: block;
+          font-size: 2rem;
           font-weight: 800;
           color: #39ff14;
           line-height: 1;
@@ -2425,11 +2375,102 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         }
 
         .nvidia-stat-label {
+          display: block;
           font-size: 0.7rem;
           color: rgba(255, 255, 255, 0.5);
           text-transform: uppercase;
+          letter-spacing: 0.08em;
+          margin-top: 8px;
+        }
+
+        /* CTA Button */
+        .btn-nvidia-cta {
+          display: inline-flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px 32px;
+          background: linear-gradient(135deg, 
+            rgba(20, 30, 20, 0.95) 0%, 
+            rgba(30, 45, 30, 0.9) 100%
+          );
+          border: 1px solid rgba(57, 255, 20, 0.4);
+          border-radius: 12px;
+          color: #fff;
+          font-size: 1rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .btn-nvidia-cta::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(135deg, 
+            rgba(57, 255, 20, 0.1) 0%, 
+            transparent 50%
+          );
+          opacity: 0;
+          transition: opacity 0.3s;
+        }
+
+        .btn-nvidia-cta:hover {
+          border-color: rgba(57, 255, 20, 0.7);
+          box-shadow: 
+            0 0 30px rgba(57, 255, 20, 0.3),
+            inset 0 0 20px rgba(57, 255, 20, 0.05);
+          transform: translateY(-2px);
+        }
+
+        .btn-nvidia-cta:hover::before {
+          opacity: 1;
+        }
+
+        .btn-nvidia-cta svg {
+          color: #39ff14;
+          filter: drop-shadow(0 0 6px rgba(57, 255, 20, 0.5));
+        }
+
+        .nvidia-cta-badge {
+          padding: 4px 10px;
+          background: linear-gradient(135deg, #39ff14 0%, #00ff00 100%);
+          border-radius: 6px;
+          font-size: 0.65rem;
+          font-weight: 800;
+          color: #000;
           letter-spacing: 0.05em;
-          margin-top: 6px;
+        }
+
+        /* Power Bar */
+        .nvidia-power-bar {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 3px;
+          background: linear-gradient(
+            90deg,
+            transparent 0%,
+            #39ff14 15%,
+            #00ff00 35%,
+            #39ff14 50%,
+            #00ff00 65%,
+            #39ff14 85%,
+            transparent 100%
+          );
+          background-size: 200% 100%;
+          animation: power-bar-anim 2s linear infinite;
+          box-shadow: 
+            0 0 10px rgba(57, 255, 20, 0.6),
+            0 0 20px rgba(57, 255, 20, 0.4),
+            0 0 40px rgba(57, 255, 20, 0.2);
+        }
+
+        @keyframes power-bar-anim {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
         }
 
         /* ===================== */
@@ -2461,27 +2502,20 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           }
 
           /* NVIDIA Responsive - Tablet */
-          .nvidia-accelerated-section {
+          .nvidia-section {
             padding: 60px 30px;
           }
 
-          .nvidia-acc-content {
-            grid-template-columns: 1fr;
-            padding: 40px 30px;
-            gap: 40px;
-          }
-
-          .nvidia-acc-left {
+          .nvidia-content {
             text-align: center;
-            align-items: center;
           }
 
-          .nvidia-acc-description {
-            max-width: 100%;
+          .nvidia-stats {
+            justify-content: center;
           }
 
-          .nvidia-logo-large {
-            width: 140px;
+          .nvidia-title {
+            font-size: 2.2rem;
           }
         }
 
@@ -2532,64 +2566,35 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           }
 
           /* NVIDIA Responsive - Mobile */
-          .nvidia-accelerated-section {
+          .nvidia-section {
             padding: 40px 20px;
           }
 
-          .nvidia-acc-card {
-            border-radius: 20px;
+          .nvidia-title {
+            font-size: 1.8rem;
           }
 
-          .nvidia-acc-content {
-            padding: 30px 20px;
-            gap: 30px;
-          }
-
-          .nvidia-acc-title {
-            font-size: 1.6rem;
-          }
-
-          .nvidia-acc-description {
+          .nvidia-description {
             font-size: 0.95rem;
           }
 
-          .nvidia-logo-large {
-            width: 120px;
-          }
-
-          .nvidia-feature-row {
-            padding: 16px 18px;
-            gap: 14px;
-          }
-
-          .nvidia-feature-icon {
-            width: 40px;
-            height: 40px;
-          }
-
-          .nvidia-feature-icon svg {
-            width: 20px;
-            height: 20px;
-          }
-
-          .nvidia-feature-text h4 {
-            font-size: 0.9rem;
-          }
-
-          .nvidia-feature-text p {
-            font-size: 0.8rem;
-          }
-
-          .nvidia-stats-row {
-            flex-wrap: wrap;
+          .nvidia-stats {
+            flex-direction: column;
+            gap: 12px;
           }
 
           .nvidia-stat {
-            min-width: calc(50% - 8px);
+            padding: 16px 24px;
           }
 
           .nvidia-stat-value {
-            font-size: 1.4rem;
+            font-size: 1.6rem;
+          }
+
+          .btn-nvidia-cta {
+            width: 100%;
+            justify-content: center;
+            padding: 14px 24px;
           }
         }
       `}</style>

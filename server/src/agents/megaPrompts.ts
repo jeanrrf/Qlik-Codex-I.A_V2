@@ -141,7 +141,11 @@ AVISO: O script deve estar COMPLETO. Não use placeholders como "// ... resto do
 AVISO CRÍTICO: O 'optimizedScript' deve ser TEXTO PURO (Plain Text). NÃO use Markdown (\`\`\`), NÃO use HTML, NÃO use tags <span>.
 AVISO DE FORMATAÇÃO: 
 - MANTENHA QUEBRAS DE LINHA (\\n) E INDENTAÇÃO CORRETA.
-- ALINHAMENTO IMPECÁVEL: Alinhe verticalmente as palavras-chave 'AS', os sinais de igual '=' e os comentários laterais para máxima legibilidade.
+- ALINHAMENTO IMPECÁVEL: Alinhe verticalmente as palavras-chave 'AS' dentro de cada bloco LOAD/SELECT. O 'AS' deve estar na mesma coluna para todos os campos do bloco, baseado no campo mais longo.
+- Exemplo de Alinhamento:
+  CampoCurto       AS Alias1,
+  CampoMuitoLongo  AS Alias2,
+  Outro            AS Alias3
 - O código NÃO pode ficar em uma única linha.
 `,
 

@@ -31,36 +31,25 @@ REGRAS DE FORMATAÇÃO:
 4.  **Estrutura de LOADs:** A palavra-chave 'FROM' ou 'RESIDENT' deve vir após a lista de campos.
 5.  **JOINs e Concatenates:** Prefixos como 'LEFT JOIN' ou 'CONCATENATE' devem vir antes do 'LOAD' ao qual se aplicam e devem estar no mesmo nível de indentação do primeiro LOAD.
 6.  **Funções Aninhadas:** Formate funções aninhadas de forma legível, quebrando-as em várias linhas se forem complexas.
-7.  **NUNCA Altere a Lógica:** O script formatado deve ser funcionalmente idêntico ao original. Não adicione, remova ou altere nomes de campos, valores ou a lógica de negócio.
+7.  **Alinhamento Vertical de 'AS':** Alinhe verticalmente a palavra-chave 'AS' dentro de cada bloco LOAD, baseando-se no campo mais longo do bloco.
+8.  **NUNCA Altere a Lógica:** O script formatado deve ser funcionalmente idêntico ao original. Não adicione, remova ou altere nomes de campos, valores ou a lógica de negócio.
 
 EXEMPLO DE FORMATAÇÃO:
 INPUT:
 Tabela1:
-LOAD campo1, campo2, if(len(trim(campo3))>0,campo3,'VAZIO') as campo3, campo4 FROM [lib://Source/Data.qvd] (qvd) WHERE campo1 > 100;
-LEFT JOIN(Tabela1) LOAD campo1, campo5 RESIDENT Tabela2;
+LOAD campo1 as ID, campo2 as Nome, if(len(trim(campo3))>0,campo3,'VAZIO') as Descricao, campo4 FROM [lib://Source/Data.qvd] (qvd) WHERE campo1 > 100;
 
 OUTPUT:
 Tabela1:
 LOAD
-    campo1,
-    campo2,
-    If(
-        Len(Trim(campo3)) > 0,
-        campo3,
-        'VAZIO'
-    ) AS campo3,
+    campo1                                         AS ID,
+    campo2                                         AS Nome,
+    IF(LEN(TRIM(campo3)) > 0, campo3, 'VAZIO')     AS Descricao,
     campo4
 FROM
     [lib://Source/Data.qvd] (qvd)
 WHERE
     campo1 > 100;
-
-LEFT JOIN (Tabela1)
-LOAD
-    campo1,
-    campo5
-RESIDENT
-    Tabela2;
 
 Responda em formato JSON, contendo o script formatado e notas sobre as alterações.
 {"formattedScript": "...", "notes": ["..."]}

@@ -14,6 +14,7 @@ export async function optimizeScript(
     headers: {
       "Content-Type": "application/json"
     },
+    credentials: "include",
     body: JSON.stringify(body)
   });
 

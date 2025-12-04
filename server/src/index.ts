@@ -20,6 +20,7 @@ import { historyRouter } from "./routes/history.routes";
 import sessionRouter from "./routes/session.routes";
 import authRouter from "./routes/auth.routes";
 import usageRouter from "./routes/usage.routes";
+import analyticsRouter from "./routes/analytics.routes";
 
 const app = express();
 
@@ -76,6 +77,7 @@ app.use("/api/tools", toolsRouter);
 app.use("/api/history", historyRouter);
 app.use("/api/sessions", sessionRouter);
 app.use("/api/usage", usageRouter);
+app.use("/api/analytics", analyticsRouter);
 
 if (fs.existsSync(webBuildPath)) {
   app.use(express.static(webBuildPath));

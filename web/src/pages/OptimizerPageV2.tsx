@@ -550,7 +550,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
           {mode === 'nvidia-fast' && (
             <div className="nvidia-header-badge">
               <NvidiaLogo />
-              <span className="nvidia-text">POWERED BY NVIDIA</span>
+              <span className="nvidia-text">NIM INFERENCE NVIDIA</span>
             </div>
           )}
         </div>
@@ -5796,6 +5796,82 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
         .opt-page.nvidia-mode-active .syntax-function {
           color: #00ff88;
           text-shadow: 0 0 6px rgba(0, 255, 136, 0.4);
+        }
+
+        /* =============================================== */
+        /* NVIDIA CONTROL PANEL - DARK WITH NEON RAYS     */
+        /* =============================================== */
+
+        .opt-page.nvidia-mode-active .control-panel-master-compact {
+          /* Revert to Dark Glass */
+          background: rgba(3, 5, 8, 0.85) !important;
+          backdrop-filter: blur(16px);
+          border-bottom: 1px solid rgba(57, 255, 20, 0.3);
+          
+          /* Neon Rays / Outer Glow */
+          box-shadow: 
+            0 10px 40px -10px rgba(57, 255, 20, 0.15),
+            0 0 20px rgba(57, 255, 20, 0.1);
+            
+          animation: nvidia-rays-pulse 3s ease-in-out infinite !important;
+          overflow: visible !important; /* Allow rays to spill out */
+        }
+
+        @keyframes nvidia-rays-pulse {
+          0%, 100% {
+            box-shadow: 
+              0 10px 40px -10px rgba(57, 255, 20, 0.15),
+              0 0 20px rgba(57, 255, 20, 0.1),
+              inset 0 -1px 0 rgba(57, 255, 20, 0.3);
+          }
+          50% {
+            box-shadow: 
+              0 15px 60px -5px rgba(57, 255, 20, 0.25),
+              0 0 35px rgba(57, 255, 20, 0.2),
+              inset 0 -1px 0 rgba(57, 255, 20, 0.6);
+          }
+        }
+
+        /* The "Ray" Emitter - Bottom Line */
+        .opt-page.nvidia-mode-active .control-panel-master-compact::after {
+          content: '';
+          position: absolute;
+          bottom: -1px;
+          left: 10%;
+          right: 10%;
+          height: 1px;
+          background: transparent;
+          box-shadow: 0 0 30px 2px rgba(57, 255, 20, 0.6);
+          animation: nvidia-emitter-pulse 2s ease-in-out infinite;
+          z-index: -1;
+        }
+
+        @keyframes nvidia-emitter-pulse {
+          0%, 100% { opacity: 0.4; transform: scaleX(0.8); }
+          50% { opacity: 1; transform: scaleX(1); }
+        }
+
+        /* Green Top Line (Subtle Scanner) */
+        .opt-page.nvidia-mode-active .control-panel-master-compact::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 1px;
+          background: linear-gradient(90deg, 
+            transparent 0%,
+            rgba(57, 255, 20, 0.0) 20%,
+            rgba(57, 255, 20, 0.8) 50%,
+            rgba(57, 255, 20, 0.0) 80%,
+            transparent 100%);
+          animation: nvidia-top-scan 3s linear infinite !important;
+          opacity: 0.7;
+        }
+
+        @keyframes nvidia-top-scan {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
         }
       `}</style>
     </div >

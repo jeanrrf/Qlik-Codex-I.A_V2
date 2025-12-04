@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigation } from "../contexts/NavigationContext";
 import { UserRole } from "../types/auth";
+import { OwnerKpiDashboard } from "../components/OwnerKpiDashboard";
 import "./ProfilePage.css";
 
 export function ProfilePage() {
@@ -199,6 +200,9 @@ Aguardo retorno!`;
             </p>
           </div>
         </div>
+
+        {/* Owner KPIs (apenas para PROPRIETÁRIO) */}
+        {user.role === UserRole.OWNER && <OwnerKpiDashboard />}
 
         {/* Upgrade to PRO (apenas para FREE TIER) */}
         {user.role === UserRole.USER && (

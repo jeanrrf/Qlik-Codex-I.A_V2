@@ -543,7 +543,9 @@
     max-width: 100%;
     width: 95vw;
   }
+}
 
+@media (max-width: 768px) {
   .code-comparison {
     grid-template-columns: 1fr;
     gap: 1rem;
@@ -552,9 +554,7 @@
   .code-panel {
     min-height: 300px;
   }
-}
 
-@media (max-width: 768px) {
   .modal-overlay {
     padding: 1rem;
   }

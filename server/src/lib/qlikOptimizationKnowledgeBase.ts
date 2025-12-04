@@ -118,6 +118,22 @@ export class QlikOptimizationKnowledgeBase {
         "Campos chaves identificados (ex: %Key, ID_...)"
       ]
     },
+    "quality_067_indentation_fix": {
+      instruction: "Aplique indentação de 4 espaços e ALINHAMENTO VERTICAL da palavra-chave 'AS' dentro de cada bloco LOAD. O 'AS' deve estar na mesma coluna para todos os campos do bloco, alinhado pelo campo mais longo.",
+      context: "O alinhamento vertical melhora drasticamente a legibilidade e é um padrão obrigatório.",
+      validationCriteria: [
+        "Indentação de 4 espaços",
+        "Alinhamento vertical de 'AS' em blocos LOAD",
+        "Vírgulas posicionadas corretamente"
+      ],
+      examples: [
+        {
+          description: "Alinhamento Vertical de AS",
+          bad: "LOAD\n    Campo1 AS C1,\n    CampoMuitoLongo AS C2,\n    X AS Y\nFROM ...",
+          good: "LOAD\n    Campo1          AS C1,\n    CampoMuitoLongo AS C2,\n    X               AS Y\nFROM ..."
+        }
+      ]
+    },
     "quality_072_remove_dead_code": {
       instruction: "Identifique e remova variáveis definidas mas não usadas, tabelas carregadas e dropadas sem uso (exceto se gerarem QVDs ou CSVs), e seções de código comentadas que são obsoletas.",
       context: "Código morto polui o script e confunde a manutenção.",

@@ -30,6 +30,7 @@ export async function saveSession(session: SessionData): Promise<{ success: bool
   const response = await fetch(`${API_BASE}/sessions/save`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify(session)
   });
 
@@ -44,7 +45,9 @@ export async function saveSession(session: SessionData): Promise<{ success: bool
  * Recupera uma sessão específica
  */
 export async function getSession(sessionId: string): Promise<ActiveSession | null> {
-  const response = await fetch(`${API_BASE}/sessions/${sessionId}`);
+  const response = await fetch(`${API_BASE}/sessions/${sessionId}`, {
+    credentials: "include"
+  });
 
   if (response.status === 404) {
     return null;
@@ -62,7 +65,9 @@ export async function getSession(sessionId: string): Promise<ActiveSession | nul
  */
 export async function getUserSessions(userId?: string): Promise<ActiveSession[]> {
   const url = userId ? `${API_BASE}/sessions/user/${userId}` : `${API_BASE}/sessions/user/`;
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    credentials: "include"
+  });
 
   if (!response.ok) {
     throw new Error(`Erro ao listar sessões: ${response.statusText}`);
@@ -82,6 +87,7 @@ export async function updateSessionStatus(
   const response = await fetch(`${API_BASE}/sessions/${sessionId}/status`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify({ status })
   });
 
@@ -97,7 +103,8 @@ export async function updateSessionStatus(
  */
 export async function deleteSession(sessionId: string): Promise<{ success: boolean }> {
   const response = await fetch(`${API_BASE}/sessions/${sessionId}`, {
-    method: "DELETE"
+    method: "DELETE",
+    credentials: "include"
   });
 
   if (!response.ok) {

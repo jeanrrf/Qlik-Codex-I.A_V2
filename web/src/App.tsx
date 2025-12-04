@@ -7,12 +7,29 @@ import { AuthCallback } from "./pages/AuthCallback";
 import LandingPage from "./pages/LandingPage";
 import OptimizerPageV2 from "./pages/OptimizerPageV2";
 import { ProfilePage } from "./pages/ProfilePage";
+import { apiClient } from "./api/client";
 
 type View = "landing" | "optimizer" | "profile";
 
 const AppContent: React.FC = () => {
   const [view, setView] = useState<View>("landing");
   const { isAuthenticated, isLoading } = useAuth();
+
+  // Analytics: Log Visit
+  useEffect(() => {
+    const logVisit = async () => {
+      try {
+        await apiClient.post('/analytics/visit', {
+          page: window.location.pathname,
+          referrer: document.referrer
+        });
+      } catch (err) {
+        // Silent fail for analytics
+        console.error('Analytics error:', err);
+      }
+    };
+    logVisit();
+  }, []);
 
   // Verificar se estamos na rota de callback
   useEffect(() => {
