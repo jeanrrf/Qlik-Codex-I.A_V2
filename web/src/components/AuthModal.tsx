@@ -3,6 +3,8 @@
  */
 import React, { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { GoogleLogin } from "@react-oauth/google";
+import { jwtDecode } from "jwt-decode";
 import "./AuthModal.css";
 
 interface AuthModalProps {
@@ -13,7 +15,7 @@ interface AuthModalProps {
 type AuthMode = "login" | "register" | "token";
 
 export function AuthModal({ isOpen, onClose }: AuthModalProps) {
-  const { login, loginWithEmail, register, isLoading, error } = useAuth();
+  const { login, loginWithEmail, register, loginWithGoogle, isLoading, error } = useAuth();
   const [mode, setMode] = useState<AuthMode>("login");
   const [formData, setFormData] = useState({
     email: "",
@@ -28,6 +30,24 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     setLocalError(null);
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    try {
+      if (credentialResponse.credential) {
+        const decoded: any = jwtDecode(credentialResponse.credential);
+        await loginWithGoogle({
+          googleId: decoded.sub,
+          email: decoded.email,
+          name: decoded.name,
+          avatarUrl: decoded.picture,
+        });
+        onClose();
+      }
+    } catch (err) {
+      console.error("Google Login Error:", err);
+      setLocalError("Falha ao autenticar com Google");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -117,6 +137,23 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
             Token
           </button>
         </div>
+
+        {/* Google Login Button */}
+        {mode !== "token" && (
+          <div className="auth-google-container">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => setLocalError("Falha no login com Google")}
+              theme="filled_black"
+              shape="pill"
+              text={mode === "login" ? "signin_with" : "signup_with"}
+              width="100%"
+            />
+            <div className="auth-divider">
+              <span>ou continue com email</span>
+            </div>
+          </div>
+        )}
 
         {/* Form */}
         <form className="auth-form" onSubmit={handleSubmit}>
