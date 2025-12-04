@@ -138,6 +138,7 @@ Retorne um objeto JSON.
 }
 AVISO: O script deve estar COMPLETO. Não use placeholders como "// ... resto do código".
 AVISO CRÍTICO: O 'optimizedScript' deve ser TEXTO PURO (Plain Text). NÃO use Markdown (\`\`\`), NÃO use HTML, NÃO use tags <span>.
+AVISO DE FORMATAÇÃO: MANTENHA QUEBRAS DE LINHA (\\n) E INDENTAÇÃO CORRETA. O código NÃO pode ficar em uma única linha.
 `,
 
   FINAL_DELIVERY: `

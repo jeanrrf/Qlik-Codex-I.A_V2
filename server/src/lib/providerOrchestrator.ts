@@ -82,7 +82,7 @@ export class ProviderOrchestrator {
       adjustedTimeout = Math.min(timeout * 1.5, 240000); // Max 4 min
       logger.info(`Timeout ajustado: ${timeout}ms -> ${adjustedTimeout}ms (prompt medio-grande: ${estimatedTokens.toLocaleString()} tokens)`);
     } else if (estimatedTokens < 10000) {
-      adjustedTimeout = Math.max(timeout * 0.8, 60000); // Min 60s
+      adjustedTimeout = Math.max(timeout * 0.8, 120000); // Min 120s (2 min) para evitar timeouts em scripts complexos
       logger.info(`Timeout otimizado: ${timeout}ms -> ${adjustedTimeout}ms (prompt compacto: ${estimatedTokens.toLocaleString()} tokens)`);
     }
 

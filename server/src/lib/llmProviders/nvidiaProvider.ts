@@ -82,6 +82,10 @@ export function extractContent(content?: NvidiaMessageContent): string | undefin
 
   if (typeof content === "string") {
     const trimmed = content.trim();
+    // Fix: Se o texto vier "encavalado" com literais \n mas sem quebras reais
+    if (trimmed.length > 100 && !trimmed.includes('\n') && trimmed.includes('\\n')) {
+      return trimmed.replace(/\\n/g, '\n');
+    }
     return trimmed.length > 0 ? trimmed : undefined;
   }
 
@@ -124,6 +128,12 @@ export function extractContent(content?: NvidiaMessageContent): string | undefin
   // parts are usually distinct blocks. Joining with newline is safer than empty string
   // to avoid "jumbled" text (encavalado), especially for models like Llama 3 on NVIDIA NIM.
   const joined = parts.join("\n").trim();
+
+  // Fix: Se o texto vier "encavalado" com literais \n mas sem quebras reais
+  if (joined.length > 100 && !joined.includes('\n') && joined.includes('\\n')) {
+    return joined.replace(/\\n/g, '\n');
+  }
+
   return joined.length > 0 ? joined : undefined;
 }
 
