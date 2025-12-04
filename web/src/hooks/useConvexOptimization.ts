@@ -3,7 +3,7 @@
  * Substitui o hook antigo que usava SSE/fetch
  */
 import { useState, useCallback } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 
@@ -35,7 +35,7 @@ export function useConvexOptimization() {
 
   // Queries e Mutations
   const createSession = useMutation(api.sessions.createSession);
-  const optimizeScript = useMutation(api.optimizer.optimizeScript);
+  const optimizeScript = useAction(api.optimizer.optimizeScript);
 
   // Query reativa para obter progresso da sessão atual
   const session = useQuery(
