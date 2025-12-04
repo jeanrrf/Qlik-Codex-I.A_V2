@@ -25,3 +25,5 @@ web/dist
 # Editor
 .vscode
 .idea
+
+.env.local

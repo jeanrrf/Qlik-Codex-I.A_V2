@@ -4,15 +4,15 @@ import { USE_CONVEX } from "../lib/config";
 import { OptimizeMode, OptimizeScriptApiResponse, OptimizationOptions, OptimizeResult, OptimizeChange, BreakingRisk, MetricsEstimate } from "../types/api";
 import { useState, useEffect } from "react";
 
-// Estágios simulados para o modo Convex (para manter compatibilidade visual)
+// Estï¿½gios simulados para o modo Convex (para manter compatibilidade visual)
 const CONVEX_STAGES: OptimizationStage[] = [
-  { id: "analysis", name: "Análise Profunda & Estratégia", status: "pending", visible: true },
-  { id: "optimization", name: "Otimização & Refatoração", status: "pending", visible: true },
-  { id: "validation", name: "Validação & Documentação", status: "pending", visible: true }
+  { id: "analysis", name: "Anï¿½lise Profunda & Estratï¿½gia", status: "pending", visible: true },
+  { id: "optimization", name: "Otimizaï¿½ï¿½o & Refatoraï¿½ï¿½o", status: "pending", visible: true },
+  { id: "validation", name: "Validaï¿½ï¿½o & Documentaï¿½ï¿½o", status: "pending", visible: true }
 ];
 
 export function useOptimizationAdapter() {
-  // Se não estiver usando Convex, retorna o hook original
+  // Se nï¿½o estiver usando Convex, retorna o hook original
   if (!USE_CONVEX) {
     return useOptimizationProgress();
   }
@@ -22,7 +22,7 @@ export function useOptimizationAdapter() {
   const [stages, setStages] = useState<OptimizationStage[]>(CONVEX_STAGES);
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
 
-  // Sincroniza progresso do Convex com os estágios visuais
+  // Sincroniza progresso do Convex com os estï¿½gios visuais
   useEffect(() => {
     if (convex.progress.status === "idle") {
       setStages(CONVEX_STAGES.map(s => ({ ...s, status: "pending" })));
@@ -31,24 +31,24 @@ export function useOptimizationAdapter() {
     }
 
     const percent = convex.progress.percent;
-    
+
     setStages(prev => prev.map((stage, index) => {
       let status = stage.status;
-      
-      // Lógica simples de mapeamento de progresso para estágios
-      if (index === 0) { // Análise (0-30%)
+
+      // Lï¿½gica simples de mapeamento de progresso para estï¿½gios
+      if (index === 0) { // Anï¿½lise (0-30%)
         if (percent > 0 && percent < 40) status = "running";
         if (percent >= 40) status = "success";
-      } else if (index === 1) { // Otimização (40-70%)
+      } else if (index === 1) { // Otimizaï¿½ï¿½o (40-70%)
         if (percent >= 40 && percent < 70) status = "running";
         if (percent >= 70) status = "success";
-      } else if (index === 2) { // Validação (70-100%)
+      } else if (index === 2) { // Validaï¿½ï¿½o (70-100%)
         if (percent >= 70 && percent < 100) status = "running";
         if (percent >= 100) status = "success";
       }
 
       if (convex.progress.status === "error") status = "error";
-      
+
       return { ...stage, status: status as any };
     }));
 
@@ -62,7 +62,7 @@ export function useOptimizationAdapter() {
     stages: stages,
     overallProgress: convex.progress.percent,
     currentStageIndex: currentStageIndex,
-    elapsedTime: 0, // Convex não retorna tempo decorrido em tempo real ainda
+    elapsedTime: 0, // Convex nï¿½o retorna tempo decorrido em tempo real ainda
     status: convex.progress.status === "completed" ? "success" : convex.progress.status as any,
     errorMessage: convex.error || undefined
   };
@@ -71,8 +71,8 @@ export function useOptimizationAdapter() {
   let mappedResult: OptimizeResult | null = null;
   if (convex.result) {
     const cr = convex.result;
-    
-    // Mapeia mudanças do plano
+
+    // Mapeia mudanï¿½as do plano
     const changes: OptimizeChange[] = cr.plan?.planSteps?.map((step: any) => ({
       category: "performance", // Default
       area: step.targetBottleneck || "Script",
@@ -82,21 +82,21 @@ export function useOptimizationAdapter() {
       after: step.details
     })) || [];
 
-    // Mapeia métricas estimadas
+    // Mapeia mï¿½tricas estimadas
     const metricsEstimate: MetricsEstimate = {
       loadComplexityBefore: "medium",
       loadComplexityAfter: "low",
       maintainabilityBefore: "low",
       maintainabilityAfter: "high",
-      notes: cr.plan?.estimatedImprovement ? 
-        `Redução de tempo: ${cr.plan.estimatedImprovement.loadTimeReduction}, RAM: ${cr.plan.estimatedImprovement.ramUsageReduction}` : 
+      notes: cr.plan?.estimatedImprovement ?
+        `Reduï¿½ï¿½o de tempo: ${cr.plan.estimatedImprovement.loadTimeReduction}, RAM: ${cr.plan.estimatedImprovement.ramUsageReduction}` :
         undefined
     };
 
     mappedResult = {
       originalScript: cr.originalScript,
       optimizedScript: cr.optimizedScript,
-      summary: cr.report?.executiveSummary || "Otimização concluída com sucesso.",
+      summary: cr.report?.executiveSummary || "Otimizaï¿½ï¿½o concluï¿½da com sucesso.",
       analysis: {
         changes: changes,
         breakingRisk: (cr.plan?.riskLevel?.toLowerCase() as BreakingRisk) || "low",
@@ -106,7 +106,7 @@ export function useOptimizationAdapter() {
         notes: cr.report?.technicalDetails
       },
       documentationMarkdown: `
-# ${cr.documentation?.title || "Documentação"}
+# ${cr.documentation?.title || "Documentaï¿½ï¿½o"}
 
 ${cr.documentation?.description || ""}
 
@@ -115,7 +115,7 @@ ${cr.documentation?.description || ""}
 ${cr.documentation?.diagramMermaid || ""}
 \`\`\`
 
-## Estratégia de Recarga
+## Estratï¿½gia de Recarga
 ${cr.documentation?.reloadStrategy || ""}
       `,
       explanation: cr.report?.technicalDetails || ""
@@ -124,7 +124,7 @@ ${cr.documentation?.reloadStrategy || ""}
 
   const startOptimization = async (options: OptimizationOptions) => {
     await convex.startOptimization(options.script, options.mode);
-    // O hook do Convex não retorna o resultado imediatamente (é assíncrono via query)
+    // O hook do Convex nï¿½o retorna o resultado imediatamente (ï¿½ assï¿½ncrono via query)
     // Mas o componente espera uma promise. Vamos retornar null e deixar o useEffect do componente pegar o resultado
     return null;
   };
@@ -133,12 +133,17 @@ ${cr.documentation?.reloadStrategy || ""}
     progress: adaptedProgress,
     result: mappedResult, // Usa o resultado mapeado
     startOptimization,
+    // keep backwards-compatible names used by the legacy UI
     reset: convex.reset,
+    // alias expected by the components
+    resetProgress: convex.reset,
+    // Convex reports `isOptimizing` â€” adapt to the `isRunning` name used in UI
+    isRunning: convex.isOptimizing,
     isConnected: true,
-    scriptAnalysis: null, // Convex ainda não retorna análise parcial
-    updateMode: () => {}, // Não necessário no Convex por enquanto
-    disconnect: () => {},
-    connect: () => {},
+    scriptAnalysis: null, // Convex ainda nï¿½o retorna anï¿½lise parcial
+    updateMode: () => { }, // Nï¿½o necessï¿½rio no Convex por enquanto
+    disconnect: () => { },
+    connect: () => { },
     // Propriedade extra para acessar o resultado mapeado diretamente
     convexResult: mappedResult
   };
