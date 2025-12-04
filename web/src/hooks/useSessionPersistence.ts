@@ -1,12 +1,14 @@
 /**
  * Hook para gerenciar persistência de sessão com fallback automático
- * Tenta salvar no backend (SQLite), se falhar usa IndexedDB local
+ * Quando USE_CONVEX=true, usa apenas IndexedDB local (Convex gerencia sessões)
+ * Quando USE_CONVEX=false, tenta backend Express (SQLite), se falhar usa IndexedDB
  */
 
 import { useEffect, useCallback, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 import * as sessionAPI from "../api/sessionClient";
 import * as indexedDB from "../lib/indexedDBService";
+import { USE_CONVEX } from "../lib/config";
 import type { OptimizationProgress } from "./useOptimizationProgress";
 import type { OptimizeMode, LLMProviderName } from "../types/api";
 
@@ -77,6 +79,7 @@ export function useSessionPersistence() {
 
   /**
    * Salva sessão com fallback automático
+   * No modo Convex, usa apenas IndexedDB local
    */
   const saveSession = useCallback(async (options: SessionPersistenceOptions): Promise<void> => {
     const sessionId = options.sessionId || sessionIdRef.current;
@@ -92,23 +95,36 @@ export function useSessionPersistence() {
       status: options.isRunning ? "running" as const : "paused" as const
     };
 
-    try {
-      // Tenta salvar no backend (SQLite)
-      await sessionAPI.saveSession(sessionData);
-      // Persiste o sessionId após salvar com sucesso
-      persistSessionId(sessionId);
-      console.warn("✓ Sessão salva no backend");
-    } catch (_error) {
-      console.warn("⚠️ Backend indisponível, salvando localmente (IndexedDB):", _error);
-
-      // Fallback: salva no IndexedDB local
+    // No modo Convex, salva APENAS localmente (Convex gerencia sessões internamente)
+    if (USE_CONVEX) {
       try {
         await indexedDB.saveSessionLocal({
           ...sessionData,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         });
-        // Persiste o sessionId após salvar localmente com sucesso
+        persistSessionId(sessionId);
+        console.debug("✓ Sessão salva localmente (modo Convex)");
+      } catch (localError) {
+        console.error("❌ Erro ao salvar sessão localmente:", localError);
+      }
+      return;
+    }
+
+    // Modo Express: tenta backend primeiro, fallback para IndexedDB
+    try {
+      await sessionAPI.saveSession(sessionData);
+      persistSessionId(sessionId);
+      console.warn("✓ Sessão salva no backend");
+    } catch (_error) {
+      console.warn("⚠️ Backend indisponível, salvando localmente (IndexedDB):", _error);
+
+      try {
+        await indexedDB.saveSessionLocal({
+          ...sessionData,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
         persistSessionId(sessionId);
         console.warn("✓ Sessão salva localmente");
       } catch (localError) {
@@ -132,6 +148,7 @@ export function useSessionPersistence() {
 
   /**
    * Recupera sessão ativa (tenta backend primeiro, depois IndexedDB)
+   * No modo Convex, usa apenas IndexedDB
    * Returns null immediately if no session was previously saved (avoids 404 errors)
    */
   const restoreSession = useCallback(async (sessionId?: string): Promise<any | null> => {
@@ -143,8 +160,23 @@ export function useSessionPersistence() {
       return null;
     }
 
+    // No modo Convex, usa apenas IndexedDB
+    if (USE_CONVEX) {
+      try {
+        const localSession = await indexedDB.getSessionLocal(id);
+        if (localSession) {
+          console.debug("✓ Sessão recuperada localmente (modo Convex)");
+          return localSession;
+        }
+      } catch (_error) {
+        console.error("❌ Erro ao recuperar sessão local:", _error);
+      }
+      clearPersistedSessionId();
+      return null;
+    }
+
+    // Modo Express: tenta backend primeiro
     try {
-      // Tenta recuperar do backend
       const session = await sessionAPI.getSession(id);
       if (session) {
         console.warn("✓ Sessão recuperada do backend");
@@ -173,12 +205,24 @@ export function useSessionPersistence() {
 
   /**
    * Lista sessões ativas (backend + local)
+   * No modo Convex, usa apenas IndexedDB
    */
   const listActiveSessions = useCallback(async (): Promise<Array<sessionAPI.ActiveSession | indexedDB.LocalSessionData>> => {
     const sessions: Array<sessionAPI.ActiveSession | indexedDB.LocalSessionData> = [];
 
+    // No modo Convex, lista apenas do IndexedDB
+    if (USE_CONVEX) {
+      try {
+        const localSessions = await indexedDB.getAllSessionsLocal();
+        sessions.push(...localSessions);
+      } catch (_error) {
+        console.warn("⚠️ Não foi possível listar sessões locais");
+      }
+      return sessions;
+    }
+
+    // Modo Express: tenta backend + IndexedDB
     try {
-      // Tenta listar do backend
       const backendSessions = await sessionAPI.getUserSessions();
       sessions.push(...backendSessions);
     } catch (_error) {
@@ -186,10 +230,7 @@ export function useSessionPersistence() {
     }
 
     try {
-      // Lista do IndexedDB local
       const localSessions = await indexedDB.getAllSessionsLocal();
-
-      // Adiciona apenas sessões que não estão no backend
       const backendIds = new Set(sessions.map(s => s.sessionId));
       const uniqueLocalSessions = localSessions.filter(s => !backendIds.has(s.sessionId));
       sessions.push(...uniqueLocalSessions);
@@ -202,8 +243,24 @@ export function useSessionPersistence() {
 
   /**
    * Remove sessão (backend + local)
+   * No modo Convex, remove apenas do IndexedDB
    */
   const removeSession = useCallback(async (sessionId: string): Promise<void> => {
+    // No modo Convex, remove apenas do IndexedDB
+    if (USE_CONVEX) {
+      try {
+        await indexedDB.deleteSessionLocal(sessionId);
+        console.debug("✓ Sessão removida localmente (modo Convex)");
+      } catch (_error) {
+        console.warn("⚠️ Não foi possível remover localmente");
+      }
+      if (sessionId === sessionIdRef.current) {
+        clearPersistedSessionId();
+      }
+      return;
+    }
+
+    // Modo Express: remove do backend + local
     try {
       await sessionAPI.deleteSession(sessionId);
       console.warn("✓ Sessão removida do backend");
@@ -218,7 +275,6 @@ export function useSessionPersistence() {
       console.warn("⚠️ Não foi possível remover localmente");
     }
 
-    // Clear persisted sessionId if this was the active session
     if (sessionId === sessionIdRef.current) {
       clearPersistedSessionId();
     }
