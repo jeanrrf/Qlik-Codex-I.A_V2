@@ -144,6 +144,9 @@ ${cr.documentation?.reloadStrategy || ""}
     updateMode: () => { }, // N�o necess�rio no Convex por enquanto
     disconnect: () => { },
     connect: () => { },
+    currentStep: null,
+    error: convex.error,
+    stop: () => { },
     // Propriedade extra para acessar o resultado mapeado diretamente
     convexResult: mappedResult
   };
