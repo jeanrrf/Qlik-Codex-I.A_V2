@@ -33,9 +33,6 @@ src/
 │   ├── ScriptAnalysisInfo.tsx         # 📊 Painel compacto de métricas
 │   └── UserMenu.tsx                   # 👤 Menu de perfil/logout
 │
-├── constants/
-│   └── optimizationSteps.ts # Definições de etapas do processo
-│
 ├── contexts/               # Gestão de Estado Global
 │   ├── AuthContext.tsx     # Usuário, Token, Login/Logout
 │   └── NavigationContext.tsx # Navegação entre "views"
@@ -50,7 +47,7 @@ src/
 ├── pages/                  # Telas Principais
 │   ├── LandingPage.tsx     # Home / Apresentação
 │   ├── LoginPage.tsx       # Autenticação
-│   ├── OptimizerProPage.tsx # 🚀 OTIMIZADOR PRINCIPAL (Upload + Progresso)
+│   ├── OptimizerPageV2.tsx # 🚀 Interface atual do otimizador (upload + progresso)
 │   ├── ProfilePage.tsx     # Dados do usuário e histórico
 │   └── AuthCallback.tsx    # Handler de retorno OAuth
 │
@@ -69,7 +66,7 @@ src/
 ## 🔄 FLUXO DE DADOS (CORE FLOW)
 
 ### 1. Otimização de Script (The Main Loop)
-1.  **User Action**: Upload de arquivo em `OptimizerProPage`.
+1.  **User Action**: Upload de arquivo em `OptimizerPageV2`.
 2.  **Trigger**: Chama `optimization.startOptimization()` (do hook `useOptimizationProgress`).
 3.  **API Call**: POST `/api/optimize` inicia o processo no backend.
 4.  **Feedback Loop**:
@@ -87,10 +84,10 @@ src/
 
 ## 🧩 COMPONENTES CHAVE
 
-### `OptimizerProPage.tsx`
-A nova interface "Pro". Substituiu a antiga V2.
-- **Responsabilidade**: Upload, Seleção de Persona (Architect/Engineer), Visualização de Progresso.
-- **Estado**: Gerencia o script localmente antes do envio.
+### `OptimizerPageV2.tsx`
+Tela principal que está em produção hoje.
+- **Responsabilidade**: Upload, configuração rápida, exibição de progresso em estágios e acesso ao relatório.
+- **Estado**: Orquestra ganchos (`useOptimizationProgress`, `useSessionPersistence`) e aplica estilos Controle/Pipeline.
 
 ### `ConsultancyDocumentViewer.tsx`
 O visualizador rico do resultado.
@@ -135,4 +132,4 @@ O projeto não usa Tailwind ou Bootstrap. Usa **CSS Modules** e **CSS Variables*
 ### Adicionar Novo Evento de Progresso
 1.  Atualize `types/api.ts` com o novo tipo de evento.
 2.  Atualize `useOptimizationProgress.ts` para escutar e processar o evento.
-3.  Atualize a UI em `OptimizerProPage` se necessário.
+3.  Atualize a UI em `OptimizerPageV2` se necessário.

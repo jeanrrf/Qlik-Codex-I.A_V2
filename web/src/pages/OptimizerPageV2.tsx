@@ -235,14 +235,9 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
     optimization.updateMode(newMode); // Atualiza as stages visíveis
   };
 
-  // Force Ultra Expert mode on mount
-  useEffect(() => {
-    if (mode !== 'ultra-expert') {
-      handleModeChange('ultra-expert');
-    }
-  }, []);
-
   const selectedLLM = useMemo(() => getLLMOptionById(llmOptionId), [llmOptionId]);
+  const providerForMode = useMemo(() => mode === 'nvidia-fast' ? 'nvidia' as const : selectedLLM.provider, [mode, selectedLLM]);
+  const llmModelForMode = useMemo(() => mode === 'nvidia-fast' ? undefined : selectedLLM.model, [mode, selectedLLM]);
 
   // === AUTO SHOW SCRIPT INFO WHEN SCRIPT IS LOADED ===
   useEffect(() => {
@@ -282,8 +277,9 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
         if (restored && restored.progressData) {
           console.warn("✓ Sessão ativa restaurada");
           setScript(restored.script);
-          // Force Ultra Expert as Analysis mode is deprecated
-          setMode("ultra-expert");
+          if (restored.mode) {
+            handleModeChange(restored.mode as OptimizeMode);
+          }
           if (restored.llmProvider) {
             const llmOption = LLM_OPTIONS.find(opt => opt.provider === restored.llmProvider);
             if (llmOption) setLlmOptionId(llmOption.id);
@@ -327,13 +323,13 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
         sessionId: session.sessionId,
         mode,
         script: script?.trim() || '',
-        llmProvider: selectedLLM.provider,
-        llmModel: selectedLLM.model,
+        llmProvider: providerForMode,
+        llmModel: llmModelForMode,
         progressData: optimization.progress,
         isRunning: true
       });
     }
-  }, [optimization.isRunning, optimization.progress, script, mode, selectedLLM, session]);
+  }, [optimization.isRunning, optimization.progress, script, mode, providerForMode, llmModelForMode, session]);
 
   // === HANDLERS ===
   const handleOptimize = async () => {
@@ -360,8 +356,8 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
       const res = await optimization.startOptimization({
         script: trimmed,
         mode,
-        llmProvider: selectedLLM.provider,
-        llmModel: selectedLLM.model
+        llmProvider: providerForMode,
+        llmModel: llmModelForMode
       });
 
       if (res) {
@@ -381,8 +377,8 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
           sessionId: session.sessionId,
           mode,
           script: trimmed,
-          llmProvider: selectedLLM.provider,
-          llmModel: selectedLLM.model,
+          llmProvider: providerForMode,
+          llmModel: llmModelForMode,
           progressData: optimization.progress,
           status: "completed"
         }).catch(console.error);
@@ -394,8 +390,8 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
           sessionId: session.sessionId,
           mode,
           script: trimmed,
-          llmProvider: selectedLLM.provider,
-          llmModel: selectedLLM.model,
+          llmProvider: providerForMode,
+          llmModel: llmModelForMode,
           progressData: optimization.progress,
           status: "error"
         }).catch(console.error);
@@ -456,6 +452,13 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
       color: "#ff2a6d",
       risk: "Otimização Máxima",
       description: "Otimização agressiva com todas as análises"
+    },
+    "nvidia-fast": {
+      title: "NVIDIA Fast",
+      icon: <Icons.Robot />,
+      color: "#1c8adb",
+      risk: "Refatoração Direta",
+      description: "Retorno rápido só com código otimizado (sem docs)"
     }
   };
 
@@ -520,11 +523,10 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
             <div className="section-icon-compact">🎯</div>
             <div className="mode-cards-horizontal">
               <button
-                className={`mode-card-compact active expert ${!isOwner && !hasUltraExpertQuotaLeft ? 'disabled-quota' : ''}`}
-                onClick={() => { }}
+                className={`mode-card-compact ${mode === 'ultra-expert' ? 'active' : ''} expert ${!isOwner && !hasUltraExpertQuotaLeft ? 'disabled-quota' : ''}`}
+                onClick={() => handleModeChange('ultra-expert')}
                 disabled={!isOwner && !hasUltraExpertQuotaLeft}
                 title={!isOwner && !hasUltraExpertQuotaLeft ? 'Quota diária de Ultra Expert esgotada. Limite geral: 4 execuções/dia. Aguarde renovação.' : undefined}
-                style={{ cursor: 'default', width: '100%' }}
               >
                 <div className="mode-card-icon-compact expert-icon">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -538,13 +540,27 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                     <div className={`ultra-expert-quota ${!hasUltraExpertQuotaLeft ? 'quota-exhausted' : ''}`}>
                       <span className="quota-icon">{hasUltraExpertQuotaLeft ? '🎟️' : '🚫'}</span>
                       <span className="quota-text">
-                        {MAX_ULTRA_EXPERT_RUNS - ultraExpertUsageCount} de {MAX_ULTRA_EXPERT_RUNS} execuções
+                        {Math.max(0, MAX_ULTRA_EXPERT_RUNS - ultraExpertUsageCount)} de {MAX_ULTRA_EXPERT_RUNS} execuções
                       </span>
                     </div>
                   )}
                 </div>
                 <div className="mode-active-dot expert" />
                 <div className="expert-flame-mini" />
+              </button>
+              <button
+                className={`mode-card-compact ${mode === 'nvidia-fast' ? 'active' : ''}`}
+                onClick={() => handleModeChange('nvidia-fast')}
+                title="Refatoração direta via NVIDIA (só retorna código otimizado)"
+              >
+                <div className="mode-card-icon-compact">
+                  <Icons.Robot />
+                </div>
+                <div className="mode-card-text-compact">
+                  <h4>NVIDIA Fast</h4>
+                  <p>Somente código otimizado</p>
+                </div>
+                <div className="mode-active-dot" />
               </button>
             </div>
           </div>

@@ -6,10 +6,10 @@ applyTo: 'web/**'
 ## 🗺️ MAPA DO REPOSITÓRIO (WEB)
 
 ### Estrutura Core (`web/src`)
-*   **`App.tsx`**: Router manual e Layout base. Gerencia a troca de views (`landing` | `optimizer-pro` | `profile`).
+*   **`App.tsx`**: Router manual e Layout base. Gerencia a troca de views (`landing` | `optimizer` | `profile`).
 *   **`main.tsx`**: Entry point Vite.
 *   **`hooks/useOptimizationProgress.ts`**: **CRÍTICO**. Gerencia todo o estado da otimização, SSE, etapas e erros. É o "cérebro" do frontend.
-*   **`pages/OptimizerProPage.tsx`**: A interface principal de otimização. Substituiu a antiga V2.
+*   **`pages/OptimizerPageV2.tsx`**: A interface principal de otimização em produção.
 *   **`components/ConsultancyDocumentViewer.tsx`**: Renderiza o relatório final (Markdown + Mermaid).
 
 ### Camadas
@@ -40,7 +40,7 @@ applyTo: 'web/**'
 
 ### 4. Componentes
 *   Mantenha componentes pequenos e focados.
-*   Se um componente crescer demais (como `OptimizerProPage`), extraia sub-componentes para `components/`.
+*   Se um componente crescer demais (como `OptimizerPageV2`), extraia sub-componentes para `components/`.
 *   **Ícones**: Use SVGs inline dentro do componente ou um objeto `Icons` local. Não instale bibliotecas de ícones pesadas.
 
 ### 5. Integração com Backend

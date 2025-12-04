@@ -130,6 +130,15 @@ const ULTRA_EXPERT_STAGES: OptimizationStage[] = [
 
 // Default para backward compatibility
 
+const NVIDIA_FAST_STAGES: OptimizationStage[] = [
+  {
+    id: "NVIDIA_FAST",
+    name: "NVIDIA Fast Refactor",
+    status: "pending",
+    visible: true
+  }
+];
+
 const INITIAL_STAGES: OptimizationStage[] = ULTRA_EXPERT_STAGES;
 
 
@@ -140,7 +149,10 @@ const TASK_TIMEOUT_MS = 5 * 60 * 1000; // 300000ms = 5 minutos
 
 
 
-function getStagesForMode(_: OptimizeMode): OptimizationStage[] {
+function getStagesForMode(mode: OptimizeMode): OptimizationStage[] {
+  if (mode === "nvidia-fast") {
+    return NVIDIA_FAST_STAGES.map(s => ({ ...s, visible: true }));
+  }
   return ULTRA_EXPERT_STAGES.map(s => ({ ...s, visible: true }));
 }
 
