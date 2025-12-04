@@ -4,15 +4,15 @@ import { USE_CONVEX } from "../lib/config";
 import { OptimizeMode, OptimizeScriptApiResponse, OptimizationOptions, OptimizeResult, OptimizeChange, BreakingRisk, MetricsEstimate } from "../types/api";
 import { useState, useEffect } from "react";
 
-// Est�gios simulados para o modo Convex (para manter compatibilidade visual)
+// Estágios simulados para o modo Convex (para manter compatibilidade visual)
 const CONVEX_STAGES: OptimizationStage[] = [
-  { id: "analysis", name: "An�lise Profunda & Estrat�gia", status: "pending", visible: true },
-  { id: "optimization", name: "Otimiza��o & Refatora��o", status: "pending", visible: true },
-  { id: "validation", name: "Valida��o & Documenta��o", status: "pending", visible: true }
+  { id: "analysis", name: "Análise Profunda & Estratégia", status: "pending", visible: true },
+  { id: "optimization", name: "Otimização & Refatoração", status: "pending", visible: true },
+  { id: "validation", name: "Validação & Documentação", status: "pending", visible: true }
 ];
 
 export function useOptimizationAdapter() {
-  // Se n�o estiver usando Convex, retorna o hook original
+  // Se não estiver usando Convex, retorna o hook original
   if (!USE_CONVEX) {
     return useOptimizationProgress();
   }
@@ -22,7 +22,7 @@ export function useOptimizationAdapter() {
   const [stages, setStages] = useState<OptimizationStage[]>(CONVEX_STAGES);
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
 
-  // Sincroniza progresso do Convex com os est�gios visuais
+  // Sincroniza progresso do Convex com os estágios visuais
   useEffect(() => {
     if (convex.progress.status === "idle") {
       setStages(CONVEX_STAGES.map(s => ({ ...s, status: "pending" })));
@@ -35,14 +35,14 @@ export function useOptimizationAdapter() {
     setStages(prev => prev.map((stage, index) => {
       let status = stage.status;
 
-      // L�gica simples de mapeamento de progresso para est�gios
-      if (index === 0) { // An�lise (0-30%)
+      // Lógica simples de mapeamento de progresso para estágios
+      if (index === 0) { // Análise (0-30%)
         if (percent > 0 && percent < 40) status = "running";
         if (percent >= 40) status = "success";
-      } else if (index === 1) { // Otimiza��o (40-70%)
+      } else if (index === 1) { // Otimização (40-70%)
         if (percent >= 40 && percent < 70) status = "running";
         if (percent >= 70) status = "success";
-      } else if (index === 2) { // Valida��o (70-100%)
+      } else if (index === 2) { // Validação (70-100%)
         if (percent >= 70 && percent < 100) status = "running";
         if (percent >= 100) status = "success";
       }
@@ -62,7 +62,7 @@ export function useOptimizationAdapter() {
     stages: stages,
     overallProgress: convex.progress.percent,
     currentStageIndex: currentStageIndex,
-    elapsedTime: 0, // Convex n�o retorna tempo decorrido em tempo real ainda
+    elapsedTime: 0, // Convex não retorna tempo decorrido em tempo real ainda
     status: convex.progress.status === "completed" ? "success" : convex.progress.status as any,
     errorMessage: convex.error || undefined
   };
@@ -72,7 +72,7 @@ export function useOptimizationAdapter() {
   if (convex.result) {
     const cr = convex.result;
 
-    // Mapeia mudan�as do plano
+    // Mapeia mudanças do plano
     const changes: OptimizeChange[] = cr.plan?.planSteps?.map((step: any) => ({
       category: "performance", // Default
       area: step.targetBottleneck || "Script",
@@ -82,21 +82,21 @@ export function useOptimizationAdapter() {
       after: step.details
     })) || [];
 
-    // Mapeia m�tricas estimadas
+    // Mapeia métricas estimadas
     const metricsEstimate: MetricsEstimate = {
       loadComplexityBefore: "medium",
       loadComplexityAfter: "low",
       maintainabilityBefore: "low",
       maintainabilityAfter: "high",
       notes: cr.plan?.estimatedImprovement ?
-        `Redu��o de tempo: ${cr.plan.estimatedImprovement.loadTimeReduction}, RAM: ${cr.plan.estimatedImprovement.ramUsageReduction}` :
+        `Redução de tempo: ${cr.plan.estimatedImprovement.loadTimeReduction}, RAM: ${cr.plan.estimatedImprovement.ramUsageReduction}` :
         undefined
     };
 
     mappedResult = {
       originalScript: cr.originalScript,
       optimizedScript: cr.optimizedScript,
-      summary: cr.report?.executiveSummary || "Otimiza��o conclu�da com sucesso.",
+      summary: cr.report?.executiveSummary || "Otimização concluída com sucesso.",
       analysis: {
         changes: changes,
         breakingRisk: (cr.plan?.riskLevel?.toLowerCase() as BreakingRisk) || "low",
@@ -106,7 +106,7 @@ export function useOptimizationAdapter() {
         notes: cr.report?.technicalDetails
       },
       documentationMarkdown: `
-# ${cr.documentation?.title || "Documenta��o"}
+# ${cr.documentation?.title || "Documentação"}
 
 ${cr.documentation?.description || ""}
 
@@ -115,7 +115,7 @@ ${cr.documentation?.description || ""}
 ${cr.documentation?.diagramMermaid || ""}
 \`\`\`
 
-## Estrat�gia de Recarga
+## Estratégia de Recarga
 ${cr.documentation?.reloadStrategy || ""}
       `,
       explanation: cr.report?.technicalDetails || ""
@@ -124,30 +124,26 @@ ${cr.documentation?.reloadStrategy || ""}
 
   const startOptimization = async (options: OptimizationOptions) => {
     await convex.startOptimization(options.script, options.mode);
-    // O hook do Convex n�o retorna o resultado imediatamente (� ass�ncrono via query)
+    // O hook do Convex não retorna o resultado imediatamente (é assíncrono via query)
     // Mas o componente espera uma promise. Vamos retornar null e deixar o useEffect do componente pegar o resultado
     return null;
   };
 
   return {
     progress: adaptedProgress,
-    result: mappedResult, // Usa o resultado mapeado
+    result: mappedResult,
     startOptimization,
-    // keep backwards-compatible names used by the legacy UI
     reset: convex.reset,
-    // alias expected by the components
     resetProgress: convex.reset,
-    // Convex reports `isOptimizing` — adapt to the `isRunning` name used in UI
     isRunning: convex.isOptimizing,
     isConnected: true,
-    scriptAnalysis: null, // Convex ainda n�o retorna an�lise parcial
-    updateMode: () => { }, // N�o necess�rio no Convex por enquanto
+    scriptAnalysis: null,
+    updateMode: () => { },
     disconnect: () => { },
     connect: () => { },
     currentStep: null,
     error: convex.error,
     stop: () => { },
-    // Propriedade extra para acessar o resultado mapeado diretamente
     convexResult: mappedResult
   };
 }
