@@ -127,7 +127,7 @@ router.post(
     }
 
     try {
-      const ownerUser = ensureOwnerUser();
+      const ownerUser = await ensureOwnerUser();
 
       // Criar sessão para owner
       const { session: _session, tokens } = await createAuthSession(
@@ -203,7 +203,7 @@ router.post(
     }
 
     try {
-      revokeSession(req.sessionId);
+      await revokeSession(req.sessionId);
 
       // Limpar cookie
       res.clearCookie("auth_token");
@@ -236,7 +236,7 @@ router.post(
     }
 
     try {
-      revokeAllUserSessions(req.user.id);
+      await revokeAllUserSessions(req.user.id);
 
       // Limpar cookie
       res.clearCookie("auth_token");
@@ -291,7 +291,7 @@ router.post(
   requireAuth,
   requireRole(UserRole.OWNER),
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const deletedCount = cleanupExpiredSessions();
+    const deletedCount = await cleanupExpiredSessions();
 
     res.json({
       success: true,

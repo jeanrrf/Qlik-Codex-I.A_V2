@@ -70,7 +70,7 @@ export async function requireAuth(
 
     // Verificar se é token de proprietário (bypass)
     if (verifyOwnerToken(token)) {
-      const ownerUser = ensureOwnerUser();
+      const ownerUser = await ensureOwnerUser();
       req.user = ownerUser;
       logger.info("Owner authenticated via bypass token", { userId: ownerUser.id });
       next();
@@ -90,7 +90,7 @@ export async function requireAuth(
     }
 
     // Buscar sessão e verificar validade
-    const session = getSessionByToken(token);
+    const session = await getSessionByToken(token);
     if (!session) {
       res.status(401).json({
         error: "Session expired",
@@ -100,7 +100,7 @@ export async function requireAuth(
     }
 
     // Buscar usuário
-    const user = getUserById(decoded.userId);
+    const user = await getUserById(decoded.userId);
     if (!user) {
       res.status(401).json({
         error: "User not found",
@@ -110,7 +110,7 @@ export async function requireAuth(
     }
 
     // Atualizar atividade da sessão
-    updateSessionActivity(session.id);
+    await updateSessionActivity(session.id);
 
     // Anexar informações ao request
     req.user = user;
@@ -146,21 +146,21 @@ export async function optionalAuth(
 
     // Tentar autenticar, mas não bloquear se falhar
     if (verifyOwnerToken(token)) {
-      req.user = ensureOwnerUser();
+      req.user = await ensureOwnerUser();
       next();
       return;
     }
 
     try {
       const decoded = verifyToken(token);
-      const session = getSessionByToken(token);
+      const session = await getSessionByToken(token);
 
       if (session) {
-        const user = getUserById(decoded.userId);
+        const user = await getUserById(decoded.userId);
         if (user) {
           req.user = user;
           req.sessionId = session.id;
-          updateSessionActivity(session.id);
+          await updateSessionActivity(session.id);
         }
       }
     } catch {

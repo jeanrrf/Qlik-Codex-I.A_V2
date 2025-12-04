@@ -18,7 +18,7 @@ router.get(
   "/recent",
   asyncHandler(async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 50;
-    const history = historyService.getRecentOptimizations(limit);
+    const history = await historyService.getRecentOptimizations(limit);
 
     res.json({
       success: true,
@@ -35,7 +35,7 @@ router.get(
 router.get(
   "/stats",
   asyncHandler(async (req, res) => {
-    const stats = historyService.getStatistics();
+    const stats = await historyService.getStatistics();
 
     res.json({
       success: true,
@@ -52,7 +52,7 @@ router.delete(
   "/cleanup",
   asyncHandler(async (req, res) => {
     const days = parseInt(req.query.days as string) || 90;
-    const deleted = historyService.cleanOldRecords(days);
+    const deleted = await historyService.cleanOldRecords(days);
 
     res.json({
       success: true,
