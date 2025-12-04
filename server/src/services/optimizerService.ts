@@ -48,6 +48,23 @@ function checkAborted(signal?: AbortSignal, context?: string): void {
   }
 }
 
+const RETRYABLE_PROVIDER_ERROR_PATTERNS = [
+  /timeout/i,
+  /json/i,
+  /stream/i,
+  /schema/i,
+  /provider/i,
+  /failed/i,
+  /falh/i
+];
+
+function isRetryableProviderError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  if (!message) return false;
+  if (/abort/i.test(message)) return false;
+  return RETRYABLE_PROVIDER_ERROR_PATTERNS.some(pattern => pattern.test(message));
+}
+
 /**
  * MODO ÚNICO: ULTRA EXPERT (Full Power)
  * Otimização profunda com todas as análises implementadas
@@ -179,6 +196,7 @@ async function runUltraExpertMode(
  * MODO NVIDIA FAST: Refatoração direta (apenas código)
  * Envia contexto completo em uma única chamada e retorna somente o script otimizado.
  */
+const NVIDIA_FAST_MAX_RETRIES = 2;
 async function runNvidiaFastMode(
   script: string,
   llmOptions?: LLMOptions,
@@ -214,54 +232,96 @@ ${script}
     timestamp: new Date().toISOString()
   });
 
-  const response = await nvidiaProvider.generateStructuredJson(prompt, { model, signal: abortSignal });
+  let lastError: unknown = null;
 
-  checkAborted(abortSignal, "NVIDIA Fast mode after LLM");
+  for (let attempt = 1; attempt <= NVIDIA_FAST_MAX_RETRIES; attempt++) {
+    try {
+      const response = await nvidiaProvider.generateStructuredJson(prompt, { model, signal: abortSignal });
 
-  let optimizedScript = response.text.trim();
+      checkAborted(abortSignal, "NVIDIA Fast mode after LLM");
 
-  // Tenta extrair JSON, mas tolera texto puro
-  try {
-    const parsed = JSON.parse(optimizedScript);
-    if (parsed && typeof parsed.optimizedScript === "string") {
-      optimizedScript = parsed.optimizedScript;
+      let optimizedScript = response.text.trim();
+
+      try {
+        const parsed = JSON.parse(optimizedScript);
+        if (parsed && typeof parsed.optimizedScript === "string") {
+          optimizedScript = parsed.optimizedScript;
+        }
+      } catch (err) {
+        logger.warn("[NVIDIA FAST] Falha ao parsear JSON, usando texto bruto", { error: String(err) });
+      }
+
+      optimizedScript = optimizedScript.replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "").trim();
+
+      const duration = Date.now() - start;
+
+      sseEmitter.sendToCurrent({
+        type: "step_progress",
+        stepId: "nvidia_fast",
+        name: "NVIDIA Fast Mode",
+        status: "success",
+        duration: `${duration}ms`,
+        timestamp: new Date().toISOString()
+      });
+
+      return {
+        originalScript: script,
+        optimizedScript,
+        summary: `NVIDIA Fast Mode (${model}) concluído em ${duration}ms`,
+        documentationMarkdown: "",
+        analysis: {
+          changes: [],
+          breakingRisk: "low",
+          safeToApply: true,
+          mode: "nvidia-fast",
+          metricsEstimate: {
+            loadComplexityBefore: "medium",
+            loadComplexityAfter: "low",
+            maintainabilityBefore: "medium",
+            maintainabilityAfter: "high"
+          }
+        }
+      };
+    } catch (error) {
+      lastError = error;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const aborted = abortSignal?.aborted || /abort/i.test(errorMessage);
+
+      if (aborted) {
+        throw error instanceof Error ? error : new Error(errorMessage);
+      }
+
+      const canRetry = attempt < NVIDIA_FAST_MAX_RETRIES && isRetryableProviderError(error);
+
+      if (canRetry) {
+        logger.warn(`[NVIDIA FAST] Tentativa ${attempt} falhou (${errorMessage}). Nova tentativa...`);
+        sseEmitter.sendToCurrent({
+          type: "step_progress",
+          stepId: "nvidia_fast",
+          name: `NVIDIA Fast Mode (retry ${attempt + 1}/${NVIDIA_FAST_MAX_RETRIES})`,
+          status: "running",
+          timestamp: new Date().toISOString()
+        });
+        continue;
+      }
+
+      const failureDuration = Date.now() - start;
+      sseEmitter.sendToCurrent({
+        type: "step_progress",
+        stepId: "nvidia_fast",
+        name: "NVIDIA Fast Mode",
+        status: "error",
+        duration: `${failureDuration}ms`,
+        timestamp: new Date().toISOString()
+      });
+
+      throw error instanceof Error ? error : new Error(errorMessage);
     }
-  } catch (err) {
-    logger.warn("[NVIDIA FAST] Falha ao parsear JSON, usando texto bruto", { error: String(err) });
   }
 
-  // Limpa code fences acidentais
-  optimizedScript = optimizedScript.replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "").trim();
-
-  const duration = Date.now() - start;
-
-  sseEmitter.sendToCurrent({
-    type: "step_progress",
-    stepId: "nvidia_fast",
-    name: "NVIDIA Fast Mode",
-    status: "success",
-    duration: `${duration}ms`,
-    timestamp: new Date().toISOString()
-  });
-
-  return {
-    originalScript: script,
-    optimizedScript,
-    summary: `NVIDIA Fast Mode (${model}) concluído em ${duration}ms`,
-    documentationMarkdown: "",
-    analysis: {
-      changes: [],
-      breakingRisk: "low",
-      safeToApply: true,
-      mode: "nvidia-fast",
-      metricsEstimate: {
-        loadComplexityBefore: "medium",
-        loadComplexityAfter: "low",
-        maintainabilityBefore: "medium",
-        maintainabilityAfter: "high"
-      }
-    }
-  };
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("NVIDIA Fast Mode falhou após múltiplas tentativas");
 }
 
 

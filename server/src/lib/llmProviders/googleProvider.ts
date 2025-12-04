@@ -10,7 +10,7 @@ import type {
 } from "./types";
 
 const MODEL_NAME = config.geminiModel;
-const GEMINI_TIMEOUT_MS = 120000; // 2 minutos para prompts grandes
+const GEMINI_TIMEOUT_MS = 150000; // 2.5 minutos para prompts muito grandes
 
 function raceWithAbort<T>(promise: Promise<T>, signal?: AbortSignal, operation = "Google Gemini API"): Promise<T> {
   if (!signal) {

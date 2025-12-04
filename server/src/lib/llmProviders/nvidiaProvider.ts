@@ -8,7 +8,7 @@ import type {
 } from "./types";
 
 const NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1";
-const NVIDIA_TIMEOUT_MS = 150000; // 2.5 minutos para Kimi K2 e modelos grandes
+const NVIDIA_TIMEOUT_MS = 180000; // 3 minutos para Kimi K2 e modelos grandes
 
 function raceWithAbort<T>(promise: Promise<T>, signal?: AbortSignal, operation = "NVIDIA NIM API"): Promise<T> {
   if (!signal) {

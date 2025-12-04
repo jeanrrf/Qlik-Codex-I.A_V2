@@ -20,6 +20,22 @@ const TASK_TIMEOUTS: Record<string, number> = {
   CODE_GEN: 120000,            // 2 min - geração de código
   FINAL_DELIVERY: 90000       // 1.5 min - documentação final
 };
+const MAX_TASK_RETRIES = 2;
+const RETRYABLE_TASK_ERROR_PATTERNS = [
+  /timeout/i,
+  /json/i,
+  /schema/i,
+  /stream/i,
+  /provider/i,
+  /failed/i,
+  /falh/i
+];
+
+function isRetryableTaskError(message: string | undefined): boolean {
+  if (!message) return false;
+  if (/abort/i.test(message)) return false;
+  return RETRYABLE_TASK_ERROR_PATTERNS.some(pattern => pattern.test(message));
+}
 
 interface MegaOptimizerResult {
   originalScript: string;
@@ -142,27 +158,9 @@ export class QlikMegaOptimizer {
   }
 
   private async executeTask(taskName: string, promptTemplate: string, schema?: ZodSchema): Promise<any> {
-    const startTime = Date.now();
-
-    // Verifica abort antes de iniciar
-    if (this.abortSignal?.aborted) {
-      throw new Error(`Task ${taskName} abortada pelo usuário`);
-    }
-
-    logger.info(`[MegaOptimizer] Starting task: ${taskName}`);
-
-    sseEmitter.sendToCurrent({
-      type: "substep",
-      substep: {
-        id: taskName,
-        name: `Executing ${taskName}...`,
-        status: "running",
-        startTime: new Date().toISOString()
-      }
-    });
+    const totalStart = Date.now();
 
     // OTIMIZAÇÃO: Prompt compacto sem acumulação de histórico completo
-    // Reduz de ~18k tokens para ~6k tokens na Task 3
     const contextSection = this.compactHistory
       ? `\n--- CONTEXTO ANTERIOR (Resumo) ---\n${this.compactHistory}\n`
       : '';
@@ -177,114 +175,165 @@ ${contextSection}
 ${promptTemplate}
     `;
 
-    // Usa o orquestrador para rotação automática de provedores
     const timeout = TASK_TIMEOUTS[taskName] || 90000;
     const stepId = `mega_${taskName.toLowerCase()}` as OptimizationStepId;
+    let lastError: unknown = null;
 
-    logger.info(`[MegaOptimizer] >>> SENDING [${taskName}] via Orchestrator`, {
-      contextSizeChars: fullPrompt.length,
-      timeout: `${timeout}ms`,
-      sentAt: new Date().toISOString()
-    });
+    for (let attempt = 1; attempt <= MAX_TASK_RETRIES; attempt++) {
+      if (this.abortSignal?.aborted) {
+        throw new Error(`Task ${taskName} abortada pelo usuário`);
+      }
 
-    const orchestratorResult = await this.orchestrator.executeWithRotation(
-      stepId,
-      fullPrompt,
-      timeout,
-      this.abortSignal
-    );
+      logger.info(`[MegaOptimizer] Starting task: ${taskName} (attempt ${attempt}/${MAX_TASK_RETRIES})`);
 
-    // Verifica abort após chamada LLM
-    if (this.abortSignal?.aborted) {
-      throw new Error(`Task ${taskName} abortada após retorno do LLM`);
-    }
-
-    // Se fallback foi acionado (todas as tentativas falharam)
-    if (orchestratorResult.fallbackTriggered || !orchestratorResult.result) {
-      const errorMessage = orchestratorResult.fallbackReason || "Todas as tentativas falharam";
+      const statusLabel = attempt > 1
+        ? `Regenerating ${taskName} (tentativa ${attempt}/${MAX_TASK_RETRIES})`
+        : `Executing ${taskName}...`;
 
       sseEmitter.sendToCurrent({
         type: "substep",
         substep: {
           id: taskName,
-          name: `Failed ${taskName}`,
-          status: "error",
-          error: errorMessage,
-          endTime: new Date().toISOString()
+          name: statusLabel,
+          description: attempt > 1 ? `Retry automático ${attempt}/${MAX_TASK_RETRIES}` : undefined,
+          status: "running",
+          startTime: new Date().toISOString()
         }
       });
 
-      throw new Error(`Task ${taskName} failed: ${errorMessage}`);
-    }
-
-    const responseText = orchestratorResult.result;
-    const successfulProvider = orchestratorResult.attempts.find(a => a.success);
-
-    // LOG: Response Size & Receive Time
-    logger.info(`[MegaOptimizer] <<< RECEIVED [${taskName}] via Orchestrator`, {
-      responseSizeChars: responseText.length,
-      provider: successfulProvider?.provider || 'unknown',
-      model: successfulProvider?.model || 'unknown',
-      attempts: orchestratorResult.attempts.length,
-      receivedAt: new Date().toISOString()
-    });
-
-    // Try to parse JSON
-    let parsedResult: any;
-    try {
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      const jsonStr = jsonMatch ? jsonMatch[0] : responseText;
-      parsedResult = JSON.parse(jsonStr);
-    } catch (e) {
-      logger.warn(`[MegaOptimizer] Failed to parse JSON for ${taskName}`, { error: e });
-      throw new Error(`JSON Parse Error for ${taskName}`);
-    }
-
-    // Validate Schema if provided
-    if (schema) {
-      const validation = schema.safeParse(parsedResult);
-      if (!validation.success) {
-        logger.warn(`[MegaOptimizer] Schema validation failed for ${taskName}`, {
-          issues: validation.error.format()
+      try {
+        logger.info(`[MegaOptimizer] >>> SENDING [${taskName}] via Orchestrator`, {
+          contextSizeChars: fullPrompt.length,
+          timeout: `${timeout}ms`,
+          sentAt: new Date().toISOString(),
+          attempt
         });
-        throw new Error(`Schema Validation Error: ${JSON.stringify(validation.error.format())}`);
+
+        const orchestratorResult = await this.orchestrator.executeWithRotation(
+          stepId,
+          fullPrompt,
+          timeout,
+          this.abortSignal
+        );
+
+        if (this.abortSignal?.aborted) {
+          throw new Error(`Task ${taskName} abortada após retorno do LLM`);
+        }
+
+        if (orchestratorResult.fallbackTriggered || !orchestratorResult.result) {
+          const errorMessage = orchestratorResult.fallbackReason || "Todas as tentativas falharam";
+          throw new Error(`Task ${taskName} failed: ${errorMessage}`);
+        }
+
+        const responseText = orchestratorResult.result;
+        const successfulProvider = orchestratorResult.attempts.find(a => a.success);
+
+        logger.info(`[MegaOptimizer] <<< RECEIVED [${taskName}] via Orchestrator`, {
+          responseSizeChars: responseText.length,
+          provider: successfulProvider?.provider || 'unknown',
+          model: successfulProvider?.model || 'unknown',
+          attempts: orchestratorResult.attempts.length,
+          receivedAt: new Date().toISOString(),
+          attempt
+        });
+
+        let parsedResult: any;
+        try {
+          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+          const jsonStr = jsonMatch ? jsonMatch[0] : responseText;
+          parsedResult = JSON.parse(jsonStr);
+        } catch (e) {
+          logger.warn(`[MegaOptimizer] Failed to parse JSON for ${taskName}`, { error: e, attempt });
+          throw new Error(`JSON Parse Error for ${taskName}`);
+        }
+
+        if (schema) {
+          const validation = schema.safeParse(parsedResult);
+          if (!validation.success) {
+            logger.warn(`[MegaOptimizer] Schema validation failed for ${taskName}`, {
+              issues: validation.error.format(),
+              attempt
+            });
+            throw new Error(`Schema Validation Error: ${JSON.stringify(validation.error.format())}`);
+          }
+          parsedResult = validation.data;
+        }
+
+        const duration = Date.now() - totalStart;
+        this.taskTimes[taskName] = duration;
+
+        const summary = this.summarizeTaskResult(taskName, parsedResult);
+        this.compactHistory = this.compactHistory
+          ? `${this.compactHistory}\n${summary}`
+          : summary;
+
+        if (this.compactHistory.length > MAX_HISTORY_TOKENS * 3) {
+          this.compactHistory = this.compactHistory.substring(this.compactHistory.length - MAX_HISTORY_TOKENS * 2);
+        }
+
+        const providerInfo = successfulProvider
+          ? `${successfulProvider.provider}/${successfulProvider.model}`
+          : 'unknown';
+        logger.info(`[MegaOptimizer] Completed task: ${taskName} using ${providerInfo} in ${duration}ms (attempt ${attempt})`);
+
+        sseEmitter.sendToCurrent({
+          type: "substep",
+          substep: {
+            id: taskName,
+            name: `Completed ${taskName}`,
+            status: "success",
+            duration,
+            endTime: new Date().toISOString()
+          }
+        });
+
+        return parsedResult;
+      } catch (error) {
+        lastError = error;
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const wasAborted = this.abortSignal?.aborted || /abort/i.test(errorMessage || "");
+
+        if (wasAborted) {
+          throw error instanceof Error ? error : new Error(errorMessage || `Task ${taskName} aborted`);
+        }
+
+        const canRetry = attempt < MAX_TASK_RETRIES && isRetryableTaskError(errorMessage);
+
+        if (canRetry) {
+          logger.warn(`[MegaOptimizer] ${taskName} attempt ${attempt} falhou (${errorMessage}). Regenerando...`);
+          sseEmitter.sendToCurrent({
+            type: "substep",
+            substep: {
+              id: taskName,
+              name: `Retrying ${taskName} (${attempt + 1}/${MAX_TASK_RETRIES})`,
+              status: "running",
+              error: errorMessage,
+              startTime: new Date().toISOString()
+            }
+          });
+          continue;
+        }
+
+        const failureDuration = Date.now() - totalStart;
+        sseEmitter.sendToCurrent({
+          type: "substep",
+          substep: {
+            id: taskName,
+            name: `Failed ${taskName}`,
+            status: "error",
+            error: errorMessage,
+            duration: failureDuration,
+            endTime: new Date().toISOString()
+          }
+        });
+
+        throw error instanceof Error ? error : new Error(errorMessage || `Task ${taskName} failed`);
       }
-      parsedResult = validation.data;
     }
 
-    // Success!
-    const duration = Date.now() - startTime;
-    this.taskTimes[taskName] = duration;
-
-    // OTIMIZAÇÃO: Resumo compacto em vez de histórico completo
-    // Evita crescimento exponencial de tokens (era: 6k → 18k, agora: 6k → 6.5k)
-    const summary = this.summarizeTaskResult(taskName, parsedResult);
-    this.compactHistory = this.compactHistory
-      ? `${this.compactHistory}\n${summary}`
-      : summary;
-
-    // Trunca se histórico compacto crescer demais
-    if (this.compactHistory.length > MAX_HISTORY_TOKENS * 3) {
-      this.compactHistory = this.compactHistory.substring(this.compactHistory.length - MAX_HISTORY_TOKENS * 2);
-    }
-
-    const providerInfo = successfulProvider
-      ? `${successfulProvider.provider}/${successfulProvider.model}`
-      : 'unknown';
-    logger.info(`[MegaOptimizer] Completed task: ${taskName} using ${providerInfo} in ${duration}ms`);
-
-    sseEmitter.sendToCurrent({
-      type: "substep",
-      substep: {
-        id: taskName,
-        name: `Completed ${taskName}`,
-        status: "success",
-        duration,
-        endTime: new Date().toISOString()
-      }
-    });
-
-    return parsedResult;
+    throw lastError instanceof Error
+      ? lastError
+      : new Error(`Task ${taskName} failed sem detalhes`);
   }
 
   public async run(): Promise<MegaOptimizerResult> {
