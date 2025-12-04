@@ -9,6 +9,9 @@
       }
     }
   ],
+  "buildCommand": "npm run build --prefix web",
+  "installCommand": "npm install --prefix web",
+  "outputDirectory": "web/dist",
   "routes": [
     { "handle": "filesystem" },
     { "src": "/.*", "dest": "/index.html" }
