@@ -22,10 +22,10 @@ export const optimizeScriptSchema = z
     lineLimit: z.number().positive().optional()
   })
   .refine(
-    (data) => !data.llmModel || data.llmProvider === "nvidia",
+    (data) => !data.llmModel || data.llmProvider === "nvidia" || data.mode === "nvidia-fast",
     {
       path: ["llmModel"],
-      message: "llmModel so pode ser informado quando o provider for NVIDIA"
+      message: "llmModel so pode ser informado quando o provider for NVIDIA ou modo nvidia-fast"
     }
   );
 

@@ -24,18 +24,21 @@ router.get(
       return;
     }
 
-    // Verifica quota para modo único
+    // Quotas por modo
     const ultraExpertQuota = checkDailyQuota(req.user, "ultra-expert");
+    const nvidiaFastQuota = checkDailyQuota(req.user, "nvidia-fast");
 
     logger.debug("[USAGE API] Quota consultada", {
       userId: req.user.id,
-      ultraExpert: ultraExpertQuota
+      ultraExpert: ultraExpertQuota,
+      nvidiaFast: nvidiaFastQuota
     });
 
     res.json({
       success: true,
       data: {
-        ultraExpert: ultraExpertQuota
+        ultraExpert: ultraExpertQuota,
+        nvidiaFast: nvidiaFastQuota
       }
     });
   })

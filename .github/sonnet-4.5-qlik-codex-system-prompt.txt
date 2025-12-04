@@ -128,7 +128,7 @@ server/src/
 
 web/src/
   pages/        # LandingPage, OptimizerPageV2
-  components/   # DiffViewer, ResultPanel, LoadAdminPanel
+  components/   # ConsultancyDocumentViewer, ScriptAnalysisInfo, UserMenu
   api/          # Typed fetch clients
   hooks/        # useOptimizationProgress
 ```

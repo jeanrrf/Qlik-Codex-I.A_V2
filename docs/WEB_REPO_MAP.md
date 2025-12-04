@@ -28,9 +28,9 @@ src/
 │   └── sessionClient.ts    # Gerenciamento de sessão
 │
 ├── components/             # Componentes Reutilizáveis
-│   ├── ConsultancyDocumentViewer.tsx  # 📄 Renderizador do relatório final (Markdown + Mermaid)
-│   ├── MermaidDiagram.tsx             # 📊 Renderizador de diagramas
+│   ├── ConsultancyDocumentViewer.tsx  # 📄 Renderizador do relatório final (Markdown + Mermaid inline)
 │   ├── QlikFormatterTool.tsx          # 🛠️ Ferramenta isolada de formatação
+│   ├── ScriptAnalysisInfo.tsx         # 📊 Painel compacto de métricas
 │   └── UserMenu.tsx                   # 👤 Menu de perfil/logout
 │
 ├── constants/
@@ -96,7 +96,7 @@ A nova interface "Pro". Substituiu a antiga V2.
 O visualizador rico do resultado.
 - **Features**:
     - Renderiza Markdown (ReactMarkdown).
-    - Renderiza Diagramas Mermaid (MermaidDiagram).
+    - Renderiza diagramas Mermaid direto via mermaid.js.
     - Syntax Highlighting para blocos de código Qlik.
     - Botões de Download/Copy.
 

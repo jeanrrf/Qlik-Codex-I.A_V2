@@ -9,7 +9,7 @@ Interface web moderna para o otimizador de scripts Qlik.
 
 ## Estrutura
 - `src/pages`: Páginas principais (Landing, OptimizerV2)
-- `src/components`: Componentes reutilizáveis (ResultPanel, LoadAdminPanel, etc.)
+- `src/components`: Componentes reutilizáveis (ConsultancyDocumentViewer, ScriptAnalysisInfo, etc.)
 - `src/hooks`: Hooks customizados (useSystemValidation, useOptimizationProgress)
 - `src/types`: Definições de tipos compartilhados com o backend
 

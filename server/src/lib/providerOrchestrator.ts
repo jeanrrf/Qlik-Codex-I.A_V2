@@ -1,10 +1,10 @@
 /**
  * Orquestrador de Rotação de Provedores LLM
  *
- * Regras:
- * 1) Tenta Gemini 2.5 Flash
- * 2) Se falhar, tenta Gemini 2.0 Flash
- * 3) Se falhar, tenta NVIDIA (modelo ~500B)
+ * Regras atuais:
+ * 1) Gemini 2.5 Flash
+ * 2) Gemini 2.0 Flash (fallback)
+ * 3) NVIDIA (modelo grande ~500B) se disponível
  */
 
 import { logger } from "./logger";
@@ -69,13 +69,13 @@ export class ProviderOrchestrator {
 
     if (estimatedTokens > 50000) {
       adjustedTimeout = Math.min(timeout * 2, 300000); // Max 5 min
-      logger.info(`⏱️ Timeout ajustado: ${timeout}ms → ${adjustedTimeout}ms (prompt grande: ${estimatedTokens.toLocaleString()} tokens)`);
+      logger.info(`Timeout ajustado: ${timeout}ms -> ${adjustedTimeout}ms (prompt grande: ${estimatedTokens.toLocaleString()} tokens)`);
     } else if (estimatedTokens > 25000) {
       adjustedTimeout = Math.min(timeout * 1.5, 240000); // Max 4 min
-      logger.info(`⏱️ Timeout ajustado: ${timeout}ms → ${adjustedTimeout}ms (prompt médio-grande: ${estimatedTokens.toLocaleString()} tokens)`);
+      logger.info(`Timeout ajustado: ${timeout}ms -> ${adjustedTimeout}ms (prompt medio-grande: ${estimatedTokens.toLocaleString()} tokens)`);
     } else if (estimatedTokens < 10000) {
       adjustedTimeout = Math.max(timeout * 0.8, 60000); // Min 60s
-      logger.info(`⏱️ Timeout otimizado: ${timeout}ms → ${adjustedTimeout}ms (prompt compacto: ${estimatedTokens.toLocaleString()} tokens)`);
+      logger.info(`Timeout otimizado: ${timeout}ms -> ${adjustedTimeout}ms (prompt compacto: ${estimatedTokens.toLocaleString()} tokens)`);
     }
 
     logger.info("Iniciando rotação de provedores", {
@@ -105,7 +105,7 @@ export class ProviderOrchestrator {
       const provider = this.providers.get(plan.provider);
 
       if (!provider || !provider.isAvailable()) {
-        logger.warn("Provedor indisponível - pulando", {
+        logger.warn("Provedor indisponivel - pulando", {
           stepId,
           provider: plan.provider,
           model: plan.model,
@@ -117,7 +117,7 @@ export class ProviderOrchestrator {
       attemptCount++;
       usedProviders.add(plan.provider);
 
-      logger.info("🔄 Tentando provedor", {
+      logger.info("Tentando provedor", {
         stepId,
         attempt: `${attemptCount}/${this.rotationConfig.maxAttemptsPerStep}`,
         provider: plan.provider,
@@ -165,8 +165,8 @@ export class ProviderOrchestrator {
           };
         }
 
-        const failIcon = attemptResult.timedOut ? "⏳" : "⚠️";
-        logger.warn(`${failIcon} Provedor falhou, tentando próximo`, {
+        const failIcon = attemptResult.timedOut ? "[timeout]" : "[falha]";
+        logger.warn(`${failIcon} Provedor falhou, tentando proximo`, {
           stepId,
           provider: plan.provider,
           model: plan.model,
@@ -179,7 +179,7 @@ export class ProviderOrchestrator {
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
 
-        logger.error("Erro crítico ao chamar provedor", {
+        logger.error("Erro critico ao chamar provedor", {
           stepId,
           provider: plan.provider,
           model: plan.model,
@@ -201,7 +201,6 @@ export class ProviderOrchestrator {
       }
     }
 
-    // Fallback: todas as tentativas falharam
     const tested = stepAttempts.map(a => `${a.provider}:${a.model}`).join(", ") || "nenhum";
     const fallbackReason = `Todas as ${attemptCount} tentativas falharam. Provedores testados: ${tested}`;
 
@@ -241,39 +240,37 @@ export class ProviderOrchestrator {
           success: false,
           provider: providerName,
           model: modelOverride || "unavailable",
-          error: `${providerName} provider não disponível (API key ausente?)`,
+          error: `${providerName} provider nao disponivel (API key ausente?)`,
           duration: 0,
           timedOut: false
         };
       }
 
-      // Cria promise de timeout
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error("TIMEOUT")), timeout);
       });
 
       // Avisos de longa duração
       warningTimer = setTimeout(() => {
-        logger.warn("⏳ Tarefa ainda em execução...", {
+        logger.warn("Tarefa ainda em execucao...", {
           provider: providerName,
           model: modelOverride,
           label,
           elapsed: "60 segundos",
-          timeout: `${Math.round(timeout / 60000)} minutos máximo`
+          timeout: `${Math.round(timeout / 60000)} minutos maximo`
         });
       }, 60000);
 
       criticalTimer = setTimeout(() => {
-        logger.warn("⚠️ Tarefa próxima do timeout!", {
+        logger.warn("Tarefa proxima do timeout!", {
           provider: providerName,
           model: modelOverride,
           label,
           elapsed: "120 segundos",
-          remainingTime: `${Math.round((timeout - 120000) / 1000)} segundos até timeout`
+          remainingTime: `${Math.round((timeout - 120000) / 1000)} segundos ate timeout`
         });
       }, 120000);
 
-      // Chamada principal
       const callPromise = provider.generateStructuredJson(prompt, {
         model: modelOverride
       });
@@ -305,30 +302,21 @@ export class ProviderOrchestrator {
         success: false,
         provider: providerName,
         model: modelOverride || "failed",
-        error: timedOut ? `Timeout após ${timeout}ms` : errorMessage,
+        error: timedOut ? `Timeout apos ${timeout}ms` : errorMessage,
         duration,
         timedOut
       };
     }
   }
 
-  /**
-   * Retorna histórico de tentativas
-   */
   getAttemptHistory(): ProviderAttempt[] {
     return [...this.attemptHistory];
   }
 
-  /**
-   * Limpa histórico de tentativas
-   */
   clearHistory(): void {
     this.attemptHistory = [];
   }
 
-  /**
-   * Estatísticas agregadas
-   */
   getStats(): {
     totalAttempts: number;
     successfulAttempts: number;
@@ -370,16 +358,10 @@ export class ProviderOrchestrator {
   }
 }
 
-/**
- * Factory para criar orquestrador com configurações padrão ou customizadas
- */
 export function createOrchestrator(
   configOverride?: Partial<ProviderRotationConfig>
 ): ProviderOrchestrator {
   return new ProviderOrchestrator(configOverride);
 }
 
-/**
- * Instância singleton para uso geral
- */
 export const defaultOrchestrator = new ProviderOrchestrator();

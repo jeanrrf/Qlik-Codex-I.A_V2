@@ -14,7 +14,7 @@ export interface SubStepExecution {
   currentRunningTime?: number; // Tempo em tempo real da tarefa em execução (ms)
 }
 
-export type OptimizeMode = "ultra-expert";
+export type OptimizeMode = "ultra-expert" | "nvidia-fast";
 
 export type LLMProviderName = "ainex" | "google" | "nvidia";
 

@@ -168,6 +168,7 @@ export function getUserUsageStats(userId: string): {
   last7days: number;
   last30days: number;
   ultraExpertModeCount: number;
+  nvidiaFastModeCount: number;
 } {
   const db = getSqliteDb();
 
@@ -207,11 +208,18 @@ export function getUserUsageStats(userId: string): {
     `);
     const ultraExpertCount = (stmtUltraExpert.get(userId) as { count: number }).count;
 
+    const stmtNvidiaFast = db.prepare(`
+      SELECT COUNT(*) as count FROM user_daily_usage
+      WHERE user_id = ? AND mode = 'nvidia-fast'
+    `);
+    const nvidiaFastCount = (stmtNvidiaFast.get(userId) as { count: number }).count;
+
     return {
       last24h: count24h,
       last7days: count7d,
       last30days: count30d,
-      ultraExpertModeCount: ultraExpertCount
+      ultraExpertModeCount: ultraExpertCount,
+      nvidiaFastModeCount: nvidiaFastCount
     };
   } catch (err) {
     logger.error("[QUOTA] Erro ao obter estatísticas de uso", { error: err, userId });
@@ -219,7 +227,8 @@ export function getUserUsageStats(userId: string): {
       last24h: 0,
       last7days: 0,
       last30days: 0,
-      ultraExpertModeCount: 0
+      ultraExpertModeCount: 0,
+      nvidiaFastModeCount: 0
     };
   }
 }

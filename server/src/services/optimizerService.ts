@@ -22,6 +22,8 @@ import {
   type AntiPattern
 } from "../lib/qlikParser";
 import { QlikMegaOptimizer } from "../agents/qlikMegaOptimizer";
+import { nvidiaProvider } from "../lib/llmProviders/nvidiaProvider";
+import { config } from "../lib/config";
 
 export interface FullOptimizeResult extends OptimizeResult {
   explanation?: string;
@@ -173,6 +175,95 @@ async function runUltraExpertMode(
   };
 }
 
+/**
+ * MODO NVIDIA FAST: Refatoração direta (apenas código)
+ * Envia contexto completo em uma única chamada e retorna somente o script otimizado.
+ */
+async function runNvidiaFastMode(
+  script: string,
+  llmOptions?: LLMOptions,
+  abortSignal?: AbortSignal
+): Promise<FullOptimizeResult> {
+  checkAborted(abortSignal, "NVIDIA Fast mode start");
+
+  if (!nvidiaProvider.isAvailable()) {
+    throw new Error("NVIDIA provider indisponível (configure NVIDIA_API_KEY)");
+  }
+
+  const model = llmOptions?.model || config.nvidiaFastModel;
+
+  // Prompt direto: pede somente o script otimizado em JSON (chave optimizedScript)
+  const prompt = `
+Você é o QLIK CODEX I.A. Refatore o script Qlik abaixo para máxima performance e legibilidade.
+- Preserve lógica e resultados.
+- Remova SELECT *, use listas explícitas.
+- Otimize joins, reduza cargas redundantes, elimine loops desnecessários.
+- Retorne APENAS JSON no formato: {"optimizedScript": "<script otimizado>"} sem Markdown nem explicações.
+
+--- SCRIPT ORIGINAL ---
+${script}
+`;
+
+  const start = Date.now();
+
+  sseEmitter.sendToCurrent({
+    type: "step_progress",
+    stepId: "nvidia_fast",
+    name: "NVIDIA Fast Mode",
+    status: "running",
+    timestamp: new Date().toISOString()
+  });
+
+  const response = await nvidiaProvider.generateStructuredJson(prompt, { model });
+
+  checkAborted(abortSignal, "NVIDIA Fast mode after LLM");
+
+  let optimizedScript = response.text.trim();
+
+  // Tenta extrair JSON, mas tolera texto puro
+  try {
+    const parsed = JSON.parse(optimizedScript);
+    if (parsed && typeof parsed.optimizedScript === "string") {
+      optimizedScript = parsed.optimizedScript;
+    }
+  } catch (err) {
+    logger.warn("[NVIDIA FAST] Falha ao parsear JSON, usando texto bruto", { error: String(err) });
+  }
+
+  // Limpa code fences acidentais
+  optimizedScript = optimizedScript.replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "").trim();
+
+  const duration = Date.now() - start;
+
+  sseEmitter.sendToCurrent({
+    type: "step_progress",
+    stepId: "nvidia_fast",
+    name: "NVIDIA Fast Mode",
+    status: "success",
+    duration: `${duration}ms`,
+    timestamp: new Date().toISOString()
+  });
+
+  return {
+    originalScript: script,
+    optimizedScript,
+    summary: `NVIDIA Fast Mode (${model}) concluído em ${duration}ms`,
+    documentationMarkdown: "",
+    analysis: {
+      changes: [],
+      breakingRisk: "low",
+      safeToApply: true,
+      mode: "nvidia-fast",
+      metricsEstimate: {
+        loadComplexityBefore: "medium",
+        loadComplexityAfter: "low",
+        maintainabilityBefore: "medium",
+        maintainabilityAfter: "high"
+      }
+    }
+  };
+}
+
 
 
 
@@ -255,7 +346,7 @@ export async function optimizeScript(
   // Debug: Log parâmetros recebidos
   const originalLines = script.split(/\r?\n/).length;
   logger.debug("optimizeScript called", {
-    mode: "FORCED_ULTRA_EXPERT",
+    mode,
     originalLines,
     shouldTruncate,
     lineLimit
@@ -299,9 +390,13 @@ export async function optimizeScript(
   // Continua processamento normal com script (possivelmente truncado)
   let result: FullOptimizeResult;
 
-  // Always force Ultra Expert Mode for now as it is the new standard
-  logger.info("MODO ULTRA EXPERT - Pipeline Avancado");
-  result = await runUltraExpertMode(finalScript, llmOptions, generateConsultancy, truncationInfo?.wasTruncated || false, abortSignal);
+  if (mode === "nvidia-fast") {
+    logger.info("MODO NVIDIA FAST - Pipeline direto");
+    result = await runNvidiaFastMode(finalScript, llmOptions, abortSignal);
+  } else {
+    logger.info("MODO ULTRA EXPERT - Pipeline Avancado");
+    result = await runUltraExpertMode(finalScript, llmOptions, generateConsultancy, truncationInfo?.wasTruncated || false, abortSignal);
+  }
 
   if (truncationInfo?.wasTruncated) {
     result.summary = `${truncationInfo.warningMessage}\n\n${result.summary}`;

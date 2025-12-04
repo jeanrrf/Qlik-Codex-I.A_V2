@@ -26,8 +26,8 @@ export const config = {
   nvidiaModel: process.env.NVIDIA_MODEL_NAME || "moonshotai/kimi-k2-instruct",  // Kimi K2 - 1T MoE model
   // Fallback NVIDIA (modelo ~500B, ex: Llama 3.1 405B na NIM)
   nvidiaFallbackModel: process.env.NVIDIA_FALLBACK_MODEL_NAME || "meta/llama-3.1-405b-instruct",
-  // Modo rápido NVIDIA (modelo grande, priorizando velocidade em refatoração direta)
-  nvidiaFastModel: process.env.NVIDIA_FAST_MODEL_NAME || "meta/llama-3.1-70b-instruct",
+  // Modo rápido NVIDIA (modelo >100B por padrão; ajuste via env para variantes mais leves/rápidas)
+  nvidiaFastModel: process.env.NVIDIA_FAST_MODEL_NAME || "meta/llama-3.1-405b-instruct",
   llmProviders,
   databaseUrl: process.env.DATABASE_URL || "",
   version: APP_VERSION,
