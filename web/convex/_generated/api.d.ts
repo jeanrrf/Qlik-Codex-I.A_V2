@@ -9,9 +9,12 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as contact from "../contact.js";
+import type * as formatter from "../formatter.js";
 import type * as history from "../history.js";
 import type * as optimizer from "../optimizer.js";
 import type * as sessions from "../sessions.js";
+import type * as validation from "../validation.js";
 
 import type {
   ApiFromModules,
@@ -21,9 +24,12 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  contact: typeof contact;
+  formatter: typeof formatter;
   history: typeof history;
   optimizer: typeof optimizer;
   sessions: typeof sessions;
+  validation: typeof validation;
 }>;
 
 /**

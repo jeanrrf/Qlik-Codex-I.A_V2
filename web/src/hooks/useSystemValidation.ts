@@ -1,6 +1,8 @@
 // web/src/hooks/useSystemValidation.ts
 import { useState, useCallback, useRef, useEffect } from "react";
-import { API_BASE_URL } from "../lib/config";
+import { useAction } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { API_BASE_URL, USE_CONVEX } from "../lib/config";
 
 export interface ValidationStage {
   id: string;
@@ -70,6 +72,10 @@ export function useSystemValidation(): UseSystemValidationReturn {
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // Convex actions
+  const convexValidateSystem = useAction(api.validation.validateSystem);
+  const convexQuickValidate = useAction(api.validation.quickValidate);
+
   const validate = useCallback(async (): Promise<ValidationResult | null> => {
     // Cancela validação anterior se existir
     if (abortControllerRef.current) {
@@ -105,18 +111,34 @@ export function useSystemValidation(): UseSystemValidationReturn {
     }, 200);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/validate/system`, {
-        method: "GET",
-        signal: abortControllerRef.current.signal
-      });
+      let data: ValidationResult;
 
-      clearInterval(progressInterval);
+      if (USE_CONVEX) {
+        // Usar Convex
+        const convexResult = await convexValidateSystem();
+        data = {
+          ...convexResult,
+          systemInfo: {
+            ...convexResult.systemInfo,
+            uptime: 0,
+            memoryUsage: 0
+          }
+        };
+      } else {
+        // Usar Express
+        const response = await fetch(`${API_BASE_URL}/api/validate/system`, {
+          method: "GET",
+          signal: abortControllerRef.current.signal
+        });
 
-      if (!response.ok) {
-        throw new Error(`Falha na validação: ${response.status}`);
+        if (!response.ok) {
+          throw new Error(`Falha na validação: ${response.status}`);
+        }
+
+        data = await response.json();
       }
 
-      const data: ValidationResult = await response.json();
+      clearInterval(progressInterval);
 
       setResult(data);
       setIsSystemReady(data.success);
@@ -140,28 +162,37 @@ export function useSystemValidation(): UseSystemValidationReturn {
     } finally {
       setIsValidating(false);
     }
-  }, []);
+  }, [convexValidateSystem]);
 
   const quickValidate = useCallback(async (): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/validate/quick`, {
-        method: "GET"
-      });
+      if (USE_CONVEX) {
+        // Usar Convex
+        const data = await convexQuickValidate();
+        const isReady = data.success === true;
+        setIsSystemReady(isReady);
+        return isReady;
+      } else {
+        // Usar Express
+        const response = await fetch(`${API_BASE_URL}/api/validate/quick`, {
+          method: "GET"
+        });
 
-      if (!response.ok) {
-        setIsSystemReady(false);
-        return false;
+        if (!response.ok) {
+          setIsSystemReady(false);
+          return false;
+        }
+
+        const data = await response.json();
+        const isReady = data.success === true;
+        setIsSystemReady(isReady);
+        return isReady;
       }
-
-      const data = await response.json();
-      const isReady = data.success === true;
-      setIsSystemReady(isReady);
-      return isReady;
     } catch {
       setIsSystemReady(false);
       return false;
     }
-  }, []);
+  }, [convexQuickValidate]);
 
   // Cleanup ao desmontar
   useEffect(() => {

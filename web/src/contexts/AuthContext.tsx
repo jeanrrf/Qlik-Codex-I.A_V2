@@ -1,17 +1,59 @@
 /**
  * Authentication Context
- * Gerencia estado de autenticação globalmente no frontend (Convex Edition)
+ * Gerencia estado de autenticação e cotas globalmente (Convex Edition)
  */
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { useMutation } from "convex/react";
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { Id } from "../../convex/_generated/dataModel";
 
-import { User, AuthContextValue, AuthState } from "../types/auth";
+// ============ TYPES ============
+
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: "free" | "premium" | "owner";
+  avatarUrl?: string;
+}
+
+interface Quota {
+  optimizations: { remaining: number; limit: number };
+  formats: { remaining: number; limit: number };
+  maxLines: number;
+  resetAt?: string;
+  isUnlimited?: boolean;
+}
+
+interface AuthState {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  error: string | null;
+  quota: Quota | null;
+}
+
+interface AuthContextValue extends AuthState {
+  // Ações de login
+  login: (token: string) => Promise<void>;
+  loginWithEmail: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name: string) => Promise<void>;
+  loginWithGoogle: (googleData?: { googleId: string; email: string; name: string; avatarUrl?: string }) => Promise<void>;
+  logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
+
+  // Helpers de quota
+  canOptimize: (linesCount?: number) => boolean;
+  canFormat: () => boolean;
+  isOwner: boolean;
+  consumeOptimization: () => Promise<void>;
+  consumeFormat: () => Promise<void>;
+}
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-// Chave para persistir auth no localStorage
+// Storage key
 const AUTH_STORAGE_KEY = "qlik-codex-auth";
 
 interface AuthProviderProps {
@@ -23,32 +65,61 @@ export function AuthProvider({ children }: AuthProviderProps) {
     user: null,
     isAuthenticated: false,
     isLoading: true,
-    error: null
+    error: null,
+    quota: null,
   });
 
+  // Convex mutations
   const loginWithTokenMutation = useMutation(api.auth.loginWithToken);
+  const loginEmailMutation = useMutation(api.auth.loginWithEmail);
+  const registerMutation = useMutation(api.auth.registerWithEmail);
+  const loginGoogleMutation = useMutation(api.auth.loginWithGoogle);
+  const consumeQuotaMutation = useMutation(api.auth.consumeQuota);
 
-  /**
-   * Verifica autenticação ao carregar a aplicação (via localStorage)
-   */
+  // Query para quota (executa quando tem userId)
+  const userId = state.user?.id as Id<"users"> | undefined;
+  const quotaData = useQuery(
+    api.auth.getUserQuota,
+    userId ? { userId } : "skip"
+  );
+
+  // Atualizar quota quando dados chegarem
+  useEffect(() => {
+    if (quotaData) {
+      setState((prev) => ({
+        ...prev,
+        quota: {
+          optimizations: quotaData.optimizations,
+          formats: quotaData.formats,
+          maxLines: quotaData.maxLines,
+          resetAt: quotaData.resetAt,
+          isUnlimited: quotaData.isUnlimited,
+        },
+      }));
+    }
+  }, [quotaData]);
+
+  // Inicializar do localStorage
   useEffect(() => {
     const initAuth = () => {
       try {
         const stored = localStorage.getItem(AUTH_STORAGE_KEY);
         if (stored) {
-          const userData = JSON.parse(stored);
+          const userData = JSON.parse(stored) as User;
           setState({
-            user: userData as User,
+            user: userData,
             isAuthenticated: true,
             isLoading: false,
-            error: null
+            error: null,
+            quota: null,
           });
         } else {
           setState({
             user: null,
             isAuthenticated: false,
             isLoading: false,
-            error: null
+            error: null,
+            quota: null,
           });
         }
       } catch (err) {
@@ -57,90 +128,223 @@ export function AuthProvider({ children }: AuthProviderProps) {
           user: null,
           isAuthenticated: false,
           isLoading: false,
-          error: null
+          error: null,
+          quota: null,
         });
       }
     };
-
     initAuth();
   }, []);
 
-  /**
-   * Login com owner token (bypass OAuth)
-   */
-  const login = async (token: string) => {
+  // ============ LOGIN METHODS ============
+
+  const login = useCallback(async (token: string) => {
+    setState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
-      setState((prev) => ({ ...prev, isLoading: true, error: null }));
-
       const response = await loginWithTokenMutation({ token });
-
-      const user = response.user as User;
-
-      // Persistir no localStorage
+      const user: User = {
+        id: response.user.id as string,
+        email: response.user.email,
+        name: response.user.name,
+        role: response.user.role as "free" | "premium" | "owner",
+      };
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-
       setState({
         user,
         isAuthenticated: true,
         isLoading: false,
-        error: null
+        error: null,
+        quota: null,
       });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Login failed";
-      setState({
-        user: null,
-        isAuthenticated: false,
+      setState((prev) => ({
+        ...prev,
         isLoading: false,
-        error: errorMessage
-      });
+        error: errorMessage,
+      }));
       throw err;
     }
-  };
+  }, [loginWithTokenMutation]);
 
-  /**
-   * Login com Google OAuth (não suportado no Convex free - usar token)
-   */
-  const loginWithGoogle = async () => {
-    setState((prev) => ({
-      ...prev,
-      isLoading: false,
-      error: "Google OAuth não disponível. Use o token de acesso."
-    }));
-  };
+  const loginWithEmail = useCallback(async (email: string, password: string) => {
+    setState((prev) => ({ ...prev, isLoading: true, error: null }));
+    try {
+      const response = await loginEmailMutation({ email, password });
+      const user: User = {
+        id: response.user.id as string,
+        email: response.user.email,
+        name: response.user.name,
+        role: response.user.role as "free" | "premium" | "owner",
+      };
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+      setState({
+        user,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+        quota: null,
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Login failed";
+      setState((prev) => ({
+        ...prev,
+        isLoading: false,
+        error: errorMessage,
+      }));
+      throw err;
+    }
+  }, [loginEmailMutation]);
 
-  /**
-   * Logout
-   */
-  const logout = async () => {
+  const register = useCallback(async (email: string, password: string, name: string) => {
+    setState((prev) => ({ ...prev, isLoading: true, error: null }));
+    try {
+      const response = await registerMutation({ email, password, name });
+      const user: User = {
+        id: response.user.id as string,
+        email: response.user.email,
+        name: response.user.name,
+        role: response.user.role as "free" | "premium" | "owner",
+      };
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+      setState({
+        user,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+        quota: null,
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Registration failed";
+      setState((prev) => ({
+        ...prev,
+        isLoading: false,
+        error: errorMessage,
+      }));
+      throw err;
+    }
+  }, [registerMutation]);
+
+  const loginWithGoogle = useCallback(async (googleData?: { googleId: string; email: string; name: string; avatarUrl?: string }) => {
+    if (!googleData) {
+      setState((prev) => ({
+        ...prev,
+        error: "Dados do Google não fornecidos",
+      }));
+      return;
+    }
+
+    setState((prev) => ({ ...prev, isLoading: true, error: null }));
+    try {
+      const response = await loginGoogleMutation(googleData);
+      const user: User = {
+        id: response.user.id as string,
+        email: response.user.email,
+        name: response.user.name,
+        role: response.user.role as "free" | "premium" | "owner",
+        avatarUrl: response.user.avatarUrl,
+      };
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+      setState({
+        user,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+        quota: null,
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Google login failed";
+      setState((prev) => ({
+        ...prev,
+        isLoading: false,
+        error: errorMessage,
+      }));
+      throw err;
+    }
+  }, [loginGoogleMutation]);
+
+  const logout = useCallback(async () => {
     localStorage.removeItem(AUTH_STORAGE_KEY);
     setState({
       user: null,
       isAuthenticated: false,
       isLoading: false,
-      error: null
+      error: null,
+      quota: null,
     });
-  };
+  }, []);
 
-  /**
-   * Recarregar dados do usuário
-   */
-  const refreshUser = async () => {
-    // No Convex, dados vêm do localStorage
+  const refreshUser = useCallback(async () => {
     const stored = localStorage.getItem(AUTH_STORAGE_KEY);
     if (stored) {
       setState((prev) => ({
         ...prev,
-        user: JSON.parse(stored) as User
+        user: JSON.parse(stored) as User,
       }));
     }
-  };
+  }, []);
+
+  // ============ QUOTA HELPERS ============
+
+  const canOptimize = useCallback((linesCount?: number): boolean => {
+    if (!state.user) return false;
+    if (state.user.role === "owner") return true;
+    if (!state.quota) return false;
+    if (state.quota.optimizations.remaining <= 0) return false;
+    if (linesCount && linesCount > state.quota.maxLines) return false;
+    return true;
+  }, [state.user, state.quota]);
+
+  const canFormat = useCallback((): boolean => {
+    if (!state.user) return false;
+    if (state.user.role === "owner") return true;
+    if (!state.quota) return false;
+    return state.quota.formats.remaining > 0;
+  }, [state.user, state.quota]);
+
+  const consumeOptimization = useCallback(async () => {
+    if (!state.user) return;
+    try {
+      await consumeQuotaMutation({
+        userId: state.user.id as Id<"users">,
+        action: "optimization",
+        success: true,
+      });
+    } catch (err) {
+      console.error("Failed to consume optimization quota:", err);
+    }
+  }, [state.user, consumeQuotaMutation]);
+
+  const consumeFormat = useCallback(async () => {
+    if (!state.user) return;
+    try {
+      await consumeQuotaMutation({
+        userId: state.user.id as Id<"users">,
+        action: "format",
+        success: true,
+      });
+    } catch (err) {
+      console.error("Failed to consume format quota:", err);
+    }
+  }, [state.user, consumeQuotaMutation]);
+
+  const isOwner = state.user?.role === "owner";
+
+  // ============ VALUE ============
 
   const value: AuthContextValue = {
     ...state,
     login,
+    loginWithEmail,
+    register,
     loginWithGoogle,
     logout,
-    refreshUser
+    refreshUser,
+    canOptimize,
+    canFormat,
+    isOwner,
+    consumeOptimization,
+    consumeFormat,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -151,10 +355,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
  */
 export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext);
-
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
-
   return context;
 }

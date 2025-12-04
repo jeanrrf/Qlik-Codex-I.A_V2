@@ -1,6 +1,8 @@
 ﻿import React, { useState, useRef } from "react";
-
+import { useAction } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { requestQlikFormatterStream } from "../lib/apiClient";
+import { USE_CONVEX } from "../lib/config";
 
 type FormatterSource = "ainex" | "fallback";
 
@@ -38,6 +40,9 @@ const QlikFormatterTool: React.FC<QlikFormatterToolProps> = ({ isOpen, onClose }
   const beforeScrollRef = useRef<HTMLTextAreaElement>(null);
   const afterScrollRef = useRef<HTMLTextAreaElement>(null);
 
+  // Convex action para formatter
+  const convexFormatScript = useAction(api.formatter.formatScript);
+
   const handleFormat = async () => {
     if (!input.trim()) {
       setError("Cole um script Qlik real para aplicar o formatter.");
@@ -54,22 +59,40 @@ const QlikFormatterTool: React.FC<QlikFormatterToolProps> = ({ isOpen, onClose }
     setShowResults(false);
 
     try {
-      const response = await requestQlikFormatterStream({ script: input }, (percent: number, message?: string) => {
-        setProgress(Math.max(0, Math.min(100, Math.round(percent))));
-        setProgressMessage(message ?? null);
-      });
-      setOutput(response.formattedScript);
-      setStyleNotes(response.styleNotes ?? []);
-      setResultMeta({
-        source: response.provider === "fallback" ? "fallback" : "ainex",
-        providerLabel:
-          response.provider === "fallback"
-            ? "Formatter local (fallback)"
-            : "AINEX Super Formatter",
-        model: response.model
-      });
-      setShowResults(true);
-      setActions(response.actions ?? []);
+      if (USE_CONVEX) {
+        // Usar Convex
+        setProgress(50);
+        setProgressMessage("Formatando via Convex...");
+
+        const response = await convexFormatScript({ script: input });
+
+        setOutput(response.formattedScript);
+        setStyleNotes(response.notes ?? []);
+        setResultMeta({
+          source: response.provider === "fallback" ? "fallback" : "ainex",
+          providerLabel: "AINEX Super Formatter (Convex)",
+        });
+        setShowResults(true);
+        setActions(response.actions ?? []);
+      } else {
+        // Usar Express
+        const response = await requestQlikFormatterStream({ script: input }, (percent: number, message?: string) => {
+          setProgress(Math.max(0, Math.min(100, Math.round(percent))));
+          setProgressMessage(message ?? null);
+        });
+        setOutput(response.formattedScript);
+        setStyleNotes(response.styleNotes ?? []);
+        setResultMeta({
+          source: response.provider === "fallback" ? "fallback" : "ainex",
+          providerLabel:
+            response.provider === "fallback"
+              ? "Formatter local (fallback)"
+              : "AINEX Super Formatter",
+          model: response.model
+        });
+        setShowResults(true);
+        setActions(response.actions ?? []);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Falha ao acionar a AINEX.";
       setError(`${message} • Tente novamente.`);

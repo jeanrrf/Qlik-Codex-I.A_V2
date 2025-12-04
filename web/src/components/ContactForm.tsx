@@ -1,6 +1,8 @@
 import React, { useState } from "react";
-
+import { useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { sendContact } from "../api/contactClient";
+import { USE_CONVEX } from "../lib/config";
 import type { ContactRequest, ContactResponse } from "../types/contact";
 
 const initialForm: ContactRequest = {
@@ -15,6 +17,9 @@ const ContactForm: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<ContactResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Convex mutation para contato
+  const convexSendContact = useMutation(api.contact.sendContact);
 
   const handleChange: React.ChangeEventHandler<
     HTMLInputElement | HTMLTextAreaElement
@@ -37,8 +42,24 @@ const ContactForm: React.FC = () => {
         message: form.message?.trim() || undefined
       };
 
-      const resp = await sendContact(payload);
-      setSuccess(resp);
+      if (USE_CONVEX) {
+        // Usar Convex
+        const resp = await convexSendContact({
+          name: payload.name,
+          email: payload.email,
+          subject: payload.company || "Contato via Qlik Codex",
+          message: payload.message || "Solicitação de demo"
+        });
+        setSuccess({
+          success: true,
+          message: resp.message,
+          id: resp.contactId as unknown as string
+        });
+      } else {
+        // Usar Express
+        const resp = await sendContact(payload);
+        setSuccess(resp);
+      }
       setForm(initialForm);
     } catch (err: unknown) {
       const msg =
