@@ -49,12 +49,14 @@ export function useConvexOptimization() {
       percent: session.progressData?.percent ?? 0,
       message: session.progressData?.message ?? "",
       status: session.status as "idle" | "running" | "completed" | "error",
-      result: session.progressData?.result
+      result: session.progressData?.result,
+      stages: session.progressData?.stages ?? []
     }
     : {
       percent: 0,
       message: "",
-      status: "idle"
+      status: "idle",
+      stages: []
     };
 
   const startOptimization = useCallback(

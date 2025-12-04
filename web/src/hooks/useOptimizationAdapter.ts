@@ -24,6 +24,27 @@ export function useOptimizationAdapter() {
 
   // Sincroniza progresso do Convex com os estágios visuais
   useEffect(() => {
+    const stageData = convex.progress.stages ?? [];
+    if (stageData.length > 0) {
+      const clonedStages = stageData.map(stage => ({
+        ...stage,
+        subSteps: stage.subSteps ? stage.subSteps.map(sub => ({ ...sub })) : undefined
+      }));
+      setStages(clonedStages);
+      const runningIndex = clonedStages.findIndex(stage =>
+        stage.status === "running" || stage.subSteps?.some(sub => sub.status === "running")
+      );
+      let fallbackIndex = runningIndex;
+      if (fallbackIndex === -1) {
+        fallbackIndex = clonedStages.findIndex(stage => stage.status !== "success");
+      }
+      if (fallbackIndex === -1) {
+        fallbackIndex = clonedStages.length - 1;
+      }
+      setCurrentStageIndex(Math.max(0, fallbackIndex));
+      return;
+    }
+
     if (convex.progress.status === "idle") {
       setStages(CONVEX_STAGES.map(s => ({ ...s, status: "pending" })));
       setCurrentStageIndex(0);
@@ -56,7 +77,7 @@ export function useOptimizationAdapter() {
     else if (percent < 70) setCurrentStageIndex(1);
     else setCurrentStageIndex(2);
 
-  }, [convex.progress.percent, convex.progress.status]);
+  }, [convex.progress.stages, convex.progress.percent, convex.progress.status]);
 
   const adaptedProgress: OptimizationProgress = {
     stages: stages,
@@ -118,7 +139,18 @@ ${cr.documentation?.diagramMermaid || ""}
 ## Estratégia de Recarga
 ${cr.documentation?.reloadStrategy || ""}
       `,
-      explanation: cr.report?.technicalDetails || ""
+      explanation: cr.report?.technicalDetails || "",
+      consultancyDocument: cr.consultancyReport ? {
+        id: cr.consultancyReport.id,
+        generatedAt: cr.consultancyReport.generatedAt,
+        summary: cr.consultancyReport.summary,
+        metrics: cr.consultancyReport.metrics,
+        criticalIssues: cr.consultancyReport.criticalIssues,
+        topRecommendations: cr.consultancyReport.topRecommendations,
+        overallRisk: cr.consultancyReport.overallRisk,
+        safeToApply: cr.consultancyReport.safeToApply,
+        processingTimeMs: cr.consultancyReport.processingTimeMs
+      } : undefined
     };
   }
 
@@ -147,4 +179,3 @@ ${cr.documentation?.reloadStrategy || ""}
     convexResult: mappedResult
   };
 }
-

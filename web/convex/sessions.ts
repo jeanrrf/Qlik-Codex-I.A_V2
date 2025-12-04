@@ -34,6 +34,7 @@ export const updateProgress = mutation({
     percent: v.number(),
     message: v.string(),
     status: v.optional(v.string()),
+    stages: v.optional(v.any()),
     result: v.optional(v.any()),
   },
   handler: async (ctx, args) => {
@@ -46,6 +47,10 @@ export const updateProgress = mutation({
 
     if (args.status) {
       updateData.status = args.status;
+    }
+
+    if (args.stages) {
+      updateData.progressData.stages = args.stages;
     }
 
     // Se tiver resultado final, poderíamos salvar em outro lugar ou no próprio progressData

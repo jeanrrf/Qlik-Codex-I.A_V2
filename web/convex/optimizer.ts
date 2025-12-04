@@ -5,6 +5,7 @@
 import { action, internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
+import { generateCompactAuditReport } from "./consultancy";
 
 // ==== PROMPTS (Migrado de server/src/agents/megaPrompts.ts) ====
 
@@ -156,6 +157,84 @@ function parseJsonResponse(text: string): any {
   }
 }
 
+type StageStatus = "pending" | "running" | "success" | "error" | "skipped" | "timeout";
+type SubStepStatus = "pending" | "running" | "success" | "error" | "timeout";
+
+interface ProgressSubStep {
+  id: string;
+  name: string;
+  description?: string;
+  status: SubStepStatus;
+  startTime?: string;
+  endTime?: string;
+  duration?: number;
+  error?: string;
+  currentRunningTime?: number;
+}
+
+interface ProgressStage {
+  id: string;
+  name: string;
+  status: StageStatus;
+  startTime?: string;
+  endTime?: string;
+  duration?: number;
+  visible?: boolean;
+  subSteps?: ProgressSubStep[];
+}
+
+const ULTRA_EXPERT_STAGE_TEMPLATE: Omit<ProgressStage, "status" | "startTime" | "endTime" | "duration" | "subSteps"> & { subSteps?: Array<Omit<ProgressSubStep, "status">> }[] = [
+  {
+    id: "ANALYSIS_AND_PLAN",
+    name: "Analysis & Strategy (Fusion)",
+    visible: true,
+    subSteps: [
+      { id: "DEEP_ANALYSIS", name: "Deep Analysis" },
+      { id: "STRATEGIC_PLAN", name: "Strategic Planning" }
+    ]
+  },
+  {
+    id: "CODE_GEN",
+    name: "Code Generation",
+    visible: true,
+    subSteps: [
+      { id: "CODE_GEN", name: "Generating Optimized Qlik Script" }
+    ]
+  },
+  {
+    id: "FINAL_DELIVERY",
+    name: "Final Delivery & Report",
+    visible: true,
+    subSteps: [
+      { id: "FINAL_DELIVERY", name: "Validating, Documenting & Reporting" }
+    ]
+  }
+];
+
+function createInitialStages(): ProgressStage[] {
+  return ULTRA_EXPERT_STAGE_TEMPLATE.map(stage => ({
+    id: stage.id,
+    name: stage.name,
+    visible: stage.visible,
+    status: "pending",
+    subSteps: stage.subSteps?.map(sub => ({
+      ...sub,
+      status: "pending" as SubStepStatus
+    }))
+  }));
+}
+
+function calculateStageStatus(subSteps: ProgressSubStep[]): StageStatus {
+  const allCompleted = subSteps.every(s => s.status === "success");
+  const hasError = subSteps.some(s => s.status === "error");
+  const hasRunning = subSteps.some(s => s.status === "running");
+
+  if (hasError) return "error";
+  if (allCompleted) return "success";
+  if (hasRunning) return "running";
+  return "pending";
+}
+
 // ==== MAIN ACTION ====
 
 export const optimizeScript = action({
@@ -181,17 +260,115 @@ export const optimizeScript = action({
       throw new Error("GEMINI_API_KEY not configured in Convex environment variables");
     }
 
+    let stageStates = createInitialStages();
+    const subStepStartTimes = new Map<string, number>();
+
+    const getStageSnapshot = (): ProgressStage[] => {
+      const now = Date.now();
+      return stageStates.map(stage => ({
+        ...stage,
+        subSteps: stage.subSteps?.map(sub => {
+          if (sub.status === "running" && subStepStartTimes.has(sub.id)) {
+            return { ...sub, currentRunningTime: now - subStepStartTimes.get(sub.id)! };
+          }
+          return sub;
+        })
+      }));
+    };
+
+    const setSubStepStatus = (stageId: string, subStepId: string, status: SubStepStatus, errorMessage?: string) => {
+      const now = Date.now();
+      stageStates = stageStates.map(stage => {
+        if (stage.id !== stageId) return stage;
+        const updatedSubSteps = stage.subSteps?.map(sub => {
+          if (sub.id !== subStepId) return sub;
+          const next: ProgressSubStep = { ...sub, status };
+          if (status === "running") {
+            subStepStartTimes.set(subStepId, now);
+            next.startTime = new Date(now).toISOString();
+            delete next.endTime;
+            delete next.duration;
+            delete next.error;
+          } else {
+            const start = subStepStartTimes.get(subStepId) ?? now;
+            const duration = now - start;
+            next.duration = duration;
+            next.endTime = new Date(now).toISOString();
+            subStepStartTimes.delete(subStepId);
+            if (status === "error") {
+              next.error = errorMessage;
+            }
+          }
+          return next;
+        }) || [];
+        const stageStatus = updatedSubSteps.length ? calculateStageStatus(updatedSubSteps) : stage.status;
+        const updatedStage: ProgressStage = {
+          ...stage,
+          subSteps: updatedSubSteps,
+          status: stageStatus,
+          duration: updatedSubSteps.reduce((sum, step) => sum + (step.duration || 0), 0)
+        };
+        if (stageStatus === "running" && !updatedStage.startTime) {
+          updatedStage.startTime = new Date(now).toISOString();
+          updatedStage.endTime = undefined;
+        }
+        if ((stageStatus === "success" || stageStatus === "error" || stageStatus === "timeout") && updatedStage.startTime) {
+          updatedStage.endTime = new Date(now).toISOString();
+        }
+        return updatedStage;
+      });
+    };
+
+    const markAllStagesAsFailed = (errorMessage: string) => {
+      const now = Date.now();
+      stageStates = stageStates.map(stage => {
+        const updatedSubSteps = stage.subSteps?.map(sub => {
+          if (sub.status === "success") return sub;
+          const start = subStepStartTimes.get(sub.id) ?? now;
+          const duration = sub.duration ?? now - start;
+          subStepStartTimes.delete(sub.id);
+          return {
+            ...sub,
+            status: "error",
+            duration,
+            endTime: new Date(now).toISOString(),
+            error: sub.error || errorMessage
+          };
+        }) || [];
+        return {
+          ...stage,
+          status: stage.status === "success" ? "success" : "error",
+          subSteps: updatedSubSteps,
+          duration: updatedSubSteps.reduce((sum, step) => sum + (step.duration || 0), 0),
+          endTime: stage.status === "success" ? stage.endTime : new Date(now).toISOString()
+        };
+      });
+    };
+
+    const sendProgressUpdate = async (
+      percent: number,
+      message: string,
+      status: "running" | "completed" | "error" = "running",
+      resultPayload?: any
+    ) => {
+      const payload: any = {
+        sessionId: args.sessionId,
+        percent,
+        message,
+        status,
+        stages: getStageSnapshot()
+      };
+      if (resultPayload) {
+        payload.result = resultPayload;
+      }
+      await ctx.runMutation(api.sessions.updateProgress, payload);
+    };
+
     try {
-      // Recuperar sessão para obter userId
       const session = await ctx.runQuery(api.sessions.getSession, { sessionId: args.sessionId });
       const userId = session?.userId;
-
-      // ==== STEP 1: ANALYSIS & PLAN ====
-      await ctx.runMutation(api.sessions.updateProgress, {
-        sessionId: args.sessionId,
-        percent: 10,
-        message: "Analisando script e criando plano de otimização..."
-      });
+      setSubStepStatus("ANALYSIS_AND_PLAN", "DEEP_ANALYSIS", "running");
+      await sendProgressUpdate(5, "Analisando script e criando plano de otimização...");
 
       const analysisPrompt = `${MEGA_SYSTEM_PROMPT}\n\n--- ORIGINAL SCRIPT ---\n${script}\n\n--- CURRENT TASK ---\n${TASK_PROMPTS.ANALYSIS_AND_PLAN}`;
       const analysisResponse = await callGemini(analysisPrompt, geminiApiKey);
@@ -199,32 +376,38 @@ export const optimizeScript = action({
 
       const { analysis, plan } = analysisAndPlan;
 
-      await ctx.runMutation(api.sessions.updateProgress, {
-        sessionId: args.sessionId,
-        percent: 40,
-        message: `Análise concluída. Complexidade: ${analysis.complexity}. Iniciando otimização...`
-      });
+      setSubStepStatus("ANALYSIS_AND_PLAN", "DEEP_ANALYSIS", "success");
+      setSubStepStatus("ANALYSIS_AND_PLAN", "STRATEGIC_PLAN", "running");
+      await sendProgressUpdate(30, "Plano estratégico em execução...");
+      setSubStepStatus("ANALYSIS_AND_PLAN", "STRATEGIC_PLAN", "success");
 
-      // ==== STEP 2: CODE_GEN ====
       const contextSummary = `Análise: ${analysis.analysisSummary}. Plano: ${plan.strategyName}.`;
       const codeGenPrompt = `${MEGA_SYSTEM_PROMPT}\n\n--- ORIGINAL SCRIPT ---\n${script}\n\n--- CONTEXT ---\n${contextSummary}\n\n--- CURRENT TASK ---\n${TASK_PROMPTS.CODE_GEN}`;
+
+      setSubStepStatus("CODE_GEN", "CODE_GEN", "running");
+      await sendProgressUpdate(50, "Gerando código otimizado...");
       const codeGenResponse = await callGemini(codeGenPrompt, geminiApiKey);
       const codeGen = parseJsonResponse(codeGenResponse);
+      setSubStepStatus("CODE_GEN", "CODE_GEN", "success");
+      await sendProgressUpdate(65, "Código otimizado gerado. Validando entrega...");
 
-      await ctx.runMutation(api.sessions.updateProgress, {
-        sessionId: args.sessionId,
-        percent: 70,
-        message: "Código otimizado gerado. Finalizando documentação..."
-      });
-
-      // ==== STEP 3: FINAL_DELIVERY ====
       const deliveryPrompt = `${MEGA_SYSTEM_PROMPT}\n\n--- ORIGINAL SCRIPT ---\n${script}\n\n--- OPTIMIZED SCRIPT ---\n${codeGen.optimizedScript}\n\n--- CURRENT TASK ---\n${TASK_PROMPTS.FINAL_DELIVERY}`;
+
+      setSubStepStatus("FINAL_DELIVERY", "FINAL_DELIVERY", "running");
+      await sendProgressUpdate(80, "Documentando e reportando os resultados...");
       const deliveryResponse = await callGemini(deliveryPrompt, geminiApiKey);
       const delivery = parseJsonResponse(deliveryResponse);
+      setSubStepStatus("FINAL_DELIVERY", "FINAL_DELIVERY", "success");
+      await sendProgressUpdate(90, "Preparando resultado final...");
 
       const totalTime = Date.now() - startTime;
 
-      // ==== RESULTADO FINAL ====
+      const consultancyReport = generateCompactAuditReport(
+        script,
+        sanitizeScript(codeGen.optimizedScript || script),
+        plan.riskLevel || "Low"
+      );
+
       const result = {
         originalScript: script,
         optimizedScript: sanitizeScript(codeGen.optimizedScript || script),
@@ -233,21 +416,20 @@ export const optimizeScript = action({
         validation: delivery.validation,
         documentation: delivery.documentation,
         report: delivery.report,
+        consultancyReport,
         metrics: {
           totalTime,
           provider: "gemini"
         }
       };
 
-      await ctx.runMutation(api.sessions.updateProgress, {
-        sessionId: args.sessionId,
-        percent: 100,
-        message: `Otimização concluída em ${Math.round(totalTime / 1000)}s!`,
-        status: "completed",
+      await sendProgressUpdate(
+        100,
+        `Otimização concluída em ${Math.round(totalTime / 1000)}s!`,
+        "completed",
         result
-      });
+      );
 
-      // Salvar no histórico
       await ctx.runMutation(api.history.saveOptimization, {
         userId: userId,
         mode: args.mode,
@@ -264,14 +446,8 @@ export const optimizeScript = action({
 
     } catch (error: any) {
       const errorMessage = error.message || "Erro desconhecido durante otimização";
-
-      await ctx.runMutation(api.sessions.updateProgress, {
-        sessionId: args.sessionId,
-        percent: 0,
-        message: `Erro: ${errorMessage}`,
-        status: "error"
-      });
-
+      markAllStagesAsFailed(errorMessage);
+      await sendProgressUpdate(0, `Erro: ${errorMessage}`, "error");
       throw error;
     }
   },
