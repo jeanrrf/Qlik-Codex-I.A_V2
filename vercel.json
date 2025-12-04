@@ -1,19 +1,9 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "web/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "web/dist"
-      }
-    }
-  ],
-  "buildCommand": "npm run build --prefix web",
-  "installCommand": "npm install --prefix web",
+  "installCommand": "cd web && npm install",
+  "buildCommand": "cd web && npm run build",
   "outputDirectory": "web/dist",
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/.*", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
