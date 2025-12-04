@@ -81,24 +81,30 @@ def get_current_branch():
     except:
         return "main"
 
-def deploy_sequence():
-    print_step("5/5 DEPLOY & SHIP (Opcional)")
+import argparse
+
+def deploy_sequence(auto=False):
+    print_step("5/5 DEPLOY & SHIP")
     
-    print("Deseja realizar o commit e push para producao? (y/n)")
-    choice = input("> ").strip().lower()
-    
-    if choice != 'y':
-        print("Skipping deploy.")
-        return
+    if not auto:
+        print("Deseja realizar o commit e push para producao? (y/n)")
+        choice = input("> ").strip().lower()
+        if choice != 'y':
+            print("Skipping deploy.")
+            return
+    else:
+        print("[AUTO] Iniciando deploy automatico...")
 
     # 1. Git Commit & Push
     branch = get_current_branch()
     print(f"\n[GIT] Branch atual detectada: {branch}")
     
-    print("Digite a mensagem do commit (Enter para 'chore: production build'):")
-    msg = input("> ").strip()
-    if not msg:
-        msg = "chore: production build"
+    msg = "chore: production build (auto)"
+    if not auto:
+        print("Digite a mensagem do commit (Enter para 'chore: production build'):")
+        input_msg = input("> ").strip()
+        if input_msg:
+            msg = input_msg
         
     print("\n[GIT] Adicionando arquivos...")
     run_command("git add .")
@@ -107,24 +113,37 @@ def deploy_sequence():
     # Allow empty commits just in case
     subprocess.run("git commit -m \"" + msg + "\"", shell=True)
     
+    print(f"[GIT] Pulling changes from origin/{branch}...")
+    try:
+        run_command(f"git pull origin {branch}")
+    except:
+        print("[WARN] Git pull failed (maybe no upstream?). Continuing...")
+
     print(f"[GIT] Push para origin/{branch}...")
     run_command(f"git push origin {branch}")
     
-    print("\n[INFO] O push para o Git deve disparar o deploy automatico no Render e Vercel.")
+    print("\n[INFO] O push para o Git deve disparar o deploy automatico no Render.")
     
-    # 2. Vercel CLI (Optional)
-    print("\nDeseja forcar deploy na Vercel via CLI? (y/n)")
-    vercel_choice = input("> ").strip().lower()
+    # 2. Vercel CLI
+    run_vercel = auto
+    if not auto:
+        print("\nDeseja forcar deploy na Vercel via CLI? (y/n)")
+        vercel_choice = input("> ").strip().lower()
+        run_vercel = (vercel_choice == 'y')
     
-    if vercel_choice == 'y':
+    if run_vercel:
         print("[VERCEL] Iniciando deploy de producao...")
-        # Assuming vercel CLI is installed globally or accessible
         try:
+            # Try to use local vercel if available, else global
             run_command("vercel --prod")
         except:
-            print("[WARN] Falha ao rodar 'vercel --prod'. Verifique se a CLI esta instalada.")
+            print("[WARN] Falha ao rodar 'vercel --prod'. Verifique se a CLI esta instalada e logada.")
 
 def main():
+    parser = argparse.ArgumentParser(description="Build and Deploy Qlik Codex I.A")
+    parser.add_argument("--auto", action="store_true", help="Run in non-interactive mode (auto deploy)")
+    args = parser.parse_args()
+
     print("Iniciando build completo do Qlik Codex I.A (Python Script)...")
     
     # Ensure we are in the project root
@@ -141,7 +160,7 @@ def main():
         print("[SUCESSO] Build local completo!")
         
         # Deploy Sequence
-        deploy_sequence()
+        deploy_sequence(auto=args.auto)
         
         print("\n[FIM] Processo concluido.")
         print("Para rodar localmente: cd server && npm start")
