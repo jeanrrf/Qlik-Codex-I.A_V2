@@ -491,7 +491,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
             <div className="brand-logo-gradient" />
             <div className="brand-logo-content">
               <span className="brand-name-text">QLIK CODEX I.A</span>
-              <span className="brand-beta-tag">BETA</span>
+              <span className="brand-beta-tag" style={{ background: 'linear-gradient(90deg, #00f2ff, #00a8ff)', color: '#000' }}>PRO</span>
             </div>
           </div>
         </div>
