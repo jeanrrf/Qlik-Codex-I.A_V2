@@ -6,6 +6,7 @@ import { action, internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 import { generateCompactAuditReport } from "./consultancy";
+import { Buffer } from "buffer";
 
 // ==== PROMPTS (Migrado de server/src/agents/megaPrompts.ts) ====
 
@@ -75,10 +76,11 @@ INSTRUÇÕES:
 
 FORMATO DE SAÍDA:
 {
-  "optimizedScript": "O_SCRIPT_COMPLETO_AQUI",
+  "optimizedScriptBase64": "BASE64_ENCODED_SCRIPT_SEM_QUEBRAS",
   "changesApplied": ["Lista de mudanças..."],
         "completenessCheck": true
 }
+IMPORTANTE: Codifique o script otimizado em Base64 e forneça-o em "optimizedScriptBase64". Evite quebras de linha dentro do valor Base64 e não envie texto adicional fora do objeto JSON para garantir integridade do payload.
 ${JSON_RESPONSE_INSTRUCTIONS}
 `,
 
@@ -150,6 +152,16 @@ function sanitizeScript(text: string): string {
     .replace(/&nbsp;/g, ' ')
     .replace(/class="[^"]*"/g, '')
     .replace(/<\/?>/g, '');
+}
+
+function decodeBase64(value?: string): string | undefined {
+  if (!value) return undefined;
+  try {
+    return Buffer.from(value, "base64").toString("utf-8");
+  } catch (error) {
+    console.error("Base64 decode failed:", error);
+    return undefined;
+  }
 }
 
 function extractBalancedJson(text: string): string | null {
@@ -448,10 +460,12 @@ export const optimizeScript = action({
       await sendProgressUpdate(50, "Gerando código otimizado...");
       const codeGenResponse = await callGemini(codeGenPrompt, geminiApiKey);
       const codeGen = parseJsonResponse(codeGenResponse);
+      const decodedOptimizedScript = decodeBase64(codeGen.optimizedScriptBase64) || codeGen.optimizedScript || "";
+      const optimizedScript = sanitizeScript(decodedOptimizedScript || script);
       setSubStepStatus("CODE_GEN", "CODE_GEN", "success");
       await sendProgressUpdate(65, "Código otimizado gerado. Validando entrega...");
 
-      const deliveryPrompt = `${MEGA_SYSTEM_PROMPT}\n\n--- ORIGINAL SCRIPT ---\n${script}\n\n--- OPTIMIZED SCRIPT ---\n${codeGen.optimizedScript}\n\n--- CURRENT TASK ---\n${TASK_PROMPTS.FINAL_DELIVERY}`;
+      const deliveryPrompt = `${MEGA_SYSTEM_PROMPT}\n\n--- ORIGINAL SCRIPT ---\n${script}\n\n--- OPTIMIZED SCRIPT ---\n${optimizedScript}\n\n--- CURRENT TASK ---\n${TASK_PROMPTS.FINAL_DELIVERY}`;
 
       setSubStepStatus("FINAL_DELIVERY", "FINAL_DELIVERY", "running");
       await sendProgressUpdate(80, "Documentando e reportando os resultados...");
@@ -464,13 +478,13 @@ export const optimizeScript = action({
 
       const consultancyReport = generateCompactAuditReport(
         script,
-        sanitizeScript(codeGen.optimizedScript || script),
+        optimizedScript,
         plan.riskLevel || "Low"
       );
 
       const result = {
         originalScript: script,
-        optimizedScript: sanitizeScript(codeGen.optimizedScript || script),
+        optimizedScript,
         analysis,
         plan,
         validation: delivery.validation,

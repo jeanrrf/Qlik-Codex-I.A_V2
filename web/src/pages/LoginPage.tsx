@@ -4,6 +4,8 @@
 
 import React, { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { useGoogleLogin } from "@react-oauth/google";
+import { jwtDecode } from "jwt-decode";
 
 import "./LoginPage.css";
 
@@ -12,14 +14,34 @@ export function LoginPage() {
   const [ownerToken, setOwnerToken] = useState("");
   const [showTokenInput, setShowTokenInput] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
+  const [googleError, setGoogleError] = useState<string | null>(null);
 
-  const handleGoogleLogin = async () => {
+  const processGoogleCredential = async (credentialResponse: any) => {
+    setGoogleError(null);
+    if (!credentialResponse?.credential) {
+      setGoogleError("Falha ao obter credenciais do Google");
+      return;
+    }
+
     try {
-      await loginWithGoogle();
+      const decoded: any = jwtDecode(credentialResponse.credential);
+      await loginWithGoogle({
+        googleId: decoded.sub,
+        email: decoded.email,
+        name: decoded.name,
+        avatarUrl: decoded.picture,
+      });
     } catch (err) {
       console.error("Google login error:", err);
+      setGoogleError("Falha ao autenticar com o Google");
     }
   };
+
+  const googleLogin = useGoogleLogin({
+    onSuccess: processGoogleCredential,
+    onError: () => setGoogleError("Falha no login com Google"),
+    flow: "implicit",
+  });
 
   const handleTokenLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +85,7 @@ export function LoginPage() {
           {/* Google Login */}
           <button
             className="login-button login-button-google"
-            onClick={handleGoogleLogin}
+            onClick={() => googleLogin()}
             disabled={isLoading}
           >
             <svg className="google-icon" viewBox="0 0 24 24">
@@ -131,6 +153,13 @@ export function LoginPage() {
                 </button>
               </div>
             </form>
+          )}
+
+          {googleError && (
+            <div className="login-error">
+              <span className="error-icon">⚠️</span>
+              {googleError}
+            </div>
           )}
         </div>
 
