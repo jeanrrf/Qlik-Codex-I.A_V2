@@ -4,11 +4,36 @@ import { USE_CONVEX } from "../lib/config";
 import { OptimizeMode, OptimizeScriptApiResponse, OptimizationOptions, OptimizeResult, OptimizeChange, BreakingRisk, MetricsEstimate } from "../types/api";
 import { useState, useEffect } from "react";
 
-// Estágios simulados para o modo Convex (para manter compatibilidade visual)
-const CONVEX_STAGES: OptimizationStage[] = [
-  { id: "analysis", name: "Análise Profunda & Estratégia", status: "pending", visible: true },
-  { id: "optimization", name: "Otimização & Refatoração", status: "pending", visible: true },
-  { id: "validation", name: "Validação & Documentação", status: "pending", visible: true }
+// Sub-steps para modo ULTRA EXPERT (opt_*)
+const ULTRA_EXPERT_STAGES: OptimizationStage[] = [
+  {
+    id: "ANALYSIS_AND_PLAN",
+    name: "Analysis & Strategy (Fusion)",
+    status: "pending",
+    visible: true,
+    subSteps: [
+      { id: "DEEP_ANALYSIS", name: "Deep Analysis", status: "pending" },
+      { id: "STRATEGIC_PLAN", name: "Strategic Planning", status: "pending" }
+    ]
+  },
+  {
+    id: "CODE_GEN",
+    name: "Code Generation",
+    status: "pending",
+    visible: true,
+    subSteps: [
+      { id: "CODE_GEN", name: "Generating Optimized Qlik Script", status: "pending" }
+    ]
+  },
+  {
+    id: "FINAL_DELIVERY",
+    name: "Final Delivery & Report",
+    status: "pending",
+    visible: true,
+    subSteps: [
+      { id: "FINAL_DELIVERY", name: "Validating, Documenting & Reporting", status: "pending" }
+    ]
+  }
 ];
 
 export function useOptimizationAdapter() {
@@ -19,18 +44,24 @@ export function useOptimizationAdapter() {
 
   // Se estiver usando Convex, adapta a interface
   const convex = useConvexOptimization();
-  const [stages, setStages] = useState<OptimizationStage[]>(CONVEX_STAGES);
+  const [stages, setStages] = useState<OptimizationStage[]>(ULTRA_EXPERT_STAGES);
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
 
   // Sincroniza progresso do Convex com os estágios visuais
   useEffect(() => {
     const stageData = convex.progress.stages ?? [];
     if (stageData.length > 0) {
+      // Se o Convex já retorna stages estruturadas, usamos elas
+      // Mas precisamos garantir que elas mapeiem para a estrutura visual esperada
+      // O backend já está emitindo os IDs corretos (ANALYSIS_AND_PLAN, CODE_GEN, FINAL_DELIVERY)
+      // Então podemos usar diretamente, apenas garantindo a estrutura de subSteps
+
       const clonedStages = stageData.map(stage => ({
         ...stage,
         subSteps: stage.subSteps ? stage.subSteps.map(sub => ({ ...sub })) : undefined
       }));
       setStages(clonedStages);
+
       const runningIndex = clonedStages.findIndex(stage =>
         stage.status === "running" || stage.subSteps?.some(sub => sub.status === "running")
       );
@@ -46,31 +77,62 @@ export function useOptimizationAdapter() {
     }
 
     if (convex.progress.status === "idle") {
-      setStages(CONVEX_STAGES.map(s => ({ ...s, status: "pending" })));
+      setStages(ULTRA_EXPERT_STAGES.map(s => ({
+        ...s,
+        status: "pending",
+        subSteps: s.subSteps?.map(sub => ({ ...sub, status: "pending" }))
+      })));
       setCurrentStageIndex(0);
       return;
     }
 
+    // Fallback para quando não temos stages detalhadas do backend ainda (apenas percentual)
+    // Isso acontece nos primeiros milissegundos ou se o backend não enviar stages
     const percent = convex.progress.percent;
 
     setStages(prev => prev.map((stage, index) => {
       let status = stage.status;
+      let subSteps = stage.subSteps ? [...stage.subSteps] : undefined;
 
-      // Lógica simples de mapeamento de progresso para estágios
-      if (index === 0) { // Análise (0-30%)
-        if (percent > 0 && percent < 40) status = "running";
-        if (percent >= 40) status = "success";
-      } else if (index === 1) { // Otimização (40-70%)
-        if (percent >= 40 && percent < 70) status = "running";
-        if (percent >= 70) status = "success";
-      } else if (index === 2) { // Validação (70-100%)
-        if (percent >= 70 && percent < 100) status = "running";
-        if (percent >= 100) status = "success";
+      // Lógica de mapeamento de progresso para estágios ULTRA EXPERT
+      if (index === 0) { // Analysis & Strategy (0-30%)
+        if (percent > 0 && percent < 40) {
+          status = "running";
+          if (subSteps) {
+            if (percent < 15) subSteps[0].status = "running"; else subSteps[0].status = "success";
+            if (percent >= 15) subSteps[1].status = "running";
+          }
+        }
+        if (percent >= 40) {
+          status = "success";
+          if (subSteps) subSteps.forEach(s => s.status = "success");
+        }
+      } else if (index === 1) { // Code Gen (40-70%)
+        if (percent >= 40 && percent < 70) {
+          status = "running";
+          if (subSteps) subSteps[0].status = "running";
+        }
+        if (percent >= 70) {
+          status = "success";
+          if (subSteps) subSteps.forEach(s => s.status = "success");
+        }
+      } else if (index === 2) { // Final Delivery (70-100%)
+        if (percent >= 70 && percent < 100) {
+          status = "running";
+          if (subSteps) subSteps[0].status = "running";
+        }
+        if (percent >= 100) {
+          status = "success";
+          if (subSteps) subSteps.forEach(s => s.status = "success");
+        }
       }
 
-      if (convex.progress.status === "error") status = "error";
+      if (convex.progress.status === "error") {
+        status = "error";
+        if (subSteps) subSteps.forEach(s => { if (s.status === "running") s.status = "error"; });
+      }
 
-      return { ...stage, status: status as any };
+      return { ...stage, status: status as any, subSteps };
     }));
 
     if (percent < 40) setCurrentStageIndex(0);

@@ -417,6 +417,20 @@ export const optimizeScript = action({
         documentation: delivery.documentation,
         report: delivery.report,
         consultancyReport,
+        // Map validation to review format expected by frontend
+        review: {
+          summary: delivery.validation.isValid ? "Aprovado com sucesso" : "Aprovado com ressalvas",
+          changes: codeGen.changesApplied?.map((c: string) => ({
+            category: "structure",
+            area: "Script",
+            impact: c,
+            riskLevel: "low"
+          })) || [],
+          recommended_risk: plan.riskLevel || "low",
+          notes: delivery.validation.issuesFound?.join("\n") || "Nenhum problema crítico encontrado."
+        },
+        // Map report to explanation format expected by frontend
+        explanation: delivery.report.technicalDetails,
         metrics: {
           totalTime,
           provider: "gemini"
