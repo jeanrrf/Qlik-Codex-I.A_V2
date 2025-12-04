@@ -12,7 +12,7 @@ export default defineSchema({
     isActive: v.boolean(),
     // Quotas
     quotaOptimizations: v.optional(v.number()), // Otimizações restantes
-    quotaFormats: v.optional(v.number()),       // Formatações restantes
+    quotaUltraExpert: v.optional(v.number()),   // Execuções Ultra-Expert restantes
     quotaResetAt: v.optional(v.string()),       // Data do próximo reset
   }).index("by_email", ["email"])
     .index("by_google_id", ["googleId"]),

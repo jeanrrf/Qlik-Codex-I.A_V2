@@ -16,23 +16,26 @@ import { v } from "convex/values";
 const OWNER_TOKEN = "2020301jeandasilva";
 const OWNER_EMAIL = "rosso.jeandasilva@gmail.com";
 
-// Limites de cota por tier
-const QUOTA_LIMITS = {
-  free: {
-    optimizations: 5,      // 5 otimizações por dia
-    formats: 20,           // 20 formatações por dia
-    maxLines: 500,         // Máximo de linhas por script
-  },
-  premium: {
-    optimizations: 50,     // 50 otimizações por dia
-    formats: 200,          // 200 formatações por dia
-    maxLines: 5000,        // 5000 linhas
-  },
+// Limites de cota por tier (OFICIAL)
+const RoleUsageLimits = {
   owner: {
-    optimizations: Infinity,
-    formats: Infinity,
-    maxLines: Infinity,
+    optimizationsPerDay: -1, // Ilimitado
+    maxScriptSizeKB: -1,
+    maxScriptLines: -1, // Ilimitado
+    maxConcurrentSessions: -1,
+    enabledModes: ["ultra-expert"],
+    canUseMultipleFiles: true,
+    ultraExpertExecutionsPerDay: -1 // Ilimitado
   },
+  user: {
+    optimizationsPerDay: 4, // FREE TIER: 4 otimizações/dia
+    maxScriptSizeKB: 1000,
+    maxScriptLines: 200, // FREE TIER: 200 linhas base
+    maxConcurrentSessions: 2,
+    enabledModes: ["ultra-expert"], // Apenas ultra-expert
+    canUseMultipleFiles: false, // Apenas 1 arquivo
+    ultraExpertExecutionsPerDay: 1 // 1 execução Ultra Expert POR DIA
+  }
 };
 
 // ============ HELPERS ============
@@ -80,7 +83,18 @@ export const getUser = query({
     const user = await ctx.db.get(args.userId);
     if (!user) return null;
 
-    const limits = QUOTA_LIMITS[user.role as keyof typeof QUOTA_LIMITS] || QUOTA_LIMITS.free;
+    // Map legacy roles or ensure valid role
+    const roleKey = (user.role === "owner" ? "owner" : "user") as keyof typeof RoleUsageLimits;
+    const limits = RoleUsageLimits[roleKey];
+
+    // Calculate remaining quotas
+    // If limit is -1, it's unlimited (Infinity for frontend)
+    const optLimit = limits.optimizationsPerDay === -1 ? Infinity : limits.optimizationsPerDay;
+    const ultraLimit = limits.ultraExpertExecutionsPerDay === -1 ? Infinity : limits.ultraExpertExecutionsPerDay;
+
+    // Current remaining (default to limit if not set)
+    const currentOpt = user.quotaOptimizations ?? (optLimit === Infinity ? 999999 : optLimit);
+    const currentUltra = user.quotaUltraExpert ?? (ultraLimit === Infinity ? 999999 : ultraLimit);
 
     return {
       id: user._id,
@@ -92,16 +106,16 @@ export const getUser = query({
       isActive: user.isActive,
       quota: {
         optimizations: {
-          used: (limits.optimizations === Infinity ? 0 : limits.optimizations) - (user.quotaOptimizations ?? limits.optimizations),
-          remaining: user.quotaOptimizations ?? limits.optimizations,
-          limit: limits.optimizations,
+          used: (optLimit === Infinity ? 0 : optLimit - currentOpt),
+          remaining: currentOpt,
+          limit: optLimit,
         },
-        formats: {
-          used: (limits.formats === Infinity ? 0 : limits.formats) - (user.quotaFormats ?? limits.formats),
-          remaining: user.quotaFormats ?? limits.formats,
-          limit: limits.formats,
+        ultraExpert: {
+          used: (ultraLimit === Infinity ? 0 : ultraLimit - currentUltra),
+          remaining: currentUltra,
+          limit: ultraLimit
         },
-        maxLines: limits.maxLines,
+        maxLines: limits.maxScriptLines === -1 ? Infinity : limits.maxScriptLines,
         resetAt: user.quotaResetAt,
       },
     };
@@ -118,22 +132,26 @@ export const getUserQuota = query({
       throw new Error("Usuário não encontrado");
     }
 
-    const limits = QUOTA_LIMITS[user.role as keyof typeof QUOTA_LIMITS] || QUOTA_LIMITS.free;
+    const roleKey = (user.role === "owner" ? "owner" : "user") as keyof typeof RoleUsageLimits;
+    const limits = RoleUsageLimits[roleKey];
 
     // Verificar se precisa resetar a cota
     const needsReset = shouldResetQuota(user.quotaResetAt);
 
+    const optLimit = limits.optimizationsPerDay === -1 ? Infinity : limits.optimizationsPerDay;
+    const ultraLimit = limits.ultraExpertExecutionsPerDay === -1 ? Infinity : limits.ultraExpertExecutionsPerDay;
+
     return {
       role: user.role,
       optimizations: {
-        remaining: needsReset ? limits.optimizations : (user.quotaOptimizations ?? limits.optimizations),
-        limit: limits.optimizations,
+        remaining: needsReset ? optLimit : (user.quotaOptimizations ?? optLimit),
+        limit: optLimit,
       },
-      formats: {
-        remaining: needsReset ? limits.formats : (user.quotaFormats ?? limits.formats),
-        limit: limits.formats,
+      ultraExpert: {
+        remaining: needsReset ? ultraLimit : (user.quotaUltraExpert ?? ultraLimit),
+        limit: ultraLimit,
       },
-      maxLines: limits.maxLines,
+      maxLines: limits.maxScriptLines === -1 ? Infinity : limits.maxScriptLines,
       resetAt: needsReset ? getQuotaResetDate() : user.quotaResetAt,
       isUnlimited: user.role === "owner",
     };
@@ -366,7 +384,7 @@ export const logout = mutation({
 export const checkQuota = mutation({
   args: {
     userId: v.id("users"),
-    action: v.string(), // "optimization" | "format"
+    action: v.string(), // "optimization" | "format" | "ultra-expert"
     linesCount: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
@@ -375,7 +393,8 @@ export const checkQuota = mutation({
       throw new Error("Usuário não encontrado");
     }
 
-    const limits = QUOTA_LIMITS[user.role as keyof typeof QUOTA_LIMITS] || QUOTA_LIMITS.free;
+    const roleKey = (user.role === "owner" ? "owner" : "user") as keyof typeof RoleUsageLimits;
+    const limits = RoleUsageLimits[roleKey];
 
     // Owner tem cota ilimitada
     if (user.role === "owner") {
@@ -384,28 +403,32 @@ export const checkQuota = mutation({
 
     // Verificar se precisa resetar cotas
     if (shouldResetQuota(user.quotaResetAt)) {
+      const optLimit = limits.optimizationsPerDay === -1 ? undefined : limits.optimizationsPerDay;
+      const ultraLimit = limits.ultraExpertExecutionsPerDay === -1 ? undefined : limits.ultraExpertExecutionsPerDay;
+
       await ctx.db.patch(user._id, {
-        quotaOptimizations: limits.optimizations,
-        quotaFormats: limits.formats,
+        quotaOptimizations: optLimit,
+        quotaUltraExpert: ultraLimit,
         quotaResetAt: getQuotaResetDate(),
       });
-      user.quotaOptimizations = limits.optimizations;
-      user.quotaFormats = limits.formats;
+      user.quotaOptimizations = optLimit;
+      user.quotaUltraExpert = ultraLimit;
     }
 
     // Verificar limite de linhas
-    if (args.linesCount && args.linesCount > limits.maxLines) {
+    const maxLines = limits.maxScriptLines === -1 ? Infinity : limits.maxScriptLines;
+    if (args.linesCount && args.linesCount > maxLines) {
       return {
         allowed: false,
         remaining: 0,
-        reason: `Seu plano permite scripts de até ${limits.maxLines} linhas. Este script tem ${args.linesCount} linhas.`,
+        reason: `Seu plano permite scripts de até ${maxLines} linhas. Este script tem ${args.linesCount} linhas.`,
         upgrade: true,
       };
     }
 
     // Verificar cota do tipo de ação
     if (args.action === "optimization") {
-      const remaining = user.quotaOptimizations ?? limits.optimizations;
+      const remaining = user.quotaOptimizations ?? 0;
       if (remaining <= 0) {
         return {
           allowed: false,
@@ -417,17 +440,17 @@ export const checkQuota = mutation({
       return { allowed: true, remaining };
     }
 
-    if (args.action === "format") {
-      const remaining = user.quotaFormats ?? limits.formats;
-      if (remaining <= 0) {
-        return {
-          allowed: false,
-          remaining: 0,
-          reason: "Você atingiu o limite de formatações do dia.",
-          resetAt: user.quotaResetAt,
-        };
+    if (args.action === "ultra-expert") {
+      const remainingOpt = user.quotaOptimizations ?? 0;
+      const remainingUltra = user.quotaUltraExpert ?? 0;
+
+      if (remainingOpt <= 0) {
+        return { allowed: false, remaining: 0, reason: "Limite de otimizações diárias atingido." };
       }
-      return { allowed: true, remaining };
+      if (remainingUltra <= 0) {
+        return { allowed: false, remaining: 0, reason: "Limite de execuções Ultra-Expert diárias atingido." };
+      }
+      return { allowed: true, remaining: remainingUltra };
     }
 
     return { allowed: true, remaining: Infinity };
@@ -451,14 +474,15 @@ export const consumeQuota = mutation({
 
     // Owner não consome cota
     if (user.role !== "owner") {
-      if (args.action === "optimization" && user.quotaOptimizations) {
+      if (args.action === "optimization" && user.quotaOptimizations !== undefined) {
         await ctx.db.patch(user._id, {
           quotaOptimizations: Math.max(0, user.quotaOptimizations - 1),
         });
-      } else if (args.action === "format" && user.quotaFormats) {
-        await ctx.db.patch(user._id, {
-          quotaFormats: Math.max(0, user.quotaFormats - 1),
-        });
+      } else if (args.action === "ultra-expert") {
+        const updates: any = {};
+        if (user.quotaOptimizations !== undefined) updates.quotaOptimizations = Math.max(0, user.quotaOptimizations - 1);
+        if (user.quotaUltraExpert !== undefined) updates.quotaUltraExpert = Math.max(0, user.quotaUltraExpert - 1);
+        await ctx.db.patch(user._id, updates);
       }
     }
 

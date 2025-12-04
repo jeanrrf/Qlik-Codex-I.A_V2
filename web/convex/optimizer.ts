@@ -145,9 +145,15 @@ function sanitizeScript(text: string): string {
 }
 
 function parseJsonResponse(text: string): any {
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  const jsonStr = jsonMatch ? jsonMatch[0] : text;
-  return JSON.parse(jsonStr);
+  try {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const jsonStr = jsonMatch ? jsonMatch[0] : text;
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    console.error("JSON Parse Error:", e);
+    console.error("Raw Text:", text);
+    throw new Error("Falha ao processar resposta do modelo (JSON inválido).");
+  }
 }
 
 // ==== MAIN ACTION ====
@@ -169,13 +175,17 @@ export const optimizeScript = action({
       await ctx.runMutation(api.sessions.updateProgress, {
         sessionId: args.sessionId,
         percent: 0,
-        message: "Erro: GEMINI_API_KEY não configurada",
+        message: "Erro: GEMINI_API_KEY não configurada no servidor.",
         status: "error"
       });
       throw new Error("GEMINI_API_KEY not configured in Convex environment variables");
     }
 
     try {
+      // Recuperar sessão para obter userId
+      const session = await ctx.runQuery(api.sessions.getSession, { sessionId: args.sessionId });
+      const userId = session?.userId;
+
       // ==== STEP 1: ANALYSIS & PLAN ====
       await ctx.runMutation(api.sessions.updateProgress, {
         sessionId: args.sessionId,
@@ -239,6 +249,7 @@ export const optimizeScript = action({
 
       // Salvar no histórico
       await ctx.runMutation(api.history.saveOptimization, {
+        userId: userId,
         mode: args.mode,
         originalLines: script.split("\n").length,
         optimizedLines: result.optimizedScript.split("\n").length,

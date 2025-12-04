@@ -14,13 +14,13 @@ interface User {
   id: string;
   email: string;
   name: string;
-  role: "free" | "premium" | "owner";
+  role: "owner" | "user";
   avatarUrl?: string;
 }
 
 interface Quota {
   optimizations: { remaining: number; limit: number };
-  formats: { remaining: number; limit: number };
+  ultraExpert: { remaining: number; limit: number };
   maxLines: number;
   resetAt?: string;
   isUnlimited?: boolean;
@@ -90,7 +90,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         ...prev,
         quota: {
           optimizations: quotaData.optimizations,
-          formats: quotaData.formats,
+          ultraExpert: quotaData.ultraExpert,
           maxLines: quotaData.maxLines,
           resetAt: quotaData.resetAt,
           isUnlimited: quotaData.isUnlimited,
@@ -290,17 +290,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (!state.user) return false;
     if (state.user.role === "owner") return true;
     if (!state.quota) return false;
+
+    // Check general optimization limit
     if (state.quota.optimizations.remaining <= 0) return false;
+
+    // Check line limit
     if (linesCount && linesCount > state.quota.maxLines) return false;
+
     return true;
   }, [state.user, state.quota]);
 
   const canFormat = useCallback((): boolean => {
     if (!state.user) return false;
-    if (state.user.role === "owner") return true;
-    if (!state.quota) return false;
-    return state.quota.formats.remaining > 0;
-  }, [state.user, state.quota]);
+    // Formatting is unlimited in official rules
+    return true;
+  }, [state.user]);
 
   const consumeOptimization = useCallback(async () => {
     if (!state.user) return;
@@ -316,17 +320,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [state.user, consumeQuotaMutation]);
 
   const consumeFormat = useCallback(async () => {
-    if (!state.user) return;
-    try {
-      await consumeQuotaMutation({
-        userId: state.user.id as Id<"users">,
-        action: "format",
-        success: true,
-      });
-    } catch (err) {
-      console.error("Failed to consume format quota:", err);
-    }
-  }, [state.user, consumeQuotaMutation]);
+    // No quota consumption for formatting in official rules
+  }, []);
 
   const isOwner = state.user?.role === "owner";
 
