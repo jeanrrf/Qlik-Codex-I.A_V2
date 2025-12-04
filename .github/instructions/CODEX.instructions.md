@@ -474,4 +474,4 @@ Com foco em **remoção de redundâncias, duplicações, código morto, arquivos
 
 ---
 
-[FIM — FRONT-END SRC FULL OPTIMIZER]**
+[FIM — FRONT-END SRC FULL OPTIMIZER]
