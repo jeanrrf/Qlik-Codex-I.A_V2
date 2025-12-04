@@ -20,6 +20,10 @@ Você deve priorizar:
 3. Manutenibilidade (Nomenclatura clara, seções modulares, comentários técnicos apenas no cabeçalho).
 `;
 
+const JSON_RESPONSE_INSTRUCTIONS = `
+IMPORTANTE: Responda exclusivamente com o JSON descrito acima. Garanta que todas as strings estejam entre aspas duplas fechadas, não inclua texto adicional antes ou depois do objeto e finalize a resposta no caractere "}" final. Se o JSON for longo, conclua o envio apenas quando o objeto estiver completo.
+`;
+
 const TASK_PROMPTS = {
   ANALYSIS_AND_PLAN: `
 TASK: ANALYSIS_AND_PLAN
@@ -55,6 +59,7 @@ Formato de Saída: JSON com chaves:
     "estimatedImprovement": { "loadTimeReduction": string, "ramUsageReduction": string, "maintainabilityScoreAfter": number }
   }
 }
+${JSON_RESPONSE_INSTRUCTIONS}
 `,
 
   CODE_GEN: `
@@ -72,8 +77,9 @@ FORMATO DE SAÍDA:
 {
   "optimizedScript": "O_SCRIPT_COMPLETO_AQUI",
   "changesApplied": ["Lista de mudanças..."],
-  "completenessCheck": true
+        "completenessCheck": true
 }
+${JSON_RESPONSE_INSTRUCTIONS}
 `,
 
   FINAL_DELIVERY: `
@@ -90,6 +96,7 @@ Formato de Saída: JSON com chaves:
   "documentation": { "title": string, "description": string, "diagramMermaid": string, "reloadStrategy": string },
   "report": { "executiveSummary": string, "technicalDetails": string, "achievedImprovements": string[], "deploymentChecklist": string[] }
 }
+${JSON_RESPONSE_INSTRUCTIONS}
 `
 };
 
@@ -145,6 +152,39 @@ function sanitizeScript(text: string): string {
     .replace(/<\/?>/g, '');
 }
 
+function extractBalancedJson(text: string): string | null {
+  const start = text.indexOf("{");
+  if (start === -1) return null;
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < text.length; i++) {
+    const char = text[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (char === "\\") {
+      escape = true;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (!inString) {
+      if (char === "{") depth++;
+      else if (char === "}") {
+        depth--;
+        if (depth === 0) {
+          return text.slice(start, i + 1);
+        }
+      }
+    }
+  }
+  return null;
+}
+
 function parseJsonResponse(text: string): any {
   try {
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -153,6 +193,26 @@ function parseJsonResponse(text: string): any {
   } catch (e) {
     console.error("JSON Parse Error:", e);
     console.error("Raw Text:", text);
+    const repaired = extractBalancedJson(text);
+    if (repaired) {
+      try {
+        console.warn("JSON repair applied. Attempting parsed candidate.");
+        return JSON.parse(repaired);
+      } catch (repairErr) {
+        console.error("JSON Repair Failed:", repairErr);
+      }
+    }
+    const bracketStart = text.indexOf("{");
+    const bracketEnd = text.lastIndexOf("}");
+    if (bracketStart !== -1 && bracketEnd > bracketStart) {
+      const fallback = text.slice(bracketStart, bracketEnd + 1);
+      try {
+        console.warn("JSON fallback slice applied.");
+        return JSON.parse(fallback);
+      } catch (fallbackErr) {
+        console.error("JSON Fallback Failed:", fallbackErr);
+      }
+    }
     throw new Error("Falha ao processar resposta do modelo (JSON inválido).");
   }
 }
