@@ -445,7 +445,16 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
   // === COMPUTED ===
   const canOptimize = script?.trim().length > 0 && !optimization.isRunning;
 
-  const modeInfo = {
+  const modeInfo: Record<OptimizeMode, {
+    title: string;
+    icon: React.ReactNode;
+    color: string;
+    risk: string;
+    description: string;
+    helper?: string;
+    badge?: string;
+    accentClass?: string;
+  }> = {
     "ultra-expert": {
       title: "Ultra Expert",
       icon: <Icons.Zap />,
@@ -458,7 +467,10 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
       icon: <Icons.Robot />,
       color: "#1c8adb",
       risk: "Refatoração Direta",
-      description: "Retorno rápido só com código otimizado (sem docs)"
+      description: "Somente código otimizado direto da GPU",
+      helper: "Retorno em poucos segundos • Sem relatórios",
+      badge: "NOVO",
+      accentClass: "nvidia"
     }
   };
 
@@ -522,46 +534,49 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
           <div className="control-section-compact mode-section-compact">
             <div className="section-icon-compact">🎯</div>
             <div className="mode-cards-horizontal">
-              <button
-                className={`mode-card-compact ${mode === 'ultra-expert' ? 'active' : ''} expert ${!isOwner && !hasUltraExpertQuotaLeft ? 'disabled-quota' : ''}`}
-                onClick={() => handleModeChange('ultra-expert')}
-                disabled={!isOwner && !hasUltraExpertQuotaLeft}
-                title={!isOwner && !hasUltraExpertQuotaLeft ? 'Quota diária de Ultra Expert esgotada. Limite geral: 4 execuções/dia. Aguarde renovação.' : undefined}
-              >
-                <div className="mode-card-icon-compact expert-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8Z" />
-                  </svg>
-                </div>
-                <div className="mode-card-text-compact">
-                  <h4>Ultra Expert</h4>
-                  <p>Otimização máxima</p>
-                  {!isOwner && (
-                    <div className={`ultra-expert-quota ${!hasUltraExpertQuotaLeft ? 'quota-exhausted' : ''}`}>
-                      <span className="quota-icon">{hasUltraExpertQuotaLeft ? '🎟️' : '🚫'}</span>
-                      <span className="quota-text">
-                        {Math.max(0, MAX_ULTRA_EXPERT_RUNS - ultraExpertUsageCount)} de {MAX_ULTRA_EXPERT_RUNS} execuções
-                      </span>
+              {Object.entries(modeInfo).map(([modeKey, info]) => {
+                const option = modeKey as OptimizeMode;
+                const isUltra = option === "ultra-expert";
+                const isSelected = mode === option;
+                const disabled = isUltra && !isOwner && !hasUltraExpertQuotaLeft;
+                const quotaTitle = !isOwner && !hasUltraExpertQuotaLeft
+                  ? 'Quota diária de Ultra Expert esgotada. Limite geral: 4 execuções/dia. Aguarde renovação.'
+                  : undefined;
+
+                return (
+                  <button
+                    key={option}
+                    className={`mode-card-compact ${isSelected ? 'active' : ''} ${isUltra ? 'expert' : ''} ${info.accentClass || ''}`}
+                    onClick={() => handleModeChange(option)}
+                    disabled={disabled}
+                    title={isUltra ? quotaTitle : info.description}
+                  >
+                    <div className="mode-card-icon-compact">
+                      {info.icon}
                     </div>
-                  )}
-                </div>
-                <div className="mode-active-dot expert" />
-                <div className="expert-flame-mini" />
-              </button>
-              <button
-                className={`mode-card-compact ${mode === 'nvidia-fast' ? 'active' : ''}`}
-                onClick={() => handleModeChange('nvidia-fast')}
-                title="Refatoração direta via NVIDIA (só retorna código otimizado)"
-              >
-                <div className="mode-card-icon-compact">
-                  <Icons.Robot />
-                </div>
-                <div className="mode-card-text-compact">
-                  <h4>NVIDIA Fast</h4>
-                  <p>Somente código otimizado</p>
-                </div>
-                <div className="mode-active-dot" />
-              </button>
+                    <div className="mode-card-text-compact">
+                      <div className="mode-card-heading">
+                        <h4>{info.title}</h4>
+                        {info.badge && <span className="mode-card-badge">{info.badge}</span>}
+                      </div>
+                      <p>{info.description}</p>
+                      {info.helper && (
+                        <span className="mode-card-helper">{info.helper}</span>
+                      )}
+                      {isUltra && !isOwner && (
+                        <div className={`ultra-expert-quota ${!hasUltraExpertQuotaLeft ? 'quota-exhausted' : ''}`}>
+                          <span className="quota-icon">{hasUltraExpertQuotaLeft ? '🎟️' : '🚫'}</span>
+                          <span className="quota-text">
+                            {Math.max(0, MAX_ULTRA_EXPERT_RUNS - ultraExpertUsageCount)} de {MAX_ULTRA_EXPERT_RUNS} execuções
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className={`mode-active-dot ${isUltra ? 'expert' : ''}`} />
+                    {isUltra && <div className="expert-flame-mini" />}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>

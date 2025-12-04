@@ -227,11 +227,39 @@
   line-height: 1.2;
 }
 
+.mode-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mode-card-badge {
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(28, 138, 219, 0.2);
+  color: #5cc8ff;
+  border: 1px solid rgba(92, 200, 255, 0.4);
+  text-transform: uppercase;
+}
+
 .mode-card-text-compact p {
   font-size: 0.7rem;
   color: var(--text-secondary);
   margin: 0;
   line-height: 1.2;
+}
+
+.mode-card-helper {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(92, 200, 255, 0.85);
 }
 
 .mode-active-dot {
@@ -275,6 +303,27 @@
 
 .mode-card-compact.active.expert .expert-flame-mini {
   opacity: 1;
+}
+
+.mode-card-compact.nvidia {
+  border: 1px solid rgba(28, 138, 219, 0.35);
+  background: rgba(28, 138, 219, 0.04);
+  box-shadow: inset 0 0 20px rgba(28, 138, 219, 0.08);
+}
+
+.mode-card-compact.nvidia .mode-card-icon-compact {
+  color: rgba(92, 200, 255, 0.9);
+}
+
+.mode-card-compact.nvidia.active {
+  background: linear-gradient(135deg, rgba(28, 138, 219, 0.15), rgba(23, 60, 109, 0.25));
+  border-color: rgba(92, 200, 255, 0.8);
+  box-shadow: 0 12px 30px rgba(28, 138, 219, 0.25);
+}
+
+.mode-card-compact.nvidia .mode-active-dot {
+  background: #5cc8ff;
+  box-shadow: 0 0 10px rgba(92, 200, 255, 0.8);
 }
 
 @keyframes flame-flicker-mini {

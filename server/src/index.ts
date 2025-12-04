@@ -23,8 +23,11 @@ import usageRouter from "./routes/usage.routes";
 
 const app = express();
 const corsOptions =
-  config.corsOrigin === "*"
-    ? { origin: "*" as const }
+  config.corsAllowAll
+    ? {
+      origin: true as const, // reflect request origin
+      credentials: true as const
+    }
     : {
       origin: config.corsOrigins,
       credentials: true as const

@@ -4,6 +4,13 @@
   "buildCommand": "cd web && npm run build",
   "outputDirectory": "web/dist",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/api/(.*)",
+      "destination": "https://qlik-codex-i-a-v2.onrender.com/api/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }

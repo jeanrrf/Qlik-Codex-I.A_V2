@@ -4,26 +4,60 @@ dotenv.config();
 
 const APP_VERSION = "0.1.0";
 const rawPort = Number(process.env.PORT ?? "3000");
+
+const nodeEnv = (process.env.NODE_ENV || "development") as
+  | "development"
+  | "production"
+  | "test";
+const isDevelopment = nodeEnv !== "production";
+
 const llmProvidersEnv = (process.env.LLM_PROVIDERS ?? "google")
   .split(",")
   .map((provider) => provider.trim().toLowerCase())
   .filter((provider) => provider.length > 0);
 const llmProviders = llmProvidersEnv.length > 0 ? llmProvidersEnv : ["google"];
 
-const normalizeOrigin = (origin: string) => origin.replace(/\/*$/, "");
-const corsOriginRaw = process.env.CORS_ORIGIN ?? "*";
-const parsedCorsOrigins = corsOriginRaw
-  .split(",")
-  .map((origin) => normalizeOrigin(origin.trim()))
-  .filter((origin) => origin.length > 0);
+// CORS
+const normalizeOrigin = (origin: string) => {
+  const trimmed = origin.trim();
+  if (!trimmed || trimmed === "*") return trimmed;
+
+  try {
+    // Remove path/query/fragment to avoid mismatches (keep only scheme + host + port)
+    return new URL(trimmed).origin;
+  } catch {
+    // Fallback: strip trailing slashes if the URL constructor fails (e.g. custom schemes)
+    return trimmed.replace(/\/+$/, "");
+  }
+};
+
+const rawCorsEnv = process.env.CORS_ORIGIN?.trim() ?? "";
+const frontendOrigin = normalizeOrigin(process.env.FRONTEND_URL ?? "");
+const vercelOrigin = normalizeOrigin(process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+
+// Keep "*" only when explicitly set
+const allowAllCors = rawCorsEnv === "*";
+
+const parsedCorsOrigins = Array.from(
+  new Set(
+    [
+      ...(allowAllCors
+        ? []
+        : (rawCorsEnv ? rawCorsEnv.split(",").map((origin) => normalizeOrigin(origin)) : [])),
+      frontendOrigin,
+      vercelOrigin,
+      ...(isDevelopment ? ["http://localhost:5173", "http://localhost:3000"] : [])
+    ]
+      .map((origin) => origin?.trim())
+      .filter((origin): origin is string => Boolean(origin) && origin !== "*")
+  )
+);
 
 export const config = {
-  nodeEnv: (process.env.NODE_ENV || "development") as
-    | "development"
-    | "production"
-    | "test",
-  isDevelopment: process.env.NODE_ENV !== "production",
-  corsOrigin: corsOriginRaw,
+  nodeEnv,
+  isDevelopment,
+  corsOrigin: rawCorsEnv || frontendOrigin || "",
+  corsAllowAll: allowAllCors,
   corsOrigins: parsedCorsOrigins,
   port: Number.isNaN(rawPort) ? 3000 : rawPort,
   geminiApiKey: process.env.GEMINI_API_KEY || "",
