@@ -1,6 +1,18 @@
 const fs = require('fs');
 const path = require('path');
-const dotenv = require('dotenv');
+
+// Tenta carregar dotenv de múltiplos locais
+let dotenv;
+try {
+  dotenv = require('dotenv');
+} catch (e) {
+  try {
+    dotenv = require(path.resolve(__dirname, '../server/node_modules/dotenv'));
+  } catch (e2) {
+    console.warn('AVISO: dotenv não encontrado. Variáveis de ambiente podem não ser carregadas corretamente.');
+    dotenv = { config: () => { } };
+  }
+}
 
 const cwd = process.cwd();
 const envCandidates = [
