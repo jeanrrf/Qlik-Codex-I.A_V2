@@ -465,7 +465,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
     "nvidia-fast": {
       title: "NVIDIA Fast",
       icon: <Icons.Robot />,
-      color: "#1c8adb",
+      color: "#39ff14",
       risk: "Refatoração Direta",
       description: "Somente código otimizado direto da GPU",
       helper: "Retorno em poucos segundos • Sem relatórios",
@@ -473,6 +473,15 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
       accentClass: "nvidia"
     }
   };
+
+  // NVIDIA Logo Component
+  const NvidiaLogo = () => (
+    <svg className="nvidia-logo-svg" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M21.6 10.8c-0.2-0.1-0.3-0.2-0.5-0.2 -0.1 0-0.2 0-0.3 0.1 -0.1 0.1-0.2 0.2-0.2 0.3 0 0.1 0 0.2 0.1 0.3 0.3 0.5 0.5 1.1 0.5 1.7 0 1.9-1.5 3.4-3.4 3.4 -1.9 0-3.4-1.5-3.4-3.4 0-1.9 1.5-3.4 3.4-3.4 0.5 0 1 0.1 1.4 0.3 0.1 0.1 0.2 0.1 0.3 0 0.1-0.1 0.1-0.2 0.1-0.3 0-0.1-0.1-0.2-0.2-0.2 -0.5-0.3-1.1-0.4-1.7-0.4 -2.3 0-4.1 1.8-4.1 4.1 0 2.3 1.8 4.1 4.1 4.1 2.3 0 4.1-1.8 4.1-4.1C21.9 12.1 21.8 11.4 21.6 10.8z" />
+      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zM12 20c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8S16.4 20 12 20z" />
+      <path d="M14.5 7.5c-0.1 0-0.2 0.1-0.2 0.2 0 0.1 0.1 0.2 0.2 0.2 1.4 0 2.5 1.1 2.5 2.5 0 0.1 0.1 0.2 0.2 0.2 0.1 0 0.2-0.1 0.2-0.2C17.4 8.8 16.1 7.5 14.5 7.5z" />
+    </svg>
+  );
 
   // === RENDER ===
   return (
@@ -501,7 +510,13 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
         </div>
 
         <div className="header-center">
-          {/* Centro vazio - logo já está na esquerda */}
+          {/* NVIDIA Logo Display */}
+          {mode === 'nvidia-fast' && (
+            <div className="nvidia-header-badge">
+              <NvidiaLogo />
+              <span className="nvidia-text">POWERED BY NVIDIA</span>
+            </div>
+          )}
         </div>
 
         <div className="header-user">
@@ -5508,6 +5523,38 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
             filter: brightness(1.2);
             box-shadow: inset 0 0 50px rgba(57, 255, 20, 0.2);
           }
+        }
+
+        /* NVIDIA Header Badge */
+        .nvidia-header-badge {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 16px;
+          background: rgba(57, 255, 20, 0.1);
+          border: 1px solid rgba(57, 255, 20, 0.3);
+          border-radius: 20px;
+          box-shadow: 0 0 15px rgba(57, 255, 20, 0.2);
+          animation: nvidia-badge-pulse 2s infinite ease-in-out;
+        }
+
+        @keyframes nvidia-badge-pulse {
+          0%, 100% { box-shadow: 0 0 15px rgba(57, 255, 20, 0.2); }
+          50% { box-shadow: 0 0 25px rgba(57, 255, 20, 0.5); }
+        }
+
+        .nvidia-logo-svg {
+          width: 20px;
+          height: 20px;
+          color: #39ff14;
+        }
+
+        .nvidia-text {
+          font-family: 'JetBrains Mono', monospace;
+          font-weight: 800;
+          font-size: 0.8rem;
+          color: #39ff14;
+          letter-spacing: 1px;
         }
       `}</style>
     </div >
