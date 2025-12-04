@@ -27,7 +27,7 @@ function getAuthCookieOptions(expiresInSeconds: number): CookieOptions {
   return {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? "none" : "lax",
+    sameSite: "lax", // Use Lax for better compatibility with Proxy setup
     maxAge: expiresInSeconds * 1000
   };
 }

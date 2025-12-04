@@ -22,6 +22,10 @@ import authRouter from "./routes/auth.routes";
 import usageRouter from "./routes/usage.routes";
 
 const app = express();
+
+// Trust proxy (Render/Vercel)
+app.set("trust proxy", 1);
+
 const corsOptions =
   config.corsAllowAll
     ? {

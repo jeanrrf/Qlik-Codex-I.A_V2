@@ -90,7 +90,10 @@ export function extractContent(content?: NvidiaMessageContent): string | undefin
     }
   }
 
-  const joined = parts.join("").trim();
+  // When content is an array (e.g. multimodal or specific model formatting), 
+  // parts are usually distinct blocks. Joining with newline is safer than empty string
+  // to avoid "jumbled" text (encavalado), especially for models like Llama 3 on NVIDIA NIM.
+  const joined = parts.join("\n").trim();
   return joined.length > 0 ? joined : undefined;
 }
 
