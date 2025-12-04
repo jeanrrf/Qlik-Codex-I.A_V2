@@ -2,7 +2,7 @@
  * Authentication API Client
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API_BASE = ""; // Use relative path to leverage Vite proxy (dev) and Vercel rewrites (prod)
 
 export interface GoogleAuthResponse {
   authUrl: string;
