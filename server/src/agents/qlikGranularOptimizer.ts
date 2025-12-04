@@ -3,7 +3,6 @@ import { logger } from "../lib/logger";
 import { ProviderOrchestrator, createOrchestrator } from "../lib/providerOrchestrator";
 import { QlikOptimizationKnowledgeBase } from "../lib/qlikOptimizationKnowledgeBase";
 import { OptimizationStepId, OPTIMIZATION_STEPS, StepExecutionResult } from "../types/optimization";
-import { createHash } from "crypto";
 
 export interface GranularOptimizerOptions {
   signal?: AbortSignal;

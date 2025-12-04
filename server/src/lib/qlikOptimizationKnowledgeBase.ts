@@ -74,8 +74,8 @@ export class QlikOptimizationKnowledgeBase {
       ]
     },
 
-    // --- PERFORMANCE ---
-    "perf_031_exists_function_analysis": {
+    // --- ANÁLISE ESTRUTURAL (continuação) ---
+    "struct_031_exists_function_analysis": {
       instruction: "Analise cláusulas WHERE que filtram dados baseados em campos já carregados. Substitua 'Campo IN (...)' ou joins lentos por 'Exists(Campo)'.",
       context: "Exists() é uma das funções mais rápidas do Qlik para filtragem baseada em dados já carregados.",
       validationCriteria: [
