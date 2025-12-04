@@ -9,10 +9,15 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as consultancy from "../consultancy.js";
 import type * as contact from "../contact.js";
+import type * as documentation from "../documentation.js";
+import type * as explanation from "../explanation.js";
 import type * as formatter from "../formatter.js";
 import type * as history from "../history.js";
+import type * as lib_llm from "../lib/llm.js";
 import type * as optimizer from "../optimizer.js";
+import type * as review from "../review.js";
 import type * as sessions from "../sessions.js";
 import type * as validation from "../validation.js";
 
@@ -24,10 +29,15 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  consultancy: typeof consultancy;
   contact: typeof contact;
+  documentation: typeof documentation;
+  explanation: typeof explanation;
   formatter: typeof formatter;
   history: typeof history;
+  "lib/llm": typeof lib_llm;
   optimizer: typeof optimizer;
+  review: typeof review;
   sessions: typeof sessions;
   validation: typeof validation;
 }>;
