@@ -72,7 +72,7 @@ export function checkDailyQuota(user: User, mode: OptimizeMode): UsageQuotaCheck
 /**
  * Registra uma execução de otimização
  */
-export function recordUsage(userId: string, mode: "ultra-expert"): void {
+export function recordUsage(userId: string, mode: OptimizeMode): void {
   const db = getSqliteDb();
   const now = new Date().toISOString();
 

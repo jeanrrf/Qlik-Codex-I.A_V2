@@ -316,7 +316,7 @@ export const OPTIMIZATION_STEPS: OptimizationStep[] = [
   // GERAÇÃO DE RESULTADOS (106-112)
   { id: "result_106_generate_diff", name: "Geração Diff", description: "Gera diff unificado", category: "result_generation", estimatedDuration: 800, timeout: 6000, critical: true, retryable: true },
   { id: "result_107_calculate_risk_score", name: "Score de Risco", description: "Calcula score de risco final", category: "result_generation", estimatedDuration: 600, timeout: 5000, critical: true, retryable: true },
-  { id: "result_108_generate_explanation", name: "Explicação", description: "Gera explicação em PT-BR", category: "result_generation", estimatedDuration: 1000, timeout: 7000, critical: true, retryable: true },
+  { id: "result_108_generate_explanation", nameA: "Explicação", description: "Gera explicação em PT-BR", category: "result_generation", estimatedDuration: 1000, timeout: 7000, critical: true, retryable: true },
   { id: "result_109_create_rollback_plan", name: "Plano Rollback", description: "Cria plano de rollback", category: "result_generation", estimatedDuration: 700, timeout: 5000, critical: true, retryable: true },
   { id: "result_110_generate_test_cases", name: "Casos de Teste", description: "Gera casos de teste", category: "result_generation", estimatedDuration: 900, timeout: 6000, critical: false, retryable: true },
   { id: "result_111_create_documentation", name: "Documentação", description: "Cria documentação completa", category: "result_generation", estimatedDuration: 1000, timeout: 7000, critical: false, retryable: true },

@@ -20,8 +20,14 @@ export const config = {
   port: Number.isNaN(rawPort) ? 3000 : rawPort,
   geminiApiKey: process.env.GEMINI_API_KEY || "",
   geminiModel: process.env.GEMINI_MODEL_NAME || "gemini-2.5-flash",
+  // Fallback para Gemini
+  geminiFallbackModel: process.env.GEMINI_FALLBACK_MODEL_NAME || "gemini-2.0-flash",
   nvidiaApiKey: process.env.NVIDIA_API_KEY || "",
   nvidiaModel: process.env.NVIDIA_MODEL_NAME || "moonshotai/kimi-k2-instruct",  // Kimi K2 - 1T MoE model
+  // Fallback NVIDIA (modelo ~500B, ex: Llama 3.1 405B na NIM)
+  nvidiaFallbackModel: process.env.NVIDIA_FALLBACK_MODEL_NAME || "meta/llama-3.1-405b-instruct",
+  // Modo rápido NVIDIA (modelo grande, priorizando velocidade em refatoração direta)
+  nvidiaFastModel: process.env.NVIDIA_FAST_MODEL_NAME || "meta/llama-3.1-70b-instruct",
   llmProviders,
   databaseUrl: process.env.DATABASE_URL || "",
   version: APP_VERSION,

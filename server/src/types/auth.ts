@@ -91,7 +91,7 @@ export const RoleUsageLimits: Record<UserRole, UsageLimits> = {
     maxScriptSizeKB: -1,
     maxScriptLines: -1, // Ilimitado
     maxConcurrentSessions: -1,
-    enabledModes: ["ultra-expert"],
+    enabledModes: ["ultra-expert", "nvidia-fast"],
     canUseMultipleFiles: true,
     ultraExpertExecutionsPerDay: -1 // Ilimitado
   },
@@ -100,7 +100,7 @@ export const RoleUsageLimits: Record<UserRole, UsageLimits> = {
     maxScriptSizeKB: 1000,
     maxScriptLines: 200, // FREE TIER: 200 linhas base
     maxConcurrentSessions: 2,
-    enabledModes: ["ultra-expert"], // Apenas ultra-expert
+    enabledModes: ["ultra-expert", "nvidia-fast"], // Permite modo rápido NVIDIA
     canUseMultipleFiles: false, // Apenas 1 arquivo
     ultraExpertExecutionsPerDay: 1 // 1 execução Ultra Expert POR DIA
   }

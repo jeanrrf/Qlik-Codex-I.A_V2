@@ -13,7 +13,7 @@ export const optimizeScriptSchema = z
         (script) => !DANGEROUS_PATTERNS.test(script),
         "Script contém padrões potencialmente perigosos"
       ),
-    mode: z.enum(["ultra-expert"]).default("ultra-expert"),
+    mode: z.enum(["ultra-expert", "nvidia-fast"]).default("ultra-expert"),
     llmProvider: z.enum(["google", "nvidia", "ainex"]).optional(),
     llmModel: z.string().min(1).optional(),
     userId: z.string().optional(),

@@ -1,16 +1,16 @@
 /**
  * Orquestrador de Rotação de Provedores LLM
- * 
- * Funcionalidades:
- * - Rotação automática entre provedores sem repetir o mesmo
- * - Timeout por tentativa
- * - Fallback após 4 falhas
- * - Logging detalhado de cada tentativa
+ *
+ * Regras:
+ * 1) Tenta Gemini 2.5 Flash
+ * 2) Se falhar, tenta Gemini 2.0 Flash
+ * 3) Se falhar, tenta NVIDIA (modelo ~500B)
  */
 
 import { logger } from "./logger";
 import { googleProvider } from "./llmProviders/googleProvider";
 import { nvidiaProvider } from "./llmProviders/nvidiaProvider";
+import { config } from "./config";
 import type { LLMProvider } from "./llmProviders/types";
 import {
   OptimizationStepId,
@@ -34,10 +34,10 @@ export class ProviderOrchestrator {
   private providers: Map<string, LLMProvider>;
   private attemptHistory: ProviderAttempt[] = [];
 
-  constructor(config?: Partial<ProviderRotationConfig>) {
+  constructor(configOverride?: Partial<ProviderRotationConfig>) {
     this.rotationConfig = {
       ...DEFAULT_ROTATION_CONFIG,
-      ...config
+      ...configOverride
     };
 
     this.providers = new Map([
@@ -47,11 +47,7 @@ export class ProviderOrchestrator {
   }
 
   /**
-   * Executa uma chamada LLM com rotação automática de provedores
-   * 
-   * @param stepId - ID do step para tracking
-   * @param prompt - Prompt para o LLM
-   * @param timeout - Timeout em ms (ajustável dinamicamente por tipo de análise)
+   * Executa uma chamada LLM seguindo o plano de fallback definido.
    */
   async executeWithRotation(
     stepId: OptimizationStepId,
@@ -67,22 +63,19 @@ export class ProviderOrchestrator {
     const usedProviders = new Set<string>();
     let attemptCount = 0;
 
-    // Ajusta timeout baseado no tamanho do prompt (heurística otimizada para Kimi K2)
+    // Ajusta timeout pelo tamanho do prompt (heurística).
     const estimatedTokens = Math.ceil(prompt.length / 4);
     let adjustedTimeout = timeout;
 
     if (estimatedTokens > 50000) {
-      // Prompts muito grandes (>50k tokens) → aumenta timeout significativamente
       adjustedTimeout = Math.min(timeout * 2, 300000); // Max 5 min
-      logger.info(`🕐 Timeout ajustado: ${timeout}ms → ${adjustedTimeout}ms (prompt grande: ${estimatedTokens.toLocaleString()} tokens)`);
+      logger.info(`⏱️ Timeout ajustado: ${timeout}ms → ${adjustedTimeout}ms (prompt grande: ${estimatedTokens.toLocaleString()} tokens)`);
     } else if (estimatedTokens > 25000) {
-      // Prompts grandes (25-50k tokens) → aumenta timeout moderadamente
       adjustedTimeout = Math.min(timeout * 1.5, 240000); // Max 4 min
-      logger.info(`🕐 Timeout ajustado: ${timeout}ms → ${adjustedTimeout}ms (prompt médio-grande: ${estimatedTokens.toLocaleString()} tokens)`);
+      logger.info(`⏱️ Timeout ajustado: ${timeout}ms → ${adjustedTimeout}ms (prompt médio-grande: ${estimatedTokens.toLocaleString()} tokens)`);
     } else if (estimatedTokens < 10000) {
-      // Prompts pequenos (<10k tokens) → pode reduzir um pouco
       adjustedTimeout = Math.max(timeout * 0.8, 60000); // Min 60s
-      logger.info(`🕐 Timeout otimizado: ${timeout}ms → ${adjustedTimeout}ms (prompt compacto: ${estimatedTokens.toLocaleString()} tokens)`);
+      logger.info(`⏱️ Timeout otimizado: ${timeout}ms → ${adjustedTimeout}ms (prompt compacto: ${estimatedTokens.toLocaleString()} tokens)`);
     }
 
     logger.info("Iniciando rotação de provedores", {
@@ -92,33 +85,44 @@ export class ProviderOrchestrator {
       estimatedTokens
     });
 
-    // Tenta até maxAttemptsPerStep vezes
-    while (attemptCount < this.rotationConfig.maxAttemptsPerStep) {
-      attemptCount++;
+    // Plano fixo de fallback por modelo.
+    const attemptPlan: Array<{ provider: "google" | "nvidia"; model?: string; label: string }> = [
+      { provider: "google", model: config.geminiModel, label: "Gemini 2.5 Flash" },
+      { provider: "google", model: config.geminiFallbackModel, label: "Gemini 2.0 Flash (fallback)" },
+      { provider: "nvidia", model: config.nvidiaFallbackModel, label: "NVIDIA 500B fallback" }
+    ];
 
-      // Seleciona próximo provedor disponível
-      const providerName = this.selectNextProvider(usedProviders);
-
-      if (!providerName) {
-        logger.error("Nenhum provedor disponível", {
+    for (const plan of attemptPlan) {
+      if (attemptCount >= this.rotationConfig.maxAttemptsPerStep) {
+        logger.warn("Limite de tentativas atingido", {
           stepId,
           attemptCount,
-          usedProviders: Array.from(usedProviders)
+          maxAttempts: this.rotationConfig.maxAttemptsPerStep
         });
         break;
       }
 
-      const provider = this.providers.get(providerName)!;
+      const provider = this.providers.get(plan.provider);
 
-      // Marca provider como usado (se configurado para não repetir)
-      if (this.rotationConfig.neverRetryProvider) {
-        usedProviders.add(providerName);
+      if (!provider || !provider.isAvailable()) {
+        logger.warn("Provedor indisponível - pulando", {
+          stepId,
+          provider: plan.provider,
+          model: plan.model,
+          label: plan.label
+        });
+        continue;
       }
+
+      attemptCount++;
+      usedProviders.add(plan.provider);
 
       logger.info("🔄 Tentando provedor", {
         stepId,
         attempt: `${attemptCount}/${this.rotationConfig.maxAttemptsPerStep}`,
-        provider: providerName,
+        provider: plan.provider,
+        model: plan.model,
+        label: plan.label,
         timeout: `${adjustedTimeout}ms (${Math.round(adjustedTimeout / 60000)} minutos)`,
         previouslyUsed: Array.from(usedProviders)
       });
@@ -126,12 +130,13 @@ export class ProviderOrchestrator {
       try {
         const attemptResult = await this.attemptProviderCall(
           provider,
-          providerName as "google" | "nvidia",
+          plan.provider,
           prompt,
-          adjustedTimeout  // Usa timeout ajustado
+          adjustedTimeout,
+          plan.model,
+          plan.label
         );
 
-        // Registra tentativa
         const attempt: ProviderAttempt = {
           provider: attemptResult.provider,
           model: attemptResult.model,
@@ -147,7 +152,8 @@ export class ProviderOrchestrator {
         if (attemptResult.success && attemptResult.text) {
           logger.info("Provedor retornou sucesso", {
             stepId,
-            provider: providerName,
+            provider: plan.provider,
+            model: attemptResult.model,
             attempt: attemptCount,
             duration: attemptResult.duration
           });
@@ -159,31 +165,31 @@ export class ProviderOrchestrator {
           };
         }
 
-        // Se falhou, loga e continua
-        const failIcon = attemptResult.timedOut ? "⏱️" : "❌";
+        const failIcon = attemptResult.timedOut ? "⏳" : "⚠️";
         logger.warn(`${failIcon} Provedor falhou, tentando próximo`, {
           stepId,
-          provider: providerName,
+          provider: plan.provider,
+          model: plan.model,
           attempt: `${attemptCount}/${this.rotationConfig.maxAttemptsPerStep}`,
           error: attemptResult.error,
           timedOut: attemptResult.timedOut,
           duration: `${attemptResult.duration}ms`,
-          remainingProviders: this.rotationConfig.providerOrder.filter(p => !usedProviders.has(p)).length
+          remainingPlans: attemptPlan.length - attemptCount
         });
-
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
 
         logger.error("Erro crítico ao chamar provedor", {
           stepId,
-          provider: providerName,
+          provider: plan.provider,
+          model: plan.model,
           attempt: attemptCount,
           error: errorMessage
         });
 
         const attempt: ProviderAttempt = {
-          provider: providerName as "google" | "nvidia",
-          model: "unknown",
+          provider: plan.provider,
+          model: plan.model || "unknown",
           timestamp: new Date(),
           success: false,
           error: errorMessage,
@@ -196,7 +202,8 @@ export class ProviderOrchestrator {
     }
 
     // Fallback: todas as tentativas falharam
-    const fallbackReason = `Todas as ${attemptCount} tentativas falharam. Provedores testados: ${Array.from(usedProviders).join(", ")}`;
+    const tested = stepAttempts.map(a => `${a.provider}:${a.model}`).join(", ") || "nenhum";
+    const fallbackReason = `Todas as ${attemptCount} tentativas falharam. Provedores testados: ${tested}`;
 
     logger.error("FALLBACK ACIONADO", {
       stepId,
@@ -219,7 +226,9 @@ export class ProviderOrchestrator {
     provider: LLMProvider,
     providerName: "google" | "nvidia",
     prompt: string,
-    timeout: number
+    timeout: number,
+    modelOverride?: string,
+    label?: string
   ): Promise<ProviderAttemptResult> {
     const startTime = Date.now();
     let warningTimer: NodeJS.Timeout | undefined;
@@ -231,7 +240,7 @@ export class ProviderOrchestrator {
         return {
           success: false,
           provider: providerName,
-          model: "unavailable",
+          model: modelOverride || "unavailable",
           error: `${providerName} provider não disponível (API key ausente?)`,
           duration: 0,
           timedOut: false
@@ -243,33 +252,34 @@ export class ProviderOrchestrator {
         setTimeout(() => reject(new Error("TIMEOUT")), timeout);
       });
 
-      // Aviso intermediário se a tarefa demorar mais de 1 minuto
+      // Avisos de longa duração
       warningTimer = setTimeout(() => {
         logger.warn("⏳ Tarefa ainda em execução...", {
           provider: providerName,
+          model: modelOverride,
+          label,
           elapsed: "60 segundos",
-          timeout: `${Math.round(timeout / 60000)} minutos máximo`,
-          message: "A tarefa está demorando mais que o esperado, mas ainda dentro do limite"
+          timeout: `${Math.round(timeout / 60000)} minutos máximo`
         });
-      }, 60000); // 1 minuto
+      }, 60000);
 
-      // Aviso crítico se passar de 2 minutos
       criticalTimer = setTimeout(() => {
         logger.warn("⚠️ Tarefa próxima do timeout!", {
           provider: providerName,
+          model: modelOverride,
+          label,
           elapsed: "120 segundos",
-          remainingTime: `${Math.round((timeout - 120000) / 1000)} segundos até timeout`,
-          message: "Tarefa está demorando muito, próxima do limite de 3 minutos"
+          remainingTime: `${Math.round((timeout - 120000) / 1000)} segundos até timeout`
         });
-      }, 120000); // 2 minutos
+      }, 120000);
 
-      // Cria promise da chamada
-      const callPromise = provider.generateStructuredJson(prompt);
+      // Chamada principal
+      const callPromise = provider.generateStructuredJson(prompt, {
+        model: modelOverride
+      });
 
-      // Race entre timeout e chamada
       const result = await Promise.race([callPromise, timeoutPromise]);
 
-      // Limpa os timers de aviso
       if (warningTimer) clearTimeout(warningTimer);
       if (criticalTimer) clearTimeout(criticalTimer);
 
@@ -279,49 +289,27 @@ export class ProviderOrchestrator {
         success: true,
         text: result.text,
         provider: providerName,
-        model: (result.metadata?.model as string) || "unknown",
+        model: (result.metadata?.model as string) || modelOverride || "unknown",
         duration,
         timedOut: false
       };
-
     } catch (error) {
       const duration = Date.now() - startTime;
       const errorMessage = error instanceof Error ? error.message : String(error);
       const timedOut = errorMessage === "TIMEOUT";
 
-      // Limpa os timers se houve erro
       if (warningTimer) clearTimeout(warningTimer);
       if (criticalTimer) clearTimeout(criticalTimer);
 
       return {
         success: false,
         provider: providerName,
-        model: "failed",
+        model: modelOverride || "failed",
         error: timedOut ? `Timeout após ${timeout}ms` : errorMessage,
         duration,
         timedOut
       };
     }
-  }
-
-  /**
-   * Seleciona próximo provedor disponível
-   */
-  private selectNextProvider(usedProviders: Set<string>): string | null {
-    for (const providerName of this.rotationConfig.providerOrder) {
-      // Se não deve repetir e já foi usado, pula
-      if (this.rotationConfig.neverRetryProvider && usedProviders.has(providerName)) {
-        continue;
-      }
-
-      // Verifica se está disponível
-      const provider = this.providers.get(providerName);
-      if (provider && provider.isAvailable()) {
-        return providerName;
-      }
-    }
-
-    return null;
   }
 
   /**
@@ -339,7 +327,7 @@ export class ProviderOrchestrator {
   }
 
   /**
-   * Retorna estatísticas do orquestrador
+   * Estatísticas agregadas
    */
   getStats(): {
     totalAttempts: number;
@@ -386,9 +374,9 @@ export class ProviderOrchestrator {
  * Factory para criar orquestrador com configurações padrão ou customizadas
  */
 export function createOrchestrator(
-  config?: Partial<ProviderRotationConfig>
+  configOverride?: Partial<ProviderRotationConfig>
 ): ProviderOrchestrator {
-  return new ProviderOrchestrator(config);
+  return new ProviderOrchestrator(configOverride);
 }
 
 /**

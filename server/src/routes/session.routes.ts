@@ -19,7 +19,7 @@ const router = Router();
 const SaveSessionSchema = z.object({
   sessionId: z.string(),
   userId: z.string().optional(),
-  mode: z.enum(["ultra-expert"]),
+  mode: z.enum(["ultra-expert", "nvidia-fast"]),
   // script: REMOVIDO - não persistimos scripts no servidor
   llmProvider: z.enum(["ainex", "google", "nvidia"]).optional(),
   llmModel: z.string().optional(),
