@@ -14,6 +14,16 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: "dist"
+    outDir: "dist",
+    // Keep vendor chunks small to avoid bundle warnings in Vercel builds
+    chunkSizeWarningLimit: 900,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ["react", "react-dom"],
+          jszip: ["jszip"]
+        }
+      }
+    }
   }
 });

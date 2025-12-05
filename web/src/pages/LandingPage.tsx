@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+﻿import React, { useEffect, useRef, useState } from "react";
 import { apiClient } from "../api/client";
 
 import QlikFormatterTool from "../components/QlikFormatterTool";
@@ -42,7 +42,7 @@ const GridBackground: React.FC = () => (
   </div>
 );
 
-// Icons com animações
+// Icons com anima├º├╡es
 const Icons = {
   Radar: () => (
     <div className="icon-wrapper icon-radar">
@@ -193,10 +193,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
   const handleCopyContact = async () => {
     try {
       await copyToClipboard(contactCopyPayload);
-      showCopyFeedback("Contato copiado para a área de transferência.", "success");
+      showCopyFeedback("Contato copiado para a ├írea de transfer├¬ncia.", "success");
     } catch {
       showCopyFeedback(
-        "Não foi possível copiar automaticamente. Use Ctrl+C ou toque e segure.",
+        "N├úo foi poss├¡vel copiar automaticamente. Use Ctrl+C ou toque e segure.",
         "error"
       );
     }
@@ -275,7 +275,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         <div className="nav-actions">
           <button className="btn btn-nav-cta" onClick={onStart}>
             <Icons.Bolt />
-            Iniciar Análise
+            Iniciar An├ílise
           </button>
         </div>
       </nav>
@@ -293,9 +293,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
 
           <div className="hero-content">
             <div className="hero-eyebrow">
-              <span className="eyebrow-icon">◆</span>
-              <span>Inteligência Artificial especializada em Qlik</span>
-              <span className="eyebrow-icon">◆</span>
+              <span className="eyebrow-icon">Γùå</span>
+              <span>Intelig├¬ncia Artificial especializada em Qlik</span>
+              <span className="eyebrow-icon">Γùå</span>
             </div>
 
             <h1 className="hero-title">
@@ -311,25 +311,25 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             <div className="hero-ainex-compact">
               <span className="ainex-tag">AINEX ENGINE</span>
               <span className="ainex-separator">|</span>
-              <span className="ainex-desc">Otimização Neural para Qlik Sense & SaaS</span>
+              <span className="ainex-desc">Otimiza├º├úo Neural para Qlik Sense & SaaS</span>
             </div>
 
             <p className="hero-description">
-              Plataforma de IA especializada em Qlik para engenharia de dados. Analisa, refatora e documenta seus scripts com foco em desempenho, segurança e padronização.
+              Plataforma de IA especializada em Qlik para engenharia de dados. Analisa, refatora e documenta seus scripts com foco em desempenho, seguran├ºa e padroniza├º├úo.
             </p>
 
             <div className="hero-features">
               <div className="hero-feature">
                 <Icons.Bolt />
-                <span>Análise em segundos</span>
+                <span>An├ílise em segundos</span>
               </div>
               <div className="hero-feature">
                 <Icons.Shield />
-                <span>Zero riscos em produção</span>
+                <span>Zero riscos em produ├º├úo</span>
               </div>
               <div className="hero-feature">
                 <Icons.Code />
-                <span>Código otimizado</span>
+                <span>C├│digo otimizado</span>
               </div>
               <div className="hero-feature">
                 <Icons.Brain />
@@ -342,14 +342,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 <span className="btn-glow" />
                 <span className="btn-content">
                   Experimentar Agora
-                  <span className="btn-badge">Grátis</span>
+                  <span className="btn-badge">Gr├ítis</span>
                 </span>
               </button>
               <button
                 className="btn btn-hero-secondary"
                 onClick={() => scrollToSection('suite')}
               >
-                Ver demonstração
+                Ver demonstra├º├úo
                 <Icons.ChevronDown />
               </button>
             </div>
@@ -384,10 +384,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 <Icons.Radar />
                 <h3 className="card-title">Radar de Performance</h3>
                 <p className="card-description">
-                  Identifica gargalos de carga, joins explosivos e uso ineficiente de memória RAM.
+                  Identifica gargalos de carga, joins explosivos e uso ineficiente de mem├│ria RAM.
                 </p>
                 <div className="card-tags">
-                  <span className="tag tag-cyan">Otimização</span>
+                  <span className="tag tag-cyan">Otimiza├º├úo</span>
                   <span className="tag tag-cyan">Speed</span>
                 </div>
               </div>
@@ -400,10 +400,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 <Icons.Scanner />
                 <h3 className="card-title">Scanner de Risco</h3>
                 <p className="card-description">
-                  Auditoria de segurança e boas práticas. Detecta loops, chaves sintéticas e vulnerabilidades.
+                  Auditoria de seguran├ºa e boas pr├íticas. Detecta loops, chaves sint├⌐ticas e vulnerabilidades.
                 </p>
                 <div className="card-tags">
-                  <span className="tag tag-pink">Segurança</span>
+                  <span className="tag tag-pink">Seguran├ºa</span>
                   <span className="tag tag-pink">Audit</span>
                 </div>
               </div>
@@ -414,13 +414,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               <div className="card-border" />
               <div className="card-content">
                 <Icons.Docs />
-                <h3 className="card-title">Documentação Automática</h3>
+                <h3 className="card-title">Documenta├º├úo Autom├ítica</h3>
                 <p className="card-description">
-                  Gera documentação técnica detalhada do seu script, incluindo linhagem e regras de negócio.
+                  Gera documenta├º├úo t├⌐cnica detalhada do seu script, incluindo linhagem e regras de neg├│cio.
                 </p>
                 <div className="card-tags">
                   <span className="tag tag-green">Docs</span>
-                  <span className="tag tag-green">Governança</span>
+                  <span className="tag tag-green">Governan├ºa</span>
                 </div>
               </div>
             </div>
@@ -430,9 +430,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               <div className="card-border" />
               <div className="card-content">
                 <Icons.Mentor />
-                <h3 className="card-title">Explicações Guiadas</h3>
+                <h3 className="card-title">Explica├º├╡es Guiadas</h3>
                 <p className="card-description">
-                  Explicações objetivas para cada recomendação de melhoria, ajudando o time a entender e padronizar o código.
+                  Explica├º├╡es objetivas para cada recomenda├º├úo de melhoria, ajudando o time a entender e padronizar o c├│digo.
                 </p>
                 <div className="card-tags">
                   <span className="tag tag-amber">Ensino</span>
@@ -443,7 +443,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           </div>
         </section>
 
-        {/* ✨ POR QUE AINEX? - DIFERENCIAL COMERCIAL */}
+        {/* Γ£¿ POR QUE AINEX? - DIFERENCIAL COMERCIAL */}
         <section className="why-ainex-section">
           <div className="section-header">
             <span className="section-badge">DIFERENCIAL AINEX</span>
@@ -451,15 +451,15 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               Por que a AINEX se destaca?
             </h2>
             <p className="section-description">
-              IAs genéricas podem gerar sintaxe incorreta; a AINEX foi desenhada para entender a engenharia do Qlik.
+              IAs gen├⌐ricas podem gerar sintaxe incorreta; a AINEX foi desenhada para entender a engenharia do Qlik.
             </p>
           </div>
 
           <div className="comparison-grid">
             <div className="comparison-card chatgpt">
               <div className="comparison-header">
-                <div className="comparison-icon">🤖</div>
-                <h3>LLMs Genéricos</h3>
+                <div className="comparison-icon">≡ƒñû</div>
+                <h3>LLMs Gen├⌐ricos</h3>
                 <span className="comparison-sub">ChatGPT, Claude, etc.</span>
               </div>
               <ul className="comparison-list">
@@ -473,22 +473,22 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
 
             <div className="comparison-card ainex featured">
               <div className="comparison-header">
-                <div className="comparison-icon">⚡</div>
+                <div className="comparison-icon">ΓÜí</div>
                 <h3>AINEX Engine</h3>
                 <span className="featured-badge">Qlik Native</span>
               </div>
               <ul className="comparison-list">
-                <li className="positive">✓ Treinada em documentação técnica Qlik</li>
-                <li className="positive">✓ Valida sintaxe antes de sugerir</li>
-                <li className="positive">✓ Otimiza para Qlik Engine (RAM/CPU)</li>
-                <li className="positive">✓ Detecta gargalos de modelagem</li>
-                <li className="positive">✓ Gera documentação automática</li>
+                <li className="positive">Γ£ô Treinada em documenta├º├úo t├⌐cnica Qlik</li>
+                <li className="positive">Γ£ô Valida sintaxe antes de sugerir</li>
+                <li className="positive">Γ£ô Otimiza para Qlik Engine (RAM/CPU)</li>
+                <li className="positive">Γ£ô Detecta gargalos de modelagem</li>
+                <li className="positive">Γ£ô Gera documenta├º├úo autom├ítica</li>
               </ul>
             </div>
           </div>
         </section>
 
-        {/* 🟢 NVIDIA ACCELERATED SECTION - COMPUTING POWER */}
+        {/* ≡ƒƒó NVIDIA ACCELERATED SECTION - COMPUTING POWER */}
         <section className="nvidia-section">
           <div className="nvidia-river-effect" />
           <div className="nvidia-particles">
@@ -521,23 +521,23 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             </h2>
 
             <p className="nvidia-description">
-              O modo NVIDIA Fast utiliza inferência acelerada por GPU para entregar
-              otimizações em <strong>segundos</strong>. Ideal para refatorações rápidas
-              e iterações ágeis.
+              O modo NVIDIA Fast utiliza infer├¬ncia acelerada por GPU para entregar
+              otimiza├º├╡es em <strong>segundos</strong>. Ideal para refatora├º├╡es r├ípidas
+              e itera├º├╡es ├ígeis.
             </p>
 
             <div className="nvidia-stats">
               <div className="nvidia-stat">
                 <span className="nvidia-stat-value">10x</span>
-                <span className="nvidia-stat-label">Mais Rápido</span>
+                <span className="nvidia-stat-label">Mais R├ípido</span>
               </div>
               <div className="nvidia-stat">
                 <span className="nvidia-stat-value">&lt;5s</span>
-                <span className="nvidia-stat-label">Tempo Médio</span>
+                <span className="nvidia-stat-label">Tempo M├⌐dio</span>
               </div>
               <div className="nvidia-stat">
                 <span className="nvidia-stat-value">GPU</span>
-                <span className="nvidia-stat-label">Inferência</span>
+                <span className="nvidia-stat-label">Infer├¬ncia</span>
               </div>
             </div>
 
@@ -553,16 +553,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           <div className="nvidia-power-bar" />
         </section>
 
-        {/* ✨ FREE TIER - EXPERIMENTE AGORA */}
+        {/* Γ£¿ FREE TIER - EXPERIMENTE AGORA */}
         <section className="free-tier-section">
           <div className="section-header">
             <span className="section-badge free">ACESSO GRATUITO</span>
             <h2 className="section-title">
-              Potência Enterprise.<br />
+              Pot├¬ncia Enterprise.<br />
               <span className="title-accent">Custo Zero.</span>
             </h2>
             <p className="section-description">
-              Experimente o poder do motor AINEX sem barreiras. Ideal para validações rápidas e aprendizado.
+              Experimente o poder do motor AINEX sem barreiras. Ideal para valida├º├╡es r├ípidas e aprendizado.
             </p>
           </div>
 
@@ -570,54 +570,54 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             <div className="free-tier-glow" />
             <div className="free-tier-content">
               <div className="free-tier-header">
-                <h3 className="free-tier-title">🚀 COMMUNITY EDITION</h3>
-                <span className="free-tier-price">R$ 0<small>/mês</small></span>
+                <h3 className="free-tier-title">≡ƒÜÇ COMMUNITY EDITION</h3>
+                <span className="free-tier-price">R$ 0<small>/m├¬s</small></span>
               </div>
 
               <div className="free-tier-features">
                 <div className="feature-item">
-                  <div className="feature-icon">⚡</div>
+                  <div className="feature-icon">ΓÜí</div>
                   <div className="feature-text">
-                    <strong>4 Otimizações Diárias</strong>
+                    <strong>4 Otimiza├º├╡es Di├írias</strong>
                     <span>Renovadas a cada 24h automaticamente</span>
                   </div>
                 </div>
                 <div className="feature-item">
-                  <div className="feature-icon">📝</div>
+                  <div className="feature-icon">≡ƒô¥</div>
                   <div className="feature-text">
-                    <strong>Até 200 Linhas de Código</strong>
-                    <span>Análise profunda de blocos lógicos</span>
+                    <strong>At├⌐ 200 Linhas de C├│digo</strong>
+                    <span>An├ílise profunda de blocos l├│gicos</span>
                   </div>
                 </div>
                 <div className="feature-item">
-                  <div className="feature-icon">🧠</div>
+                  <div className="feature-icon">≡ƒºá</div>
                   <div className="feature-text">
                     <strong>Modo Ultra-Expert</strong>
-                    <span>O mesmo motor da versão Enterprise</span>
+                    <span>O mesmo motor da vers├úo Enterprise</span>
                   </div>
                 </div>
                 <div className="feature-item">
-                  <div className="feature-icon">🛡️</div>
+                  <div className="feature-icon">≡ƒ¢í∩╕Å</div>
                   <div className="feature-text">
-                    <strong>Validação de Segurança</strong>
-                    <span>Detecção de riscos e anti-patterns</span>
+                    <strong>Valida├º├úo de Seguran├ºa</strong>
+                    <span>Detec├º├úo de riscos e anti-patterns</span>
                   </div>
                 </div>
               </div>
 
               <button className="btn btn-free-start" onClick={onStart}>
-                <span className="btn-icon">👉</span>
+                <span className="btn-icon">≡ƒæë</span>
                 Iniciar Agora
               </button>
 
               <p className="free-tier-note">
-                Não requer cartão de crédito. Acesso imediato.
+                N├úo requer cart├úo de cr├⌐dito. Acesso imediato.
               </p>
             </div>
           </div>
         </section>
 
-        {/* QLIK FORMATTER TOOL - BOTÃO COMPACTO */}
+        {/* QLIK FORMATTER TOOL - BOT├âO COMPACTO */}
         <section className="formatter-cta-section">
           <div className="formatter-cta-card">
             <div className="formatter-cta-glow" />
@@ -659,7 +659,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             <div className="contact-content">
               <span className="contact-badge">FALE COM O CRIADOR</span>
               <h2 className="contact-title">
-                Precisa de uma solução<br />
+                Precisa de uma solu├º├úo<br />
                 <span className="text-gradient-cyan">Enterprise Personalizada?</span>
               </h2>
               <p className="contact-description">
@@ -710,7 +710,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                   </form>
                 ) : (
                   <div className="contact-success">
-                    <div className="success-icon">✓</div>
+                    <div className="success-icon">Γ£ô</div>
                     <h3>Recebemos sua mensagem!</h3>
                     <p>Entraremos em contato em breve pelo e-mail informado.</p>
                     <button className="btn btn-ghost small" onClick={() => setIsSent(false)}>Nova mensagem</button>
@@ -763,11 +763,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             <span className="footer-logo-name">QLIK CODEX I.A</span>
             <span className="footer-logo-beta">BETA</span>
           </div>
-          <span className="footer-separator">•</span>
+          <span className="footer-separator">ΓÇó</span>
           <span className="footer-copy">
             &copy; 2025 SENTINNELL IA
           </span>
-          <span className="footer-separator">•</span>
+          <span className="footer-separator">ΓÇó</span>
           <a href="https://github.com/jeanrrf" target="_blank" rel="noopener noreferrer" className="footer-link">
             GitHub
           </a>
@@ -1143,7 +1143,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           opacity: 0.6;
         }
 
-        /* ✨ Badge Especialista Qlik */
+        /* Γ£¿ Badge Especialista Qlik */
         .hero-specialist-badge {
           display: flex;
           align-items: center;
