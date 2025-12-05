@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "installCommand": "cd web && npm install",
-  "buildCommand": "cd web && npm run build",
+  "installCommand": "npm install --prefix web",
+  "buildCommand": "npm run build --prefix web",
   "outputDirectory": "web/dist",
   "rewrites": [
     {
