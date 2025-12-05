@@ -33,18 +33,13 @@
   margin-bottom: 1.5rem;
 }
 
-.logo-gradient {
-  padding: 0.8rem 1.8rem;
-  background: linear-gradient(135deg, #00f2ff 0%, #00ff9d 100%);
-  border-radius: 12px;
-  box-shadow: 0 8px 25px rgba(0, 242, 255, 0.3);
+.login-brand-mark {
+  justify-content: center;
+  width: 100%;
 }
 
-.logo-text {
-  font-size: 1.4rem;
-  font-weight: 800;
-  letter-spacing: 1px;
-  color: #0a0a0f;
+.login-brand-mark .brand-wordmark__title {
+  font-size: 1rem;
 }
 
 .login-title {

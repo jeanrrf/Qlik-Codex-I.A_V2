@@ -15,6 +15,7 @@ import ConsultancyDocumentViewer from "../components/ConsultancyDocumentViewer";
 import ROICard from "../components/ROICard";
 import ScriptAnalysisInfo from "../components/ScriptAnalysisInfo";
 import ScriptInfoModal, { ScriptInfo } from "../components/ScriptInfoModal";
+import { BrandMark } from "../components/BrandMark";
 import { getLLMOptionById, LLM_OPTIONS } from "../lib/llmOptions";
 import {
   OptimizeMode,
@@ -494,42 +495,6 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
     </svg>
   );
 
-  // Qlik Codex Brand Logo Component
-  const QlikCodexLogo = () => (
-    <svg className="qlik-codex-logo" viewBox="0 0 100 100" fill="none">
-      {/* Circuit Board Background Pattern */}
-      <defs>
-        <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#00f2ff" />
-          <stop offset="50%" stopColor="#7000ff" />
-          <stop offset="100%" stopColor="#00f2ff" />
-        </linearGradient>
-        <filter id="glow">
-          <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-          <feMerge>
-            <feMergeNode in="coloredBlur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
-      {/* Hexagon Base */}
-      <polygon
-        points="50,5 90,27.5 90,72.5 50,95 10,72.5 10,27.5"
-        fill="rgba(0,242,255,0.1)"
-        stroke="url(#logo-gradient)"
-        strokeWidth="2"
-        filter="url(#glow)"
-      />
-      {/* Q Letter Stylized */}
-      <circle cx="50" cy="45" r="18" stroke="url(#logo-gradient)" strokeWidth="4" fill="none" filter="url(#glow)" />
-      <line x1="58" y1="53" x2="70" y2="65" stroke="url(#logo-gradient)" strokeWidth="4" strokeLinecap="round" filter="url(#glow)" />
-      {/* AI Indicator Dots */}
-      <circle cx="50" cy="75" r="3" fill="#00f2ff" filter="url(#glow)" />
-      <circle cx="40" cy="75" r="2" fill="#7000ff" filter="url(#glow)" />
-      <circle cx="60" cy="75" r="2" fill="#7000ff" filter="url(#glow)" />
-    </svg>
-  );
-
   // === RENDER ===
   return (
     <div className={`opt-page ${mode === 'nvidia-fast' ? 'nvidia-mode-active' : ''} ${optimization.isOptimizing && mode === 'nvidia-fast' ? 'optimizing-pulse' : ''}`}>
@@ -547,13 +512,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
               <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
           </button>
-          <div className="brand-logo-unified">
-            <QlikCodexLogo />
-            <div className="brand-logo-content">
-              <span className="brand-name-text">QLIK CODEX I.A</span>
-              <span className="brand-beta-tag">BETA</span>
-            </div>
-          </div>
+          <BrandMark variant="full" size="sm" showBeta className="opt-brand-mark" />
         </div>
 
         <div className="header-center">
@@ -891,10 +850,20 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                     const completedSubSteps = subSteps.filter(s => s.status === "success").length;
                     const totalSubSteps = subSteps.length;
                     const progressPercent = totalSubSteps > 0 ? Math.round((completedSubSteps / totalSubSteps) * 100) : 0;
+                    const hasSubSteps = totalSubSteps > 0;
                     const isComplete = stage?.status === "success" || (totalSubSteps > 0 && subSteps.every(s => s.status === "success"));
                     const isActive = stage?.status === "running" || subSteps.some(s => s.status === "running");
                     const hasError = stage?.status === "error" || subSteps.some(s => s.status === "error");
                     const cardDuration = subSteps.reduce((sum, sub) => sum + (sub.duration || 0), 0) || (stage?.duration || 0);
+                    const isNvidiaFast = stage.id === "NVIDIA_FAST";
+                    const statusLabel = stage.status === "running"
+                      ? "Executando"
+                      : stage.status === "success"
+                        ? "Concluído"
+                        : stage.status === "error"
+                          ? "Erro"
+                          : "Aguardando";
+                    const durationLabel = cardDuration ? formatDuration(cardDuration) : "--";
 
                     return (
                       <details
@@ -954,36 +923,69 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
 
                         {/* SUBTASKS DENTRO DO CARD */}
                         <div className="card-substeps">
-                          {subSteps.map((subStep) => {
-                            const isRunning = subStep.status === "running";
-                            const runningTime = isRunning && subStep.currentRunningTime ? subStep.currentRunningTime : 0;
-                            const isNearTimeout = runningTime > 150000;
+                          {hasSubSteps ? (
+                            subSteps.map((subStep) => {
+                              const isRunning = subStep.status === "running";
+                              const runningTime = isRunning && subStep.currentRunningTime ? subStep.currentRunningTime : 0;
+                              const isNearTimeout = runningTime > 150000;
 
-                            return (
-                              <div key={subStep.id} className={`substep-item ${subStep.status} ${isNearTimeout ? 'warning-timeout' : ''}`}>
-                                <div className="substep-indicator">
-                                  {isRunning ? (
-                                    <Spinner size={10} />
-                                  ) : subStep.status === "success" ? (
-                                    <Icons.Check />
-                                  ) : subStep.status === "error" ? (
-                                    <Icons.X />
-                                  ) : (
-                                    <div className="substep-dot" />
+                              return (
+                                <div key={subStep.id} className={`substep-item ${subStep.status} ${isNearTimeout ? 'warning-timeout' : ''}`}>
+                                  <div className="substep-indicator">
+                                    {isRunning ? (
+                                      <Spinner size={10} />
+                                    ) : subStep.status === "success" ? (
+                                      <Icons.Check />
+                                    ) : subStep.status === "error" ? (
+                                      <Icons.X />
+                                    ) : (
+                                      <div className="substep-dot" />
+                                    )}
+                                  </div>
+                                  <span className="substep-name">{subStep.name}</span>
+                                  {isRunning && runningTime > 0 && (
+                                    <span className={`substep-time ${isNearTimeout ? 'warning' : ''}`}>
+                                      🕐 {formatDuration(runningTime)}
+                                    </span>
+                                  )}
+                                  {subStep.duration && subStep.status === "success" && (
+                                    <span className="substep-duration">{formatDuration(subStep.duration)}</span>
                                   )}
                                 </div>
-                                <span className="substep-name">{subStep.name}</span>
-                                {isRunning && runningTime > 0 && (
-                                  <span className={`substep-time ${isNearTimeout ? 'warning' : ''}`}>
-                                    🕐 {formatDuration(runningTime)}
+                              );
+                            })
+                          ) : (
+                            isNvidiaFast ? (
+                              <div className="nvidia-fast-empty">
+                                <div className="nvidia-fast-tags">
+                                  <span className="nvidia-chip primary">Execução GPU</span>
+                                  <span className="nvidia-chip muted">Sem relatório textual</span>
+                                  <span className={`nvidia-chip status ${stage.status}`}>
+                                    {statusLabel}
                                   </span>
-                                )}
-                                {subStep.duration && subStep.status === "success" && (
-                                  <span className="substep-duration">{formatDuration(subStep.duration)}</span>
-                                )}
+                                </div>
+                                <p className="nvidia-fast-desc">
+                                  Otimizador NVIDIA Fast retorna apenas o script refatorado direto da GPU, ideal para respostas rápidas.
+                                </p>
+                                <div className="nvidia-fast-grid">
+                                  <div className="nvidia-fast-stat">
+                                    <span>Saída</span>
+                                    <strong>Script otimizado</strong>
+                                  </div>
+                                  <div className="nvidia-fast-stat">
+                                    <span>Relatório</span>
+                                    <strong>Não gera</strong>
+                                  </div>
+                                  <div className="nvidia-fast-stat">
+                                    <span>Tempo</span>
+                                    <strong>{durationLabel}</strong>
+                                  </div>
+                                </div>
                               </div>
-                            );
-                          })}
+                            ) : (
+                              <div className="card-empty-text">Nenhuma tarefa listada para esta etapa.</div>
+                            )
+                          )}
                         </div>
                       </details>
                     );
@@ -1046,10 +1048,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
         overflow: 'hidden',
         flexShrink: 0
       }}>
-        <div className="footer-logo-v2">
-          <span className="footer-name-v2">QLIK CODEX I.A</span>
-          <span className="footer-beta-v2">BETA</span>
-        </div>
+        <BrandMark variant="wordmark" size="sm" showBeta className="opt-footer-brand" />
         <span style={{ color: '#444' }}>•</span>
         <span style={{ color: '#888', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>© 2025 Sentinnell IA</span>
         <span style={{ color: '#444' }}>•</span>

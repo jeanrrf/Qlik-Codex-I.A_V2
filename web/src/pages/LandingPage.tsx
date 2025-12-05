@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { apiClient } from "../api/client";
 
 import QlikFormatterTool from "../components/QlikFormatterTool";
+import { BrandMark } from "../components/BrandMark";
 
 interface LandingPageProps {
   onStart: () => void;
@@ -254,13 +255,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       {/* NAV */}
       <nav className="landing-nav">
         <div className="nav-brand">
-          <div className="brand-logo-unified">
-            <div className="brand-logo-gradient" />
-            <div className="brand-logo-content">
-              <span className="brand-name">QLIK CODEX I.A</span>
-              <span className="brand-beta">BETA</span>
-            </div>
-          </div>
+          <BrandMark
+            variant="full"
+            size="sm"
+            showBeta
+            className="nav-brand-mark"
+            onClick={() => scrollToSection('how-it-works')}
+          />
         </div>
 
         <div className="nav-links">
@@ -800,12 +801,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       </main >
 
       {/* FOOTER HORIZONTAL */}
-      < footer className="landing-footer" >
+      <footer className="landing-footer">
         <div className="footer-content">
-          <div className="footer-logo">
-            <span className="footer-logo-name">QLIK CODEX I.A</span>
-            <span className="footer-logo-beta">BETA</span>
-          </div>
+          <BrandMark variant="wordmark" size="sm" showBeta className="footer-brand-mark" />
           <span className="footer-separator">•</span>
           <span className="footer-copy">&copy; 2025 SENTINNELL IA</span>
           <span className="footer-separator">•</span>
@@ -816,7 +814,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             WhatsApp
           </a>
         </div>
-      </footer >
+      </footer>
 
       {/* Contact Modal */}
       {
@@ -1007,99 +1005,18 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           gap: 12px;
         }
 
-        /* Logo Oficial Unificado - Escurecimento Progressivo + BETA Verde */
-        .brand-logo-unified {
-          position: relative;
-          display: flex;
-          align-items: center;
-          padding: 10px 14px 10px 18px;
-          border-radius: 10px;
-          overflow: hidden;
-          cursor: pointer;
-          transition: all 0.3s ease;
+        /* Marca unificada */
+        .nav-brand .brand-mark {
+          background: rgba(8, 12, 20, 0.92);
+          border-color: rgba(255, 255, 255, 0.08);
         }
 
-        .brand-logo-gradient {
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(90deg, 
-            rgba(45, 50, 60, 0.98) 0%,
-            rgba(35, 40, 50, 0.98) 25%,
-            rgba(25, 30, 40, 0.99) 50%,
-            rgba(18, 22, 30, 1) 75%,
-            rgba(12, 15, 22, 1) 100%);
-          border: 1px solid rgba(100, 116, 139, 0.25);
-          border-radius: 10px;
-          box-shadow: 
-            0 6px 24px rgba(0, 0, 0, 0.5),
-            inset 0 1px 0 rgba(255, 255, 255, 0.06),
-            inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+        .nav-brand .brand-mark:hover {
+          border-color: rgba(0, 231, 255, 0.45);
         }
 
-        .brand-logo-content {
-          position: relative;
-          z-index: 1;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-
-        .brand-name {
-          font-size: 1.05rem;
-          font-weight: 800;
-          letter-spacing: 0.06em;
-          background: linear-gradient(180deg, 
-            #ffffff 0%, 
-            #f1f5f9 30%,
-            #cbd5e1 60%,
-            #94a3b8 100%);
-          -webkit-background-clip: text;
-          background-clip: text;
-          -webkit-text-fill-color: transparent;
-          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-        }
-
-        .brand-beta {
-          font-size: 0.6rem;
-          font-weight: 800;
-          letter-spacing: 0.15em;
-          padding: 4px 8px;
-          background: linear-gradient(135deg, 
-            rgba(16, 185, 129, 0.25) 0%, 
-            rgba(5, 150, 105, 0.35) 100%);
-          color: #34d399;
-          border: 1px solid rgba(16, 185, 129, 0.4);
-          border-radius: 5px;
-          text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
-          box-shadow: 
-            0 0 12px rgba(16, 185, 129, 0.2),
-            inset 0 1px 0 rgba(255, 255, 255, 0.1);
-        }
-
-        .nav-brand:hover .brand-logo-gradient {
-          border-color: rgba(16, 185, 129, 0.4);
-          box-shadow: 
-            0 8px 32px rgba(0, 0, 0, 0.6),
-            0 0 20px rgba(16, 185, 129, 0.15),
-            inset 0 1px 0 rgba(255, 255, 255, 0.08);
-        }
-
-        .nav-brand:hover .brand-name {
-          background: linear-gradient(180deg, 
-            #ffffff 0%, 
-            #f8fafc 40%,
-            #e2e8f0 100%);
-          -webkit-background-clip: text;
-          background-clip: text;
-        }
-
-        .nav-brand:hover .brand-beta {
-          background: linear-gradient(135deg, 
-            rgba(16, 185, 129, 0.35) 0%, 
-            rgba(5, 150, 105, 0.45) 100%);
-          box-shadow: 
-            0 0 18px rgba(16, 185, 129, 0.35),
-            inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        .nav-brand .brand-wordmark__title {
+          letter-spacing: 0.1em;
         }
 
         .nav-links {
@@ -1495,6 +1412,105 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         @keyframes scroll-dot {
           0%, 100% { top: 0; opacity: 1; }
           100% { top: 100%; opacity: 0; }
+        }
+
+        /* ===================== */
+        /* HOW IT WORKS SECTION  */
+        /* ===================== */
+        
+        .how-it-works-section {
+          position: relative;
+          padding: 120px 60px 80px;
+          max-width: 1200px;
+          margin: 0 auto;
+          overflow: hidden;
+        }
+
+        .how-it-works-section::after {
+          content: "";
+          position: absolute;
+          inset: 40px;
+          background: radial-gradient(ellipse at top, rgba(0, 242, 255, 0.05) 0%, transparent 70%);
+          pointer-events: none;
+          z-index: -1;
+        }
+
+        .how-it-works-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+          gap: 20px;
+          margin-top: 56px;
+        }
+
+        .how-step {
+          position: relative;
+          padding: 28px;
+          background: rgba(15, 20, 35, 0.55);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 18px;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+          transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .how-step::before {
+          content: "";
+          position: absolute;
+          inset: 1px;
+          border-radius: 16px;
+          background: linear-gradient(135deg, rgba(0, 242, 255, 0.1), rgba(112, 0, 255, 0.04));
+          opacity: 0;
+          transition: opacity 0.25s ease;
+          pointer-events: none;
+        }
+
+        .how-step:hover {
+          transform: translateY(-4px);
+          border-color: rgba(0, 242, 255, 0.18);
+          box-shadow: 0 16px 60px rgba(0, 0, 0, 0.45);
+        }
+
+        .how-step:hover::before {
+          opacity: 1;
+        }
+
+        .how-step-title {
+          position: relative;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          font-size: 1.25rem;
+          font-weight: 700;
+          margin-bottom: 10px;
+        }
+
+        .how-step-title::before {
+          content: "";
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          background: var(--primary);
+          box-shadow: 0 0 18px var(--primary-glow);
+        }
+
+        .how-step-text {
+          color: var(--text-secondary);
+          line-height: 1.7;
+          font-size: 1rem;
+        }
+
+        @media (max-width: 900px) {
+          .how-it-works-section {
+            padding: 100px 28px 60px;
+          }
+
+          .how-it-works-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
+          }
+
+          .how-step {
+            padding: 22px;
+          }
         }
 
         /* ===================== */
@@ -2187,45 +2203,19 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             inset 0 1px 0 rgba(255, 255, 255, 0.05);
         }
 
-        .footer-logo {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 6px 10px 6px 14px;
-          background: linear-gradient(90deg, 
-            rgba(40, 45, 55, 0.95) 0%,
-            rgba(25, 30, 40, 0.98) 60%,
-            rgba(15, 18, 25, 1) 100%);
-          border: 1px solid rgba(100, 116, 139, 0.25);
-          border-radius: 8px;
-          box-shadow: 
-            0 3px 12px rgba(0, 0, 0, 0.4),
-            inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        .footer-brand-mark .brand-mark {
+          background: transparent;
+          border-color: rgba(255, 255, 255, 0.08);
+          box-shadow: none;
+          padding: 6px 10px;
         }
 
-        .footer-logo-name {
-          font-size: 0.7rem;
-          font-weight: 800;
-          letter-spacing: 0.08em;
-          background: linear-gradient(180deg, 
-            #ffffff 0%, 
-            #e2e8f0 50%,
-            #94a3b8 100%);
-          -webkit-background-clip: text;
-          background-clip: text;
-          -webkit-text-fill-color: transparent;
+        .footer-brand-mark .brand-wordmark__title {
+          font-size: 0.85rem;
         }
 
-        .footer-logo-beta {
-          font-size: 0.5rem;
-          font-weight: 800;
-          letter-spacing: 0.12em;
-          padding: 3px 6px;
-          background: rgba(16, 185, 129, 0.2);
-          color: #34d399;
-          border: 1px solid rgba(16, 185, 129, 0.35);
-          border-radius: 4px;
-          text-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+        .footer-brand-mark .brand-wordmark__beta {
+          font-size: 0.55rem;
         }
 
         .footer-separator {

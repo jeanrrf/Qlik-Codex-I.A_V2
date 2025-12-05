@@ -398,6 +398,104 @@
   color: #fff;
 }
 
+.card-empty-text {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.65);
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+/* NVIDIA Fast - empty state info */
+.nvidia-fast-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(0, 242, 255, 0.05), rgba(112, 0, 255, 0.03));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+}
+
+.nvidia-fast-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.nvidia-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.nvidia-chip.primary {
+  border-color: rgba(0, 255, 157, 0.4);
+  color: #00ff9d;
+  background: rgba(0, 255, 157, 0.12);
+}
+
+.nvidia-chip.muted {
+  color: var(--text-secondary);
+}
+
+.nvidia-chip.status.running {
+  border-color: rgba(0, 242, 255, 0.5);
+  color: var(--primary);
+}
+
+.nvidia-chip.status.success {
+  border-color: rgba(0, 255, 157, 0.5);
+  color: var(--success);
+}
+
+.nvidia-chip.status.error {
+  border-color: rgba(255, 42, 109, 0.5);
+  color: var(--danger);
+}
+
+.nvidia-fast-desc {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.5;
+}
+
+.nvidia-fast-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.nvidia-fast-stat {
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nvidia-fast-stat span {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 0.02em;
+}
+
+.nvidia-fast-stat strong {
+  font-size: 0.95rem;
+  color: #fff;
+}
+
 .substep-item.running {
   background: rgba(var(--card-color-rgb), 0.1);
   border-left: 2px solid var(--card-color);

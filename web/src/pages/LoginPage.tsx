@@ -4,6 +4,7 @@
 
 import React, { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { BrandMark } from "../components/BrandMark";
 
 import "./LoginPage.css";
 
@@ -42,9 +43,7 @@ export function LoginPage() {
       <div className="login-container">
         <div className="login-header">
           <div className="login-logo">
-            <div className="logo-gradient">
-              <span className="logo-text">QLIK CODEX I.A</span>
-            </div>
+            <BrandMark variant="full" size="sm" showBeta className="login-brand-mark" />
           </div>
           <h1 className="login-title">Bem-vindo</h1>
           <p className="login-subtitle">

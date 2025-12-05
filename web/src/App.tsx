@@ -11,8 +11,20 @@ import { apiClient } from "./api/client";
 
 type View = "landing" | "optimizer" | "profile";
 
+const ALLOWED_VIEWS: View[] = ["landing", "optimizer", "profile"];
+
 const AppContent: React.FC = () => {
-  const [view, setView] = useState<View>("landing");
+  const [view, setView] = useState<View>(() => {
+    try {
+      const stored = localStorage.getItem("codex-last-view") as View | null;
+      if (stored && ALLOWED_VIEWS.includes(stored)) {
+        return stored;
+      }
+    } catch (err) {
+      // ignore storage errors
+    }
+    return "landing";
+  });
   const { isAuthenticated, isLoading } = useAuth();
 
   // Analytics: Log Visit
@@ -39,6 +51,15 @@ const AppContent: React.FC = () => {
       return;
     }
   }, []);
+
+  // Persist view so refresh keeps current section
+  useEffect(() => {
+    try {
+      localStorage.setItem("codex-last-view", view);
+    } catch (err) {
+      // ignore storage errors
+    }
+  }, [view]);
 
   // Se estamos na rota de callback, renderizar AuthCallback
   if (window.location.pathname === "/auth/callback") {

@@ -22,6 +22,13 @@
   /* Electric Violet */
   --secondary-dim: rgba(112, 0, 255, 0.15);
 
+  /* Brand */
+  --brand-primary: #00e7ff;
+  --brand-secondary: #754bff;
+  --brand-surface: rgba(14, 20, 32, 0.9);
+  --brand-ink: #05070d;
+  --brand-glow: rgba(0, 231, 255, 0.35);
+
   --success: #00ff9d;
   --warning: #ffb800;
   --danger: #ff2a6d;
