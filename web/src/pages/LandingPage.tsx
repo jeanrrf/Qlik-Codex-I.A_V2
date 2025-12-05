@@ -478,14 +478,19 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         </section>
         {/* DIFERENCIAL / COMPARATIVO */}
         <section className="why-ainex-section">
-          <div className="section-header">
-            <span className="section-badge">DIFERENCIAL AINEX</span>
-            <h2 className="section-title">
-              Mais que um chat: uma IA feita para Qlik
-            </h2>
-            <p className="section-description">
-              Use o teste gratuito para sentir, na prática, a diferença entre uma IA genérica e uma engine desenhada para Qlik Script.
-            </p>
+          <div className="section-header why-ainex-header">
+            <div className="section-header-text">
+              <span className="section-badge">DIFERENCIAL AINEX</span>
+              <h2 className="section-title">
+                Mais que um chat: uma IA feita para Qlik
+              </h2>
+              <p className="section-description">
+                Use o teste gratuito para sentir, na prática, a diferença entre uma IA genérica e uma engine desenhada para Qlik Script.
+              </p>
+            </div>
+            <div className="section-header-logo" aria-hidden="true">
+              <img src="/brand-visual-hero.png" alt="Logo Qlik Codex I.A" loading="lazy" />
+            </div>
           </div>
 
           <div className="comparison-grid">
@@ -1821,22 +1826,42 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           padding: 100px 60px;
           max-width: 1200px;
           margin: 0 auto;
-          overflow: hidden;
-          isolation: isolate;
         }
 
-        .why-ainex-section::before {
-          content: "";
-          position: absolute;
-          inset: -60px -120px;
-          background:
-            radial-gradient(circle at 25% 30%, rgba(0, 242, 255, 0.14), transparent 42%),
-            radial-gradient(circle at 78% 70%, rgba(112, 0, 255, 0.12), transparent 52%),
-            url('/brand-visual-hero.png') center/cover no-repeat;
-          opacity: 0.38;
-          filter: saturate(1.05);
-          z-index: 0;
-          pointer-events: none;
+        .why-ainex-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 24px;
+          margin-bottom: 32px;
+        }
+
+        .section-header-text {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          max-width: 760px;
+        }
+
+        .section-header-logo img {
+          display: block;
+          width: 220px;
+          max-width: 32vw;
+          height: auto;
+          object-fit: contain;
+          filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.35));
+        }
+
+        @media (max-width: 960px) {
+          .why-ainex-header {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+
+          .section-header-logo img {
+            width: 180px;
+            max-width: 50vw;
+          }
         }
 
         .comparison-grid {
