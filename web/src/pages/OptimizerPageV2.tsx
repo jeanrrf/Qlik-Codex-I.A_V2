@@ -5013,130 +5013,28 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
           transform: translateX(-1px) scale(0.96);
         }
 
-        .brand-logo {
-          display: flex;
-          align-items: center;
-          gap: 12px;
+        .opt-brand-mark {
+          background: rgba(8, 12, 20, 0.92);
+          border-color: rgba(255, 255, 255, 0.08);
         }
 
-        /* Qlik Codex Logo SVG */
-        .qlik-codex-logo {
-          width: 36px;
-          height: 36px;
-          margin-right: 4px;
-          filter: drop-shadow(0 0 8px rgba(0, 242, 255, 0.4));
-          animation: logo-float 4s ease-in-out infinite;
+        .opt-brand-mark .brand-wordmark__title {
+          letter-spacing: 0.1em;
         }
 
-        @keyframes logo-float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-2px); }
+        .opt-footer-brand {
+          background: transparent;
+          border-color: rgba(255, 255, 255, 0.08);
+          box-shadow: none;
+          padding: 6px 10px;
         }
 
-        /* Logo Oficial Unificado - Escurecimento Progressivo + BETA Verde */
-        .brand-logo-unified {
-          position: relative;
-          display: flex;
-          align-items: center;
-          padding: 10px 14px 10px 12px;
-          border-radius: 10px;
-          overflow: hidden;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          background: linear-gradient(90deg, 
-            rgba(45, 50, 60, 0.98) 0%,
-            rgba(35, 40, 50, 0.98) 25%,
-            rgba(25, 30, 40, 0.99) 50%,
-            rgba(18, 22, 30, 1) 75%,
-            rgba(12, 15, 22, 1) 100%);
-          border: 1px solid rgba(100, 116, 139, 0.25);
-          box-shadow: 
-            0 6px 24px rgba(0, 0, 0, 0.5),
-            inset 0 1px 0 rgba(255, 255, 255, 0.06),
-            inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+        .opt-footer-brand .brand-wordmark__title {
+          font-size: 0.9rem;
         }
 
-        .brand-logo-gradient {
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(90deg, 
-            rgba(45, 50, 60, 0.98) 0%,
-            rgba(35, 40, 50, 0.98) 25%,
-            rgba(25, 30, 40, 0.99) 50%,
-            rgba(18, 22, 30, 1) 75%,
-            rgba(12, 15, 22, 1) 100%);
-          border: 1px solid rgba(100, 116, 139, 0.25);
-          border-radius: 10px;
-          box-shadow: 
-            0 6px 24px rgba(0, 0, 0, 0.5),
-            inset 0 1px 0 rgba(255, 255, 255, 0.06),
-            inset 0 -1px 0 rgba(0, 0, 0, 0.2);
-        }
-
-        .brand-logo-content {
-          position: relative;
-          z-index: 1;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-
-        .brand-name-text {
-          font-size: 1.05rem;
-          font-weight: 800;
-          letter-spacing: 0.06em;
-          background: linear-gradient(180deg, 
-            #ffffff 0%, 
-            #f1f5f9 30%,
-            #cbd5e1 60%,
-            #94a3b8 100%);
-          -webkit-background-clip: text;
-          background-clip: text;
-          -webkit-text-fill-color: transparent;
-          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-        }
-
-        .brand-beta-tag {
-          font-size: 0.6rem;
-          font-weight: 800;
-          letter-spacing: 0.15em;
-          padding: 4px 8px;
-          background: linear-gradient(135deg, 
-            rgba(16, 185, 129, 0.25) 0%, 
-            rgba(5, 150, 105, 0.35) 100%);
-          color: #34d399;
-          border: 1px solid rgba(16, 185, 129, 0.4);
-          border-radius: 5px;
-          text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
-          box-shadow: 
-            0 0 12px rgba(16, 185, 129, 0.2),
-            inset 0 1px 0 rgba(255, 255, 255, 0.1);
-        }
-
-        .brand-logo-unified:hover .brand-logo-gradient {
-          border-color: rgba(16, 185, 129, 0.4);
-          box-shadow: 
-            0 8px 32px rgba(0, 0, 0, 0.6),
-            0 0 20px rgba(16, 185, 129, 0.15),
-            inset 0 1px 0 rgba(255, 255, 255, 0.08);
-        }
-
-        .brand-logo-unified:hover .brand-name-text {
-          background: linear-gradient(180deg, 
-            #ffffff 0%, 
-            #f8fafc 40%,
-            #e2e8f0 100%);
-          -webkit-background-clip: text;
-          background-clip: text;
-        }
-
-        .brand-logo-unified:hover .brand-beta-tag {
-          background: linear-gradient(135deg, 
-            rgba(16, 185, 129, 0.35) 0%, 
-            rgba(5, 150, 105, 0.45) 100%);
-          box-shadow: 
-            0 0 18px rgba(16, 185, 129, 0.35),
-            inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        .opt-footer-brand .brand-wordmark__beta {
+          font-size: 0.55rem;
         }
 
         /* Footer Logo V2 */
