@@ -211,13 +211,21 @@ async function runNvidiaFastMode(
 
   const model = llmOptions?.model || config.nvidiaFastModel;
 
-  // Prompt direto: pede somente o script otimizado em JSON (chave optimizedScript)
+  // Prompt direto: pede script otimizado + resumo + mudanças em JSON
   const prompt = `
 Você é o QLIK CODEX I.A. Refatore o script Qlik abaixo para máxima performance e legibilidade.
 - Preserve lógica e resultados.
 - Remova SELECT *, use listas explícitas.
 - Otimize joins, reduza cargas redundantes, elimine loops desnecessários.
-- Retorne APENAS JSON no formato: {"optimizedScript": "<script otimizado>"} sem Markdown nem explicações.
+- Retorne APENAS JSON no formato:
+{
+  "optimizedScript": "<script otimizado>",
+  "summary": "<resumo conciso das melhorias>",
+  "changes": [
+    { "category": "performance" | "readability" | "structure", "area": "<onde mudou>", "impact": "<impacto>" }
+  ]
+}
+sem Markdown nem explicações adicionais.
 
 --- SCRIPT ORIGINAL ---
 ${script}
@@ -241,18 +249,36 @@ ${script}
 
       checkAborted(abortSignal, "NVIDIA Fast mode after LLM");
 
-      let optimizedScript = response.text.trim();
+      let rawResponse = response.text.trim();
+      // Remove markdown code blocks if present
+      rawResponse = rawResponse.replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "").trim();
+
+      let optimizedScript = rawResponse;
+      let summary = `NVIDIA Fast Mode (${model}) concluído`;
+      let changes: any[] = [];
 
       try {
-        const parsed = JSON.parse(optimizedScript);
-        if (parsed && typeof parsed.optimizedScript === "string") {
-          optimizedScript = parsed.optimizedScript;
+        const parsed = JSON.parse(rawResponse);
+        if (parsed) {
+          if (typeof parsed.optimizedScript === "string") {
+            optimizedScript = parsed.optimizedScript;
+          }
+          if (typeof parsed.summary === "string") {
+            summary = parsed.summary;
+          }
+          if (Array.isArray(parsed.changes)) {
+            changes = parsed.changes;
+          }
         }
       } catch (err) {
-        logger.warn("[NVIDIA FAST] Falha ao parsear JSON, usando texto bruto", { error: String(err) });
+        logger.warn("[NVIDIA FAST] Falha ao parsear JSON completo, usando resposta bruta como script", { error: String(err) });
+        // Se falhar o parse, assumimos que o modelo devolveu apenas o script ou o JSON quebrou
+        // Tentativa de recuperação simples se for um JSON malformado que contem "optimizedScript"
+        const match = rawResponse.match(/"optimizedScript"\s*:\s*"(.*?)"/s);
+        if (match && match[1]) {
+          try { optimizedScript = JSON.parse(`"${match[1]}"`); } catch { }
+        }
       }
-
-      optimizedScript = optimizedScript.replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "").trim();
 
       const duration = Date.now() - start;
 
@@ -271,11 +297,16 @@ ${script}
       return {
         originalScript: script,
         optimizedScript,
-        summary: `NVIDIA Fast Mode (${model}) concluído em ${duration}ms`,
+        summary,
         diffStats,
         documentationMarkdown: "",
         analysis: {
-          changes: [],
+          changes: changes.map(c => ({
+            category: c.category || "performance",
+            area: c.area || "Geral",
+            impact: c.impact || "Otimização aplicada",
+            riskLevel: "low"
+          })),
           breakingRisk: "low",
           safeToApply: true,
           mode: "nvidia-fast",
