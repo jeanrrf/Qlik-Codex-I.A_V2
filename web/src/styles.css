@@ -638,6 +638,120 @@ h6 {
   border: 1px solid rgba(255, 184, 0, 0.2);
 }
 
+/* Landing: Comparativo AINEX x Genéricos */
+.why-ainex-section {
+  padding: 120px 60px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.comparison-card {
+  position: relative;
+  padding: 32px;
+  border-radius: 18px;
+  background: rgba(12, 16, 28, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.comparison-card.chatgpt {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.comparison-card.ainex {
+  border-color: rgba(0, 242, 255, 0.18);
+  box-shadow: 0 12px 40px rgba(0, 242, 255, 0.08);
+}
+
+.comparison-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.comparison-icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 1.4rem;
+}
+
+.comparison-sub {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.comparison-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+}
+
+.comparison-list li {
+  font-size: 0.95rem;
+  color: var(--text-main);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.comparison-list li::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.comparison-list .positive::before {
+  background: #00ff9d;
+  box-shadow: 0 0 10px rgba(0, 255, 157, 0.4);
+}
+
+.comparison-list .negative::before {
+  background: #ff6b6b;
+  box-shadow: 0 0 10px rgba(255, 107, 107, 0.4);
+}
+
+.comparison-list .neutral::before {
+  background: var(--primary);
+  box-shadow: 0 0 10px rgba(0, 242, 255, 0.3);
+}
+
+.featured-badge {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(0, 242, 255, 0.1);
+  border: 1px solid rgba(0, 242, 255, 0.3);
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+@media (max-width: 900px) {
+  .why-ainex-section {
+    padding: 100px 28px;
+  }
+}
+
 @media (max-width: 900px) {
   .how-it-works-section {
     padding: 100px 28px 60px;

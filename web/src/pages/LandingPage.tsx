@@ -468,7 +468,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             </div>
           </div>
         </section>
-
         {/* DIFERENCIAL / COMPARATIVO */}
         <section className="why-ainex-section">
           <div className="section-header">
@@ -502,21 +501,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 <span className="comparison-sub">Engine desenhada para Qlik</span>
               </div>
               <ul className="comparison-list">
-                <li className="positive">Treinada em padrões e boas práticas de Qlik</li>
-                <li className="positive">Valida sintaxe e estrutura antes de sugerir mudanças</li>
-                <li className="positive">Focada em desempenho, segurança e manutenção de scripts</li>
+                <li className="positive">Treinada em documentação técnica Qlik</li>
+                <li className="positive">Valida sintaxe antes de sugerir</li>
+                <li className="positive">Otimiza para Qlik Engine (RAM/CPU)</li>
+                <li className="positive">Detecta gargalos de modelagem</li>
+                <li className="positive">Gera documentação automática</li>
               </ul>
               <span className="featured-badge">AINEX</span>
             </div>
           </div>
         </section>
-        <ul className="comparison-list">
-          <li className="positive">Treinada em documentação técnica Qlik</li>
-          <li className="positive">Valida sintaxe antes de sugerir</li>
-          <li className="positive">Otimiza para Qlik Engine (RAM/CPU)</li>
-          <li className="positive">Detecta gargalos de modelagem</li>
-          <li className="positive">Gera documentação automática</li>
-        </ul>
 
         {/* NVIDIA ACCELERATED SECTION - COMPUTING POWER */}
         <section className="nvidia-section">
