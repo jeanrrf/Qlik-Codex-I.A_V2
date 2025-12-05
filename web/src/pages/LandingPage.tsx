@@ -1817,9 +1817,26 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         /* ===================== */
         
         .why-ainex-section {
+          position: relative;
           padding: 100px 60px;
           max-width: 1200px;
           margin: 0 auto;
+          overflow: hidden;
+          isolation: isolate;
+        }
+
+        .why-ainex-section::before {
+          content: "";
+          position: absolute;
+          inset: -60px -120px;
+          background:
+            radial-gradient(circle at 25% 30%, rgba(0, 242, 255, 0.14), transparent 42%),
+            radial-gradient(circle at 78% 70%, rgba(112, 0, 255, 0.12), transparent 52%),
+            url('/brand-visual-hero.png') center/cover no-repeat;
+          opacity: 0.38;
+          filter: saturate(1.05);
+          z-index: 0;
+          pointer-events: none;
         }
 
         .comparison-grid {
@@ -1827,6 +1844,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
           gap: 32px;
           margin-bottom: 48px;
+          align-items: stretch;
         }
 
         .comparison-card {
@@ -1835,7 +1853,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           background: rgba(15, 20, 35, 0.6);
           border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 24px;
+          display: flex;
+          flex-direction: column;
+          height: 100%;
           transition: all 0.3s;
+          z-index: 1;
         }
 
         .comparison-card.featured {
@@ -1853,10 +1875,19 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           gap: 16px;
           margin-bottom: 24px;
           position: relative;
+          z-index: 1;
         }
 
         .comparison-icon {
-          font-size: 2.5rem;
+          width: 56px;
+          height: 56px;
+          border-radius: 16px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 2rem;
+          background: rgba(255, 255, 255, 0.04);
+          box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
         }
 
         .comparison-header h3 {
