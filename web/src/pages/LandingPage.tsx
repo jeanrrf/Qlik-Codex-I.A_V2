@@ -131,8 +131,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
   const [copyFeedback, setCopyFeedback] = useState<CopyFeedback | null>(null);
   const copyTimeout = useRef<number | null>(null);
 
-  const heroBackground = "/brand-visual-3d.png";
-
   // Contact Form State
   const [formState, setFormState] = useState({ name: "", email: "", company: "", message: "" });
   const [isSending, setIsSending] = useState(false);
@@ -288,7 +286,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         <section className="hero-section">
           <div
             className="hero-bg-layer"
-            style={{ backgroundImage: `url(${heroBackground})` }}
             aria-hidden="true"
           >
             <div className="hero-bg-overlay" />
@@ -1095,12 +1092,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         .hero-bg-layer {
           position: absolute;
           inset: -6%;
-          background-size: cover;
-          background-position: center;
-          filter: saturate(1.05) brightness(0.45);
-          opacity: 0.7;
+          background: radial-gradient(circle at 50% 46%, rgba(0, 242, 255, 0.18) 0%, rgba(0, 242, 255, 0.08) 24%, rgba(3, 5, 8, 0.9) 56%, rgba(3, 5, 8, 1) 74%);
+          background-repeat: no-repeat;
+          filter: none;
+          opacity: 0.9;
           transform: scale(1.02);
-          transition: background-image 0.4s ease, opacity 0.4s ease;
+          transition: opacity 0.4s ease;
           z-index: 0;
         }
 
