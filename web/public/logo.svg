@@ -1,44 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
-  <defs>
-    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#00e7ff" />
-      <stop offset="55%" stop-color="#754bff" />
-      <stop offset="100%" stop-color="#00e7ff" />
-    </linearGradient>
-    <filter id="brandGlow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
-      <feMerge>
-        <feMergeNode in="blur" />
-        <feMergeNode in="SourceGraphic" />
-      </feMerge>
-    </filter>
-  </defs>
-
-  <polygon
-    points="256 36 444 146 444 366 256 476 68 366 68 146"
-    fill="rgba(0, 231, 255, 0.07)"
-    stroke="url(#brandGradient)"
-    stroke-width="14"
-    filter="url(#brandGlow)"
-  />
-  <circle
-    cx="256"
-    cy="226"
-    r="122"
-    fill="rgba(117, 75, 255, 0.08)"
-    stroke="url(#brandGradient)"
-    stroke-width="12"
-    filter="url(#brandGlow)"
-  />
-  <path
-    d="M256 106c-66.8 0-121 54.2-121 121s54.2 121 121 121c22.5 0 43.2-6 61.4-16.9L416 410"
-    stroke="url(#brandGradient)"
-    stroke-width="14"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    filter="url(#brandGlow)"
-  />
-  <circle cx="256" cy="356" r="10" fill="#00e7ff" opacity="0.9" />
-  <circle cx="220" cy="356" r="8" fill="#754bff" opacity="0.75" />
-  <circle cx="292" cy="356" r="8" fill="#754bff" opacity="0.75" />
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+    <rect width="100%" height="100%" fill="#050B12"/>
+    
+    <rect x="10" y="10" width="236" height="236" rx="22" fill="#0C1621"/>
+    <rect x="18" y="18" width="220" height="220" rx="18" fill="rgba(74, 246, 161, 0.235)"/>
+    
+    <!-- Main Circle Background -->
+    <circle cx="128" cy="128" r="92" stroke="#4AF6A1" stroke-width="12" fill="#0C1621"/>
+    
+    <!-- Arc -->
+    <!-- M 174 48.3 A 92 92 0 0 1 82 207.7 -->
+    <!-- 300 to 120 is 180 degrees. Sweep flag 1 (clockwise). Large arc? 180 is boundary. -->
+    <path d="M 174 48.32 A 92 92 0 0 1 82 207.67" stroke="#4AF6A1" stroke-width="12" fill="none" stroke-linecap="round"/>
+    
+    <!-- Line -->
+    <line x1="128" y1="128" x2="186" y2="194" stroke="#4AF6A1" stroke-width="12" stroke-linecap="round"/>
+    
+    <!-- Dot -->
+    <circle cx="128" cy="212" r="6" fill="#4AF6A1"/>
+    
+    <!-- Inner Ring -->
+    <circle cx="128" cy="128" r="52" stroke="rgba(20, 44, 38, 0.55)" stroke-width="6" fill="none"/>
+    </svg>
