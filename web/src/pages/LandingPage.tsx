@@ -656,199 +656,199 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           <span className="floating-cta-sub">4 análises/dia • sem cartão</span>
         </button>
 
-      {/* QLIK FORMATTER TOOL - BOTÃO COMPACTO */}
-      <section className="formatter-cta-section">
-        <div className="formatter-cta-card">
-          <div className="formatter-cta-glow" />
-          <div className="formatter-cta-content">
-            <div className="formatter-cta-icon">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                <path d="M2 17l10 5 10-5" />
-                <path d="M2 12l10 5 10-5" />
-              </svg>
+        {/* QLIK FORMATTER TOOL - BOTÃO COMPACTO */}
+        <section className="formatter-cta-section">
+          <div className="formatter-cta-card">
+            <div className="formatter-cta-glow" />
+            <div className="formatter-cta-content">
+              <div className="formatter-cta-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                  <path d="M2 17l10 5 10-5" />
+                  <path d="M2 12l10 5 10-5" />
+                </svg>
+              </div>
+              <div className="formatter-cta-text">
+                <h3 className="formatter-cta-title">Formatador de Script Qlik</h3>
+                <p className="formatter-cta-description">
+                  Organize e indente seus scripts Qlik automaticamente com IA
+                </p>
+              </div>
+              <button
+                className="btn btn-formatter-open"
+                onClick={() => setFormatterOpen(true)}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="16 18 22 12 16 6" />
+                  <polyline points="8 6 2 12 8 18" />
+                </svg>
+                Abrir Ferramenta
+              </button>
             </div>
-            <div className="formatter-cta-text">
-              <h3 className="formatter-cta-title">Formatador de Script Qlik</h3>
-              <p className="formatter-cta-description">
-                Organize e indente seus scripts Qlik automaticamente com IA
-              </p>
-            </div>
-            <button
-              className="btn btn-formatter-open"
-              onClick={() => setFormatterOpen(true)}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="16 18 22 12 16 6" />
-                <polyline points="8 6 2 12 8 18" />
-              </svg>
-              Abrir Ferramenta
-            </button>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Modal do Formatter */}
-      < QlikFormatterTool isOpen={formatterOpen} onClose={() => setFormatterOpen(false)} />
+        {/* Modal do Formatter */}
+        < QlikFormatterTool isOpen={formatterOpen} onClose={() => setFormatterOpen(false)} />
 
-      {/* CONTACT / CTA FINAL */}
-      <section id="contact" className="contact-section">
-        <div className="contact-card">
-          <div className="contact-glow" />
-          <div className="contact-content">
-            <span className="contact-badge">FALE COM O CRIADOR</span>
-            <h2 className="contact-title">
-              Precisa de uma solução<br />
-              <span className="text-gradient-cyan">Enterprise Personalizada?</span>
-            </h2>
-            <p className="contact-description">
-              Vamos conversar sobre como a AINEX pode transformar a produtividade do seu time de dados.
-            </p>
+        {/* CONTACT / CTA FINAL */}
+        <section id="contact" className="contact-section">
+          <div className="contact-card">
+            <div className="contact-glow" />
+            <div className="contact-content">
+              <span className="contact-badge">FALE COM O CRIADOR</span>
+              <h2 className="contact-title">
+                Precisa de uma solução<br />
+                <span className="text-gradient-cyan">Enterprise Personalizada?</span>
+              </h2>
+              <p className="contact-description">
+                Vamos conversar sobre como a AINEX pode transformar a produtividade do seu time de dados.
+              </p>
 
-            {/* Contact Form */}
-            <div className="contact-form-wrapper">
-              {!isSent ? (
-                <form className="contact-form" onSubmit={handleContactSubmit}>
-                  <div className="form-row">
+              {/* Contact Form */}
+              <div className="contact-form-wrapper">
+                {!isSent ? (
+                  <form className="contact-form" onSubmit={handleContactSubmit}>
+                    <div className="form-row">
+                      <input
+                        type="text"
+                        className="contact-input"
+                        placeholder="Nome"
+                        required
+                        value={formState.name}
+                        onChange={e => setFormState({ ...formState, name: e.target.value })}
+                      />
+                      <input
+                        type="email"
+                        className="contact-input"
+                        placeholder="E-mail Corporativo"
+                        required
+                        value={formState.email}
+                        onChange={e => setFormState({ ...formState, email: e.target.value })}
+                      />
+                    </div>
                     <input
                       type="text"
                       className="contact-input"
-                      placeholder="Nome"
+                      placeholder="Empresa"
                       required
-                      value={formState.name}
-                      onChange={e => setFormState({ ...formState, name: e.target.value })}
+                      value={formState.company}
+                      onChange={e => setFormState({ ...formState, company: e.target.value })}
                     />
-                    <input
-                      type="email"
-                      className="contact-input"
-                      placeholder="E-mail Corporativo"
-                      required
-                      value={formState.email}
-                      onChange={e => setFormState({ ...formState, email: e.target.value })}
+                    <textarea
+                      className="contact-input contact-textarea"
+                      placeholder="Mensagem (opcional)"
+                      rows={3}
+                      value={formState.message}
+                      onChange={e => setFormState({ ...formState, message: e.target.value })}
                     />
+                    <button type="submit" className="btn btn-contact-submit" disabled={isSending}>
+                      {isSending ? "Enviando..." : "Enviar Mensagem"}
+                    </button>
+                    {formError && <p className="form-error">{formError}</p>}
+                  </form>
+                ) : (
+                  <div className="contact-success">
+                    <div className="success-icon" aria-hidden="true">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </div>
+                    <h3>Recebemos sua mensagem!</h3>
+                    <p>Entraremos em contato em breve pelo e-mail informado.</p>
+                    <button className="btn btn-ghost small" onClick={() => setIsSent(false)}>Nova mensagem</button>
                   </div>
-                  <input
-                    type="text"
-                    className="contact-input"
-                    placeholder="Empresa"
-                    required
-                    value={formState.company}
-                    onChange={e => setFormState({ ...formState, company: e.target.value })}
-                  />
-                  <textarea
-                    className="contact-input contact-textarea"
-                    placeholder="Mensagem (opcional)"
-                    rows={3}
-                    value={formState.message}
-                    onChange={e => setFormState({ ...formState, message: e.target.value })}
-                  />
-                  <button type="submit" className="btn btn-contact-submit" disabled={isSending}>
-                    {isSending ? "Enviando..." : "Enviar Mensagem"}
-                  </button>
-                  {formError && <p className="form-error">{formError}</p>}
-                </form>
-              ) : (
-                <div className="contact-success">
-                  <div className="success-icon" aria-hidden="true">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  </div>
-                  <h3>Recebemos sua mensagem!</h3>
-                  <p>Entraremos em contato em breve pelo e-mail informado.</p>
-                  <button className="btn btn-ghost small" onClick={() => setIsSent(false)}>Nova mensagem</button>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-            <div className="contact-divider-text">
-              <span>ou use nossos canais diretos</span>
-            </div>
+              <div className="contact-divider-text">
+                <span>ou use nossos canais diretos</span>
+              </div>
 
-            <div className="contact-actions">
-              <button className="btn btn-contact-primary" onClick={() => window.location.href = 'mailto:rosso.jeandasilva@gmail.com'}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect width="20" height="16" x="2" y="4" rx="2" />
-                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-                </svg>
-                Enviar E-mail
-              </button>
-              <button className="btn btn-contact-secondary" onClick={handleWhatsApp}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                </svg>
-                WhatsApp
-              </button>
-              <button className="btn btn-contact-tertiary" onClick={handleCopyContact}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="7" width="12" height="12" rx="2" />
-                  <path d="M8 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2" />
-                </svg>
-                Copiar contato
-              </button>
-            </div>
-            {!contactOpen && feedbackMessage}
+              <div className="contact-actions">
+                <button className="btn btn-contact-primary" onClick={() => window.location.href = 'mailto:rosso.jeandasilva@gmail.com'}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="20" height="16" x="2" y="4" rx="2" />
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                  </svg>
+                  Enviar E-mail
+                </button>
+                <button className="btn btn-contact-secondary" onClick={handleWhatsApp}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                  </svg>
+                  WhatsApp
+                </button>
+                <button className="btn btn-contact-tertiary" onClick={handleCopyContact}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="7" width="12" height="12" rx="2" />
+                    <path d="M8 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2" />
+                  </svg>
+                  Copiar contato
+                </button>
+              </div>
+              {!contactOpen && feedbackMessage}
 
-            <div className="contact-decoration">
-              <div className="decoration-line" />
-              <div className="decoration-dot" />
-              <div className="decoration-line" />
+              <div className="contact-decoration">
+                <div className="decoration-line" />
+                <div className="decoration-dot" />
+                <div className="decoration-line" />
+              </div>
             </div>
           </div>
-        </div>
-      </section>
-    </main >
+        </section>
+      </main >
 
-  {/* FOOTER HORIZONTAL */ }
-  < footer className="landing-footer" >
-    <div className="footer-content">
-      <div className="footer-logo">
-        <span className="footer-logo-name">QLIK CODEX I.A</span>
-        <span className="footer-logo-beta">BETA</span>
-      </div>
-      <span className="footer-separator">•</span>
-      <span className="footer-copy">&copy; 2025 SENTINNELL IA</span>
-      <span className="footer-separator">•</span>
-      <a href="https://github.com/jeanrrf" target="_blank" rel="noopener noreferrer" className="footer-link">
-        GitHub
-      </a>
-      <a href="https://api.whatsapp.com/send?phone=5548991937304" target="_blank" rel="noopener noreferrer" className="footer-link">
-        WhatsApp
-      </a>
-    </div>
-  </footer >
-
-  {/* Contact Modal */ }
-  {
-    contactOpen && (
-      <div className="modal-overlay" onClick={() => setContactOpen(false)}>
-        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-          <h3>Escolha como quer falar</h3>
-          <p className="text-secondary">
-            Um clique abre seu e-mail ou WhatsApp com mensagem pronta.
-          </p>
-          <div className="modal-actions">
-            <button className="btn btn-primary" onClick={handleEmail}>
-              Disparar e-mail
-            </button>
-            <button className="btn btn-glass" onClick={handleWhatsApp}>
-              Abrir WhatsApp
-            </button>
-            <button className="btn btn-contact-tertiary" onClick={handleCopyContact}>
-              Copiar contato
-            </button>
-            <button className="btn btn-ghost" onClick={() => setContactOpen(false)}>
-              Fechar
-            </button>
+      {/* FOOTER HORIZONTAL */}
+      < footer className="landing-footer" >
+        <div className="footer-content">
+          <div className="footer-logo">
+            <span className="footer-logo-name">QLIK CODEX I.A</span>
+            <span className="footer-logo-beta">BETA</span>
           </div>
-          {contactOpen && feedbackMessage}
+          <span className="footer-separator">•</span>
+          <span className="footer-copy">&copy; 2025 SENTINNELL IA</span>
+          <span className="footer-separator">•</span>
+          <a href="https://github.com/jeanrrf" target="_blank" rel="noopener noreferrer" className="footer-link">
+            GitHub
+          </a>
+          <a href="https://api.whatsapp.com/send?phone=5548991937304" target="_blank" rel="noopener noreferrer" className="footer-link">
+            WhatsApp
+          </a>
         </div>
-      </div>
-    )
-  }
+      </footer >
 
-  {/* Global Landing Styles */ }
-  <style>{`
+      {/* Contact Modal */}
+      {
+        contactOpen && (
+          <div className="modal-overlay" onClick={() => setContactOpen(false)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <h3>Escolha como quer falar</h3>
+              <p className="text-secondary">
+                Um clique abre seu e-mail ou WhatsApp com mensagem pronta.
+              </p>
+              <div className="modal-actions">
+                <button className="btn btn-primary" onClick={handleEmail}>
+                  Disparar e-mail
+                </button>
+                <button className="btn btn-glass" onClick={handleWhatsApp}>
+                  Abrir WhatsApp
+                </button>
+                <button className="btn btn-contact-tertiary" onClick={handleCopyContact}>
+                  Copiar contato
+                </button>
+                <button className="btn btn-ghost" onClick={() => setContactOpen(false)}>
+                  Fechar
+                </button>
+              </div>
+              {contactOpen && feedbackMessage}
+            </div>
+          </div>
+        )
+      }
+
+      {/* Global Landing Styles */}
+      <style>{`
         /* ===================== */
         /* LANDING PAGE STYLES   */
         /* ===================== */
@@ -2911,7 +2911,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           }
         }
       `}</style>
-    </div >
+    </div>
   );
 };
 
