@@ -1843,13 +1843,37 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           max-width: 760px;
         }
 
+        .section-header-logo {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px 20px;
+          background: rgba(0, 0, 0, 0.55);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 16px;
+          box-shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
+          overflow: hidden;
+        }
+
+        .section-header-logo::after {
+          content: "";
+          position: absolute;
+          inset: 8px;
+          border-radius: 12px;
+          pointer-events: none;
+          background: radial-gradient(circle at 50% 35%, rgba(0, 242, 255, 0.08), transparent 60%);
+          opacity: 0.9;
+          mix-blend-mode: screen;
+        }
+
         .section-header-logo img {
           display: block;
-          width: 220px;
-          max-width: 32vw;
+          width: 320px;
+          max-width: 42vw;
           height: auto;
           object-fit: contain;
-          filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.35));
+          filter: drop-shadow(0 12px 36px rgba(0, 0, 0, 0.45));
         }
 
         @media (max-width: 960px) {
@@ -1859,8 +1883,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           }
 
           .section-header-logo img {
-            width: 180px;
-            max-width: 50vw;
+            width: 220px;
+            max-width: 60vw;
           }
         }
 

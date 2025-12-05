@@ -58,6 +58,11 @@
   display: grid;
   gap: 20px;
   margin-bottom: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+}
+
+.stage-cards-row.stages-1 {
+  grid-template-columns: 1fr;
 }
 
 .stage-cards-row.stages-3 {
@@ -832,7 +837,7 @@
   }
 
   .stage-cards-row {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   }
 
   .stage-card-v3 {
