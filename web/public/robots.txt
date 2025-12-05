@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://sentinnellcodex.vercel.app/sitemap.xml

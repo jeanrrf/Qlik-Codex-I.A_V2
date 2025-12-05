@@ -69,6 +69,28 @@ body {
   font-size: 16px;
 }
 
+a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  font-weight: 600;
+}
+
+a:visited {
+  color: #7ae7ff;
+}
+
+a:hover {
+  color: #b9f3ff;
+}
+
+a:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 /* Background Mesh Gradient */
 body::before {
   content: "";
