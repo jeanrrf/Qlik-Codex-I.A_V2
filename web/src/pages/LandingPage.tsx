@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { apiClient } from "../api/client";
 
 import QlikFormatterTool from "../components/QlikFormatterTool";
@@ -42,7 +42,7 @@ const GridBackground: React.FC = () => (
   </div>
 );
 
-// Icons com anima├º├╡es
+// Icons com animações
 const Icons = {
   Radar: () => (
     <div className="icon-wrapper icon-radar">
@@ -193,10 +193,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
   const handleCopyContact = async () => {
     try {
       await copyToClipboard(contactCopyPayload);
-      showCopyFeedback("Contato copiado para a ├írea de transfer├¬ncia.", "success");
+      showCopyFeedback("Contato copiado para a área de transferência.", "success");
     } catch {
       showCopyFeedback(
-        "N├úo foi poss├¡vel copiar automaticamente. Use Ctrl+C ou toque e segure.",
+        "Não foi possível copiar automaticamente. Use Ctrl+C ou toque e segure.",
         "error"
       );
     }
@@ -275,12 +275,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         <div className="nav-actions">
           <button className="btn btn-nav-cta" onClick={onStart}>
             <Icons.Bolt />
-            Iniciar An├ílise
+            Começar teste gratuito
           </button>
         </div>
       </nav>
 
-      <div className="landing-content">
+      <main className="landing-content" role="main">
         {/* HERO */}
         <section className="hero-section">
           {/* Hero Orb */}
@@ -293,47 +293,42 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
 
           <div className="hero-content">
             <div className="hero-eyebrow">
-              <span className="eyebrow-icon">Γùå</span>
-              <span>Intelig├¬ncia Artificial especializada em Qlik</span>
-              <span className="eyebrow-icon">Γùå</span>
+              <span className="eyebrow-icon">◆</span>
+              <span>IA treinada para Qlik Sense & Qlik Cloud</span>
+              <span className="eyebrow-icon">◆</span>
             </div>
 
             <h1 className="hero-title">
-              <span className="title-line">Plataforma de</span>
+              <span className="title-line">Otimize scripts Qlik</span>
               <span className="title-line title-highlight">
-                <span className="highlight-text">Engenharia de Dados Qlik</span>
+                <span className="highlight-text">com IA em segundos</span>
                 <span className="highlight-glow" />
               </span>
-              <span className="title-line">para times de BI e Dados.</span>
             </h1>
 
             {/* Badge AINEX - Compacto */}
             <div className="hero-ainex-compact">
               <span className="ainex-tag">AINEX ENGINE</span>
               <span className="ainex-separator">|</span>
-              <span className="ainex-desc">Otimiza├º├úo Neural para Qlik Sense & SaaS</span>
+              <span className="ainex-desc">Orquestração multi-IA especializada em scripts Qlik</span>
             </div>
 
             <p className="hero-description">
-              Plataforma de IA especializada em Qlik para engenharia de dados. Analisa, refatora e documenta seus scripts com foco em desempenho, seguran├ºa e padroniza├º├úo.
+              Analise, refatore e documente scripts de Qlik Sense e Qlik Cloud com IA especializada, sem risco em produção.
             </p>
 
             <div className="hero-features">
               <div className="hero-feature">
                 <Icons.Bolt />
-                <span>An├ílise em segundos</span>
-              </div>
-              <div className="hero-feature">
-                <Icons.Shield />
-                <span>Zero riscos em produ├º├úo</span>
-              </div>
-              <div className="hero-feature">
-                <Icons.Code />
-                <span>C├│digo otimizado</span>
+                <span>IA treinada exclusivamente para Qlik</span>
               </div>
               <div className="hero-feature">
                 <Icons.Brain />
-                <span>IA Especializada</span>
+                <span>Análises em segundos, não em horas</span>
+              </div>
+              <div className="hero-feature">
+                <Icons.Code />
+                <span>Sugestões compatíveis com o Qlik Engine</span>
               </div>
             </div>
 
@@ -341,24 +336,54 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               <button className="btn btn-hero-primary" onClick={onStart}>
                 <span className="btn-glow" />
                 <span className="btn-content">
-                  Experimentar Agora
-                  <span className="btn-badge">Gr├ítis</span>
+                  Começar teste gratuito
+                  <span className="btn-badge">4 análises/dia</span>
                 </span>
               </button>
               <button
                 className="btn btn-hero-secondary"
-                onClick={() => scrollToSection('suite')}
+                onClick={() => scrollToSection('how-it-works')}
               >
-                Ver demonstra├º├úo
+                Ver como funciona
                 <Icons.ChevronDown />
               </button>
             </div>
           </div>
 
-          <div className="scroll-indicator" onClick={() => scrollToSection('suite')}>
-            <span className="scroll-text">Explore</span>
-            <div className="scroll-line">
-              <div className="scroll-dot" />
+        </section>
+
+        <div className="scroll-indicator" onClick={() => scrollToSection('suite')}>
+          <Icons.ChevronDown />
+        </div>
+
+        {/* COMO FUNCIONA */}
+        <section id="how-it-works" className="how-it-works-section">
+          <div className="section-header">
+            <span className="section-badge">COMO FUNCIONA</span>
+            <h2 className="section-title">Como funciona o Qlik Codex I.A</h2>
+            <p className="section-description">
+              Veja, em 3 passos, como tirar valor do teste gratuito.
+            </p>
+          </div>
+
+          <div className="how-it-works-grid">
+            <div className="how-step">
+              <h3 className="how-step-title">1. Cole seu script Qlik</h3>
+              <p className="how-step-text">
+                Cole o trecho mais crítico do seu script (carga, transformações, joins, etc.).
+              </p>
+            </div>
+            <div className="how-step">
+              <h3 className="how-step-title">2. A AINEX analisa e sugere melhorias</h3>
+              <p className="how-step-text">
+                O motor AINEX valida sintaxe, identifica riscos e propõe refatorações explicadas passo a passo.
+              </p>
+            </div>
+            <div className="how-step">
+              <h3 className="how-step-title">3. Aplique com segurança no seu ambiente</h3>
+              <p className="how-step-text">
+                Você recebe sugestões compatíveis com Qlik Sense e Qlik Cloud, prontas para revisão e implementação pelo seu time.
+              </p>
             </div>
           </div>
         </section>
@@ -368,11 +393,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           <div className="section-header">
             <span className="section-badge">SUITE COMPLETA</span>
             <h2 className="section-title">
-              Suite de ferramentas para<br />
-              <span className="title-accent">Desenvolvedores Qlik.</span>
+              Suite de IA para<br />
+              <span className="title-accent">times que vivem Qlik.</span>
             </h2>
             <p className="section-description">
-              Conjunto de ferramentas para auditar, otimizar e documentar seus projetos Qlik Sense e SaaS.
+              Durante o teste gratuito você já experimenta as mesmas ferramentas usadas nas contas Enterprise para auditar, otimizar e documentar Qlik Sense e Qlik Cloud.
             </p>
           </div>
 
@@ -384,10 +409,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 <Icons.Radar />
                 <h3 className="card-title">Radar de Performance</h3>
                 <p className="card-description">
-                  Identifica gargalos de carga, joins explosivos e uso ineficiente de mem├│ria RAM.
+                  Encontre gargalos de recarga, joins explosivos e uso ineficiente de QVDs e memória antes que virem incidente em produção.
                 </p>
                 <div className="card-tags">
-                  <span className="tag tag-cyan">Otimiza├º├úo</span>
+                  <span className="tag tag-cyan">Otimização</span>
                   <span className="tag tag-cyan">Speed</span>
                 </div>
               </div>
@@ -400,10 +425,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 <Icons.Scanner />
                 <h3 className="card-title">Scanner de Risco</h3>
                 <p className="card-description">
-                  Auditoria de seguran├ºa e boas pr├íticas. Detecta loops, chaves sint├⌐ticas e vulnerabilidades.
+                  Detecte loops perigosos, chaves sintéticas e padrões que podem quebrar seus apps.
                 </p>
                 <div className="card-tags">
-                  <span className="tag tag-pink">Seguran├ºa</span>
+                  <span className="tag tag-pink">Segurança</span>
                   <span className="tag tag-pink">Audit</span>
                 </div>
               </div>
@@ -414,13 +439,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               <div className="card-border" />
               <div className="card-content">
                 <Icons.Docs />
-                <h3 className="card-title">Documenta├º├úo Autom├ítica</h3>
+                <h3 className="card-title">Documentação Automática</h3>
                 <p className="card-description">
-                  Gera documenta├º├úo t├⌐cnica detalhada do seu script, incluindo linhagem e regras de neg├│cio.
+                  Gere documentação técnica clara do script que você usou no teste.
                 </p>
                 <div className="card-tags">
                   <span className="tag tag-green">Docs</span>
-                  <span className="tag tag-green">Governan├ºa</span>
+                  <span className="tag tag-green">Governança</span>
                 </div>
               </div>
             </div>
@@ -430,9 +455,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               <div className="card-border" />
               <div className="card-content">
                 <Icons.Mentor />
-                <h3 className="card-title">Explica├º├╡es Guiadas</h3>
+                <h3 className="card-title">Explicações Guiadas</h3>
                 <p className="card-description">
-                  Explica├º├╡es objetivas para cada recomenda├º├úo de melhoria, ajudando o time a entender e padronizar o c├│digo.
+                  Entenda o porquê de cada recomendação durante o teste, não só o “como”.
                 </p>
                 <div className="card-tags">
                   <span className="tag tag-amber">Ensino</span>
@@ -443,52 +468,56 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           </div>
         </section>
 
-        {/* Γ£¿ POR QUE AINEX? - DIFERENCIAL COMERCIAL */}
+        {/* DIFERENCIAL / COMPARATIVO */}
         <section className="why-ainex-section">
           <div className="section-header">
             <span className="section-badge">DIFERENCIAL AINEX</span>
             <h2 className="section-title">
-              Por que a AINEX se destaca?
+              Mais que um chat: uma IA feita para Qlik
             </h2>
             <p className="section-description">
-              IAs gen├⌐ricas podem gerar sintaxe incorreta; a AINEX foi desenhada para entender a engenharia do Qlik.
+              Use o teste gratuito para sentir, na prática, a diferença entre uma IA genérica e uma engine desenhada para Qlik Script.
             </p>
           </div>
 
           <div className="comparison-grid">
             <div className="comparison-card chatgpt">
               <div className="comparison-header">
-                <div className="comparison-icon">≡ƒñû</div>
-                <h3>LLMs Gen├⌐ricos</h3>
+                <div className="comparison-icon">🤖</div>
+                <h3>LLMs Genéricos</h3>
                 <span className="comparison-sub">ChatGPT, Claude, etc.</span>
               </div>
               <ul className="comparison-list">
-                <li className="neutral">? Adequados para textos gerais</li>
-                <li className="negative">? Podem sugerir fun??es inexistentes</li>
-                <li className="negative">? N?o consideram performance de QVD e modelo</li>
-                <li className="negative">? N?o avaliam impacto de loops e chaves sint?ticas</li>
-                <li className="negative">? N?o entendem particularidades como "Preceding Load"</li>
+                <li className="neutral">Bons para responder dúvidas gerais e gerar textos</li>
+                <li className="negative">Podem inventar funções que não existem no Qlik</li>
+                <li className="negative">Não consideram performance de recarga, RAM ou QVDs</li>
               </ul>
             </div>
 
-            <div className="comparison-card ainex featured">
+            <div className="comparison-card ainex">
               <div className="comparison-header">
-                <div className="comparison-icon">ΓÜí</div>
-                <h3>AINEX Engine</h3>
-                <span className="featured-badge">Qlik Native</span>
+                <div className="comparison-icon">🧠</div>
+                <h3>Qlik Codex I.A</h3>
+                <span className="comparison-sub">Engine desenhada para Qlik</span>
               </div>
               <ul className="comparison-list">
-                <li className="positive">Γ£ô Treinada em documenta├º├úo t├⌐cnica Qlik</li>
-                <li className="positive">Γ£ô Valida sintaxe antes de sugerir</li>
-                <li className="positive">Γ£ô Otimiza para Qlik Engine (RAM/CPU)</li>
-                <li className="positive">Γ£ô Detecta gargalos de modelagem</li>
-                <li className="positive">Γ£ô Gera documenta├º├úo autom├ítica</li>
+                <li className="positive">Treinada em padrões e boas práticas de Qlik</li>
+                <li className="positive">Valida sintaxe e estrutura antes de sugerir mudanças</li>
+                <li className="positive">Focada em desempenho, segurança e manutenção de scripts</li>
               </ul>
+              <span className="featured-badge">AINEX</span>
             </div>
           </div>
         </section>
+        <ul className="comparison-list">
+          <li className="positive">Treinada em documentação técnica Qlik</li>
+          <li className="positive">Valida sintaxe antes de sugerir</li>
+          <li className="positive">Otimiza para Qlik Engine (RAM/CPU)</li>
+          <li className="positive">Detecta gargalos de modelagem</li>
+          <li className="positive">Gera documentação automática</li>
+        </ul>
 
-        {/* ≡ƒƒó NVIDIA ACCELERATED SECTION - COMPUTING POWER */}
+        {/* NVIDIA ACCELERATED SECTION - COMPUTING POWER */}
         <section className="nvidia-section">
           <div className="nvidia-river-effect" />
           <div className="nvidia-particles">
@@ -521,23 +550,23 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             </h2>
 
             <p className="nvidia-description">
-              O modo NVIDIA Fast utiliza infer├¬ncia acelerada por GPU para entregar
-              otimiza├º├╡es em <strong>segundos</strong>. Ideal para refatora├º├╡es r├ípidas
-              e itera├º├╡es ├ígeis.
+              O modo NVIDIA Fast utiliza inferência acelerada por GPU para entregar
+              otimizações em <strong>segundos</strong>. Ideal para refatorações rápidas
+              e iterações ágeis.
             </p>
 
             <div className="nvidia-stats">
               <div className="nvidia-stat">
                 <span className="nvidia-stat-value">10x</span>
-                <span className="nvidia-stat-label">Mais R├ípido</span>
+                <span className="nvidia-stat-label">Mais rápido</span>
               </div>
               <div className="nvidia-stat">
                 <span className="nvidia-stat-value">&lt;5s</span>
-                <span className="nvidia-stat-label">Tempo M├⌐dio</span>
+                <span className="nvidia-stat-label">Tempo médio</span>
               </div>
               <div className="nvidia-stat">
                 <span className="nvidia-stat-value">GPU</span>
-                <span className="nvidia-stat-label">Infer├¬ncia</span>
+                <span className="nvidia-stat-label">Inferência</span>
               </div>
             </div>
 
@@ -553,16 +582,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           <div className="nvidia-power-bar" />
         </section>
 
-        {/* Γ£¿ FREE TIER - EXPERIMENTE AGORA */}
-        <section className="free-tier-section">
+        {/* FREE TIER - TESTE GRATUITO */}
+        <section id="free-tier" className="free-tier-section">
           <div className="section-header">
             <span className="section-badge free">ACESSO GRATUITO</span>
             <h2 className="section-title">
-              Pot├¬ncia Enterprise.<br />
-              <span className="title-accent">Custo Zero.</span>
+              Seu teste gratuito:<br />
+              <span className="title-accent">Qlik Codex Community Edition</span>
             </h2>
             <p className="section-description">
-              Experimente o poder do motor AINEX sem barreiras. Ideal para valida├º├╡es r├ípidas e aprendizado.
+              Comece agora, sem cartão de crédito e sem risco. Teste a mesma inteligência usada pelas contas pagas.
             </p>
           </div>
 
@@ -570,242 +599,256 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             <div className="free-tier-glow" />
             <div className="free-tier-content">
               <div className="free-tier-header">
-                <h3 className="free-tier-title">≡ƒÜÇ COMMUNITY EDITION</h3>
-                <span className="free-tier-price">R$ 0<small>/m├¬s</small></span>
+                <h3 className="free-tier-title">🚀 QLIK CODEX COMMUNITY EDITION</h3>
+                <span className="free-tier-price">R$ 0<small>/mês</small></span>
               </div>
 
               <div className="free-tier-features">
                 <div className="feature-item">
-                  <div className="feature-icon">ΓÜí</div>
+                  <div className="feature-icon">⚡</div>
                   <div className="feature-text">
-                    <strong>4 Otimiza├º├╡es Di├írias</strong>
-                    <span>Renovadas a cada 24h automaticamente</span>
+                    <strong>4 análises gratuitas por dia</strong>
+                    <span>Créditos renovados a cada 24 horas para validar vários cenários.</span>
                   </div>
                 </div>
                 <div className="feature-item">
-                  <div className="feature-icon">≡ƒô¥</div>
+                  <div className="feature-icon">📝</div>
                   <div className="feature-text">
-                    <strong>At├⌐ 200 Linhas de C├│digo</strong>
-                    <span>An├ílise profunda de blocos l├│gicos</span>
+                    <strong>Até 200 linhas por análise</strong>
+                    <span>Blocos de script completos, não só exemplos simples de documentação.</span>
                   </div>
                 </div>
                 <div className="feature-item">
-                  <div className="feature-icon">≡ƒºá</div>
+                  <div className="feature-icon">🧠</div>
                   <div className="feature-text">
-                    <strong>Modo Ultra-Expert</strong>
-                    <span>O mesmo motor da vers├úo Enterprise</span>
+                    <strong>Mesmo motor usado pelas contas pagas</strong>
+                    <span>Sem versão “light”. O teste já usa o modo Ultra-Expert.</span>
                   </div>
                 </div>
                 <div className="feature-item">
-                  <div className="feature-icon">≡ƒ¢í∩╕Å</div>
+                  <div className="feature-icon">🛡️</div>
                   <div className="feature-text">
-                    <strong>Valida├º├úo de Seguran├ºa</strong>
-                    <span>Detec├º├úo de riscos e anti-patterns</span>
+                    <strong>Validação de segurança</strong>
+                    <span>Detecção de riscos e anti-patterns antes de chegar à produção.</span>
                   </div>
                 </div>
               </div>
 
               <button className="btn btn-free-start" onClick={onStart}>
-                <span className="btn-icon">≡ƒæë</span>
-                Iniciar Agora
+                <span className="btn-icon">👉</span>
+                Começar teste gratuito agora
               </button>
 
               <p className="free-tier-note">
-                N├úo requer cart├úo de cr├⌐dito. Acesso imediato.
+                Não requer cartão de crédito. Acesso imediato.
               </p>
             </div>
           </div>
         </section>
 
-        {/* QLIK FORMATTER TOOL - BOT├âO COMPACTO */}
-        <section className="formatter-cta-section">
-          <div className="formatter-cta-card">
-            <div className="formatter-cta-glow" />
-            <div className="formatter-cta-content">
-              <div className="formatter-cta-icon">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                  <path d="M2 17l10 5 10-5" />
-                  <path d="M2 12l10 5 10-5" />
-                </svg>
-              </div>
-              <div className="formatter-cta-text">
-                <h3 className="formatter-cta-title">Formatador de Script Qlik</h3>
-                <p className="formatter-cta-description">
-                  Organize e indente seus scripts Qlik automaticamente com IA
-                </p>
-              </div>
-              <button
-                className="btn btn-formatter-open"
-                onClick={() => setFormatterOpen(true)}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="16 18 22 12 16 6" />
-                  <polyline points="8 6 2 12 8 18" />
-                </svg>
-                Abrir Ferramenta
-              </button>
+        {/* CTA flutuante persistente */}
+        <button
+          className="floating-cta"
+          aria-label="Botão fixo para começar teste gratuito"
+          onClick={() => scrollToSection('free-tier')}
+        >
+          <span className="floating-cta-text">Começar teste gratuito</span>
+          <span className="floating-cta-sub">4 análises/dia • sem cartão</span>
+        </button>
+
+      {/* QLIK FORMATTER TOOL - BOTÃO COMPACTO */}
+      <section className="formatter-cta-section">
+        <div className="formatter-cta-card">
+          <div className="formatter-cta-glow" />
+          <div className="formatter-cta-content">
+            <div className="formatter-cta-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                <path d="M2 17l10 5 10-5" />
+                <path d="M2 12l10 5 10-5" />
+              </svg>
             </div>
-          </div>
-        </section>
-
-        {/* Modal do Formatter */}
-        <QlikFormatterTool isOpen={formatterOpen} onClose={() => setFormatterOpen(false)} />
-
-        {/* CONTACT / CTA FINAL */}
-        <section id="contact" className="contact-section">
-          <div className="contact-card">
-            <div className="contact-glow" />
-            <div className="contact-content">
-              <span className="contact-badge">FALE COM O CRIADOR</span>
-              <h2 className="contact-title">
-                Precisa de uma solu├º├úo<br />
-                <span className="text-gradient-cyan">Enterprise Personalizada?</span>
-              </h2>
-              <p className="contact-description">
-                Vamos conversar sobre como a AINEX pode transformar a produtividade do seu time de dados.
+            <div className="formatter-cta-text">
+              <h3 className="formatter-cta-title">Formatador de Script Qlik</h3>
+              <p className="formatter-cta-description">
+                Organize e indente seus scripts Qlik automaticamente com IA
               </p>
+            </div>
+            <button
+              className="btn btn-formatter-open"
+              onClick={() => setFormatterOpen(true)}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="16 18 22 12 16 6" />
+                <polyline points="8 6 2 12 8 18" />
+              </svg>
+              Abrir Ferramenta
+            </button>
+          </div>
+        </div>
+      </section>
 
-              {/* Contact Form */}
-              <div className="contact-form-wrapper">
-                {!isSent ? (
-                  <form className="contact-form" onSubmit={handleContactSubmit}>
-                    <div className="form-row">
-                      <input
-                        type="text"
-                        className="contact-input"
-                        placeholder="Nome"
-                        required
-                        value={formState.name}
-                        onChange={e => setFormState({ ...formState, name: e.target.value })}
-                      />
-                      <input
-                        type="email"
-                        className="contact-input"
-                        placeholder="E-mail Corporativo"
-                        required
-                        value={formState.email}
-                        onChange={e => setFormState({ ...formState, email: e.target.value })}
-                      />
-                    </div>
+      {/* Modal do Formatter */}
+      < QlikFormatterTool isOpen={formatterOpen} onClose={() => setFormatterOpen(false)} />
+
+      {/* CONTACT / CTA FINAL */}
+      <section id="contact" className="contact-section">
+        <div className="contact-card">
+          <div className="contact-glow" />
+          <div className="contact-content">
+            <span className="contact-badge">FALE COM O CRIADOR</span>
+            <h2 className="contact-title">
+              Precisa de uma solução<br />
+              <span className="text-gradient-cyan">Enterprise Personalizada?</span>
+            </h2>
+            <p className="contact-description">
+              Vamos conversar sobre como a AINEX pode transformar a produtividade do seu time de dados.
+            </p>
+
+            {/* Contact Form */}
+            <div className="contact-form-wrapper">
+              {!isSent ? (
+                <form className="contact-form" onSubmit={handleContactSubmit}>
+                  <div className="form-row">
                     <input
                       type="text"
                       className="contact-input"
-                      placeholder="Empresa"
+                      placeholder="Nome"
                       required
-                      value={formState.company}
-                      onChange={e => setFormState({ ...formState, company: e.target.value })}
+                      value={formState.name}
+                      onChange={e => setFormState({ ...formState, name: e.target.value })}
                     />
-                    <textarea
-                      className="contact-input contact-textarea"
-                      placeholder="Mensagem (opcional)"
-                      rows={3}
-                      value={formState.message}
-                      onChange={e => setFormState({ ...formState, message: e.target.value })}
+                    <input
+                      type="email"
+                      className="contact-input"
+                      placeholder="E-mail Corporativo"
+                      required
+                      value={formState.email}
+                      onChange={e => setFormState({ ...formState, email: e.target.value })}
                     />
-                    <button type="submit" className="btn btn-contact-submit" disabled={isSending}>
-                      {isSending ? "Enviando..." : "Enviar Mensagem"}
-                    </button>
-                    {formError && <p className="form-error">{formError}</p>}
-                  </form>
-                ) : (
-                  <div className="contact-success">
-                    <div className="success-icon">Γ£ô</div>
-                    <h3>Recebemos sua mensagem!</h3>
-                    <p>Entraremos em contato em breve pelo e-mail informado.</p>
-                    <button className="btn btn-ghost small" onClick={() => setIsSent(false)}>Nova mensagem</button>
                   </div>
-                )}
-              </div>
-
-              <div className="contact-divider-text">
-                <span>ou use nossos canais diretos</span>
-              </div>
-
-              <div className="contact-actions">
-                <button className="btn btn-contact-primary" onClick={() => window.location.href = 'mailto:rosso.jeandasilva@gmail.com'}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect width="20" height="16" x="2" y="4" rx="2" />
-                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-                  </svg>
-                  Enviar E-mail
-                </button>
-                <button className="btn btn-contact-secondary" onClick={handleWhatsApp}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                  </svg>
-                  WhatsApp
-                </button>
-                <button className="btn btn-contact-tertiary" onClick={handleCopyContact}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="7" width="12" height="12" rx="2" />
-                    <path d="M8 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2" />
-                  </svg>
-                  Copiar contato
-                </button>
-              </div>
-              {!contactOpen && feedbackMessage}
-
-              <div className="contact-decoration">
-                <div className="decoration-line" />
-                <div className="decoration-dot" />
-                <div className="decoration-line" />
-              </div>
+                  <input
+                    type="text"
+                    className="contact-input"
+                    placeholder="Empresa"
+                    required
+                    value={formState.company}
+                    onChange={e => setFormState({ ...formState, company: e.target.value })}
+                  />
+                  <textarea
+                    className="contact-input contact-textarea"
+                    placeholder="Mensagem (opcional)"
+                    rows={3}
+                    value={formState.message}
+                    onChange={e => setFormState({ ...formState, message: e.target.value })}
+                  />
+                  <button type="submit" className="btn btn-contact-submit" disabled={isSending}>
+                    {isSending ? "Enviando..." : "Enviar Mensagem"}
+                  </button>
+                  {formError && <p className="form-error">{formError}</p>}
+                </form>
+              ) : (
+                <div className="contact-success">
+                  <div className="success-icon" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </div>
+                  <h3>Recebemos sua mensagem!</h3>
+                  <p>Entraremos em contato em breve pelo e-mail informado.</p>
+                  <button className="btn btn-ghost small" onClick={() => setIsSent(false)}>Nova mensagem</button>
+                </div>
+              )}
             </div>
-          </div>
-        </section>
-      </div>
 
-      {/* FOOTER HORIZONTAL */}
-      <footer className="landing-footer">
-        <div className="footer-content">
-          <div className="footer-logo">
-            <span className="footer-logo-name">QLIK CODEX I.A</span>
-            <span className="footer-logo-beta">BETA</span>
-          </div>
-          <span className="footer-separator">ΓÇó</span>
-          <span className="footer-copy">
-            &copy; 2025 SENTINNELL IA
-          </span>
-          <span className="footer-separator">ΓÇó</span>
-          <a href="https://github.com/jeanrrf" target="_blank" rel="noopener noreferrer" className="footer-link">
-            GitHub
-          </a>
-          <a href="https://api.whatsapp.com/send?phone=5548991937304" target="_blank" rel="noopener noreferrer" className="footer-link">
-            WhatsApp
-          </a>
-        </div>
-      </footer>
+            <div className="contact-divider-text">
+              <span>ou use nossos canais diretos</span>
+            </div>
 
-      {/* Contact Modal */}
-      {contactOpen && (
-        <div className="modal-overlay" onClick={() => setContactOpen(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3>Escolha como quer falar</h3>
-            <p className="text-secondary">
-              Um clique abre seu e-mail ou WhatsApp com mensagem pronta.
-            </p>
-            <div className="modal-actions">
-              <button className="btn btn-primary" onClick={handleEmail}>
-                Disparar e-mail
+            <div className="contact-actions">
+              <button className="btn btn-contact-primary" onClick={() => window.location.href = 'mailto:rosso.jeandasilva@gmail.com'}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect width="20" height="16" x="2" y="4" rx="2" />
+                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                </svg>
+                Enviar E-mail
               </button>
-              <button className="btn btn-glass" onClick={handleWhatsApp}>
-                Abrir WhatsApp
+              <button className="btn btn-contact-secondary" onClick={handleWhatsApp}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                </svg>
+                WhatsApp
               </button>
               <button className="btn btn-contact-tertiary" onClick={handleCopyContact}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="7" width="12" height="12" rx="2" />
+                  <path d="M8 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2" />
+                </svg>
                 Copiar contato
               </button>
-              <button className="btn btn-ghost" onClick={() => setContactOpen(false)}>
-                Fechar
-              </button>
             </div>
-            {contactOpen && feedbackMessage}
+            {!contactOpen && feedbackMessage}
+
+            <div className="contact-decoration">
+              <div className="decoration-line" />
+              <div className="decoration-dot" />
+              <div className="decoration-line" />
+            </div>
           </div>
         </div>
-      )}
+      </section>
+    </main >
 
-      {/* Global Landing Styles */}
-      <style>{`
+  {/* FOOTER HORIZONTAL */ }
+  < footer className="landing-footer" >
+    <div className="footer-content">
+      <div className="footer-logo">
+        <span className="footer-logo-name">QLIK CODEX I.A</span>
+        <span className="footer-logo-beta">BETA</span>
+      </div>
+      <span className="footer-separator">•</span>
+      <span className="footer-copy">&copy; 2025 SENTINNELL IA</span>
+      <span className="footer-separator">•</span>
+      <a href="https://github.com/jeanrrf" target="_blank" rel="noopener noreferrer" className="footer-link">
+        GitHub
+      </a>
+      <a href="https://api.whatsapp.com/send?phone=5548991937304" target="_blank" rel="noopener noreferrer" className="footer-link">
+        WhatsApp
+      </a>
+    </div>
+  </footer >
+
+  {/* Contact Modal */ }
+  {
+    contactOpen && (
+      <div className="modal-overlay" onClick={() => setContactOpen(false)}>
+        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <h3>Escolha como quer falar</h3>
+          <p className="text-secondary">
+            Um clique abre seu e-mail ou WhatsApp com mensagem pronta.
+          </p>
+          <div className="modal-actions">
+            <button className="btn btn-primary" onClick={handleEmail}>
+              Disparar e-mail
+            </button>
+            <button className="btn btn-glass" onClick={handleWhatsApp}>
+              Abrir WhatsApp
+            </button>
+            <button className="btn btn-contact-tertiary" onClick={handleCopyContact}>
+              Copiar contato
+            </button>
+            <button className="btn btn-ghost" onClick={() => setContactOpen(false)}>
+              Fechar
+            </button>
+          </div>
+          {contactOpen && feedbackMessage}
+        </div>
+      </div>
+    )
+  }
+
+  {/* Global Landing Styles */ }
+  <style>{`
         /* ===================== */
         /* LANDING PAGE STYLES   */
         /* ===================== */
@@ -854,6 +897,65 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           pointer-events: none;
           z-index: 1;
           transition: left 0.1s ease-out, top 0.1s ease-out;
+        }
+
+        /* Floating CTA */
+        .floating-cta {
+          position: fixed;
+          right: 24px;
+          bottom: 24px;
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          padding: 12px 16px;
+          background: rgba(7, 14, 24, 0.92);
+          border: 1px solid rgba(0, 242, 255, 0.25);
+          border-radius: 14px;
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.04);
+          backdrop-filter: blur(10px);
+          color: var(--text-primary);
+          cursor: pointer;
+          z-index: 18;
+          transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+
+        .floating-cta:hover {
+          transform: translateY(-2px);
+          border-color: rgba(0, 255, 157, 0.6);
+          box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(0, 255, 157, 0.3);
+        }
+
+        .floating-cta-text {
+          font-weight: 700;
+          font-size: 0.95rem;
+          letter-spacing: -0.01em;
+        }
+
+        .floating-cta-sub {
+          font-size: 0.85rem;
+          color: var(--text-secondary);
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        @media (max-width: 768px) {
+          .floating-cta {
+            left: 16px;
+            right: 16px;
+            bottom: 16px;
+            justify-content: space-between;
+            padding: 12px 14px;
+            gap: 8px;
+          }
+
+          .floating-cta-text {
+            font-size: 0.9rem;
+          }
+
+          .floating-cta-sub {
+            font-size: 0.8rem;
+          }
         }
 
         /* Particles */
@@ -1143,7 +1245,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           opacity: 0.6;
         }
 
-        /* Γ£¿ Badge Especialista Qlik */
+        /* Badge Especialista Qlik */
         .hero-specialist-badge {
           display: flex;
           align-items: center;
@@ -2809,7 +2911,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           }
         }
       `}</style>
-    </div>
+    </div >
   );
 };
 
