@@ -1,0 +1,79 @@
+// PASSO 3: Une os dados do cabeçalho à tabela de itens em uma tabela temporária para cálculos.
+Fato_Entrada_Staging:
+LoaD
+    codEmp,
+    codFil,
+    codFor,
+    numNfc,
+    codSnf,
+    %ChaveNotaFiscal,
+    tnsPro,
+    pesLiq,
+    DataEntrada,
+    DataEmissao,
+    codPro,
+    codDer,
+    proFor,
+    cplIpc,
+    qtdRec,
+    uniNfc,
+    preUni,
+    vlrBru,
+    vlrDsc,
+    vlrLiq,
+    vlrIpi,
+    vlrIcs,
+    vlrIim
+resident Fato_EntradaItens_Temp;
+
+left join (Fato_Entrada_Staging)
+load
+    %ChaveNotaFiscal, // Chave de junção
+    codFor, // Chave de junção
+    DataEntrada, // Chave de junção
+    DataEmissao, // Chave de junção
+    ValorFreteTotal,
+    ValorSeguroTotal,
+    ValorEmbalagemTotal,
+    ValorOutrasDespesasTotal,
+    ValorBrutoProdutos
+resident Fato_EntradaNF_Temp;
+
+// As tabelas temporárias de origem já cumpriram seu papel e podem ser removidas.
+drop table Fato_EntradaNF_Temp;
+drop table Fato_EntradaItens_Temp;
+
+// PASSO 4: Cria a tabela FATO final, com todos os cálculos e renomeações, a partir da tabela de staging.
+Fato_Entrada:
+LoaD
+    codEmp as "Fato_Entrada.Empresa",
+    codFil as "Fato_Entrada.Filial",
+    codFor as "Fato_Entrada.CodFornecedor",
+    numNfc as "Fato_Entrada.NumeroNota",
+    codSnf as "Fato_Entrada.SerieNota",
+    %ChaveNotaFiscal as "Fato_Entrada.ChaveNotaFiscal",
+    tnsPro as "Fato_Entrada.cfop",
+    pesLiq as "Fato_Entrada.PesoLiquido",
+    DataEntrada as "Fato_Entrada.DataEntrada",
+    DataEmissao as "Fato_Entrada.DataEmissao",
+    codPro as "Fato_Entrada.CodProduto",
+    codDer as "Fato_Entrada.CodDerivacao",
+    proFor as "Fato_Entrada.CodProdutoFornecedor",
+    cplIpc as "Fato_Entrada.DescricaoComplementar",
+    Num(qtdRec) as "Fato_Entrada.Qtd",
+    uniNfc as "Fato_Entrada.UnidadeMedida",
+    Num(preUni) as "Fato_Entrada.PrecoUnitario",
+    Num(vlrBru) as "Fato_Entrada.ValorBruto",
+    Num(vlrDsc) as "Fato_Entrada.ValorDesconto",
+    Num(vlrLiq) as "Fato_Entrada.ValorLiquido",
+    Num((vlrLiq+vlrIpi+vlrIcs+vlrIim+(If(ValorBrutoProdutos>0,vlrBru/ValorBrutoProdutos,0)*(ValorFreteTotal+ValorSeguroTotal+ValorEmbalagemTotal+ValorOutrasDespesasTotal)))) as "Fato_Entrada.CustoTotalEntrada",
+    Num(If(qtdRec>0,(vlrLiq+vlrIpi+vlrIcs+vlrIim+(If(ValorBrutoProdutos>0,vlrBru/ValorBrutoProdutos,0)*(ValorFreteTotal+ValorSeguroTotal+ValorEmbalagemTotal+ValorOutrasDespesasTotal)))/qtdRec,0)) as "Fato_Entrada.CustoUnitarioEntrada"
+resident Fato_Entrada_Staging;
+
+// A tabela de staging já cumpriu seu papel e pode ser removida.
+drop table Fato_Entrada_Staging;
+
+// Armazena a tabela final em QVD
+Store * from [Fato_Entrada] into [lib://Dados - Transformações:DataFiles/NotaFiscal_DevolucaoSaida.qvd](qvd);
+// Descarta a tabela final após o armazenamento
+drop table [Fato_Entrada];
