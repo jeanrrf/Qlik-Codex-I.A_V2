@@ -17,74 +17,64 @@ type CopyFeedback = {
 const FloatingParticles: React.FC = () => {
   return (
     <div className="particles-container">
-          <div className="hero-content">
-            <div className="hero-grid">
-              <div className="hero-text">
-                <div className="hero-eyebrow">
-                  <span className="eyebrow-icon">◆</span>
-                  <span>IA treinada para Qlik Sense & Qlik Cloud</span>
-                  <span className="eyebrow-icon">◆</span>
-                </div>
+      {[...Array(50)].map((_, i) => (
+        <div
+          key={i}
+          className="particle"
+          style={{
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+            animationDelay: `${Math.random() * 5}s`,
+            animationDuration: `${3 + Math.random() * 4}s`,
+            width: `${2 + Math.random() * 4}px`,
+            height: `${2 + Math.random() * 4}px`,
+          }}
+        />
+      ))}
+    </div>
+  );
+};
 
-                <h1 className="hero-title">
-                  <span className="title-line">Otimize scripts Qlik</span>
-                  <span className="title-line title-highlight">
-                    <span className="highlight-text">com IA em segundos</span>
-                    <span className="highlight-glow" />
-                  </span>
-                </h1>
+// Animated Grid Background
+const GridBackground: React.FC = () => (
+  <div className="grid-bg">
+    <div className="grid-lines" />
+    <div className="grid-glow" />
+  </div>
+);
 
-                {/* Badge AINEX - Compacto */}
-                <div className="hero-ainex-compact">
-                  <span className="ainex-tag">AINEX ENGINE</span>
-                  <span className="ainex-separator">|</span>
-                  <span className="ainex-desc">Orquestração multi-IA especializada em scripts Qlik</span>
-                </div>
-
-                <p className="hero-description">
-                  Analise, refatore e documente scripts de Qlik Sense e Qlik Cloud com IA especializada, sem risco em produção.
-                </p>
-
-                <div className="hero-features">
-                  <div className="hero-feature">
-                    <Icons.Bolt />
-                    <span>IA treinada exclusivamente para Qlik</span>
-                  </div>
-                  <div className="hero-feature">
-                    <Icons.Brain />
-                    <span>Análises em segundos, não em horas</span>
-                  </div>
-                  <div className="hero-feature">
-                    <Icons.Code />
-                    <span>Sugestões compatíveis com o Qlik Engine</span>
-                  </div>
-                </div>
-
-                <div className="hero-actions">
-                  <button className="btn btn-hero-primary" onClick={onStart}>
-                    <span className="btn-glow" />
-                    <span className="btn-content">
-                      Começar teste gratuito
-                      <span className="btn-badge">4 análises/dia</span>
-                    </span>
-                  </button>
-                  <button
-                    className="btn btn-hero-secondary"
-                    onClick={() => scrollToSection('how-it-works')}
-                  >
-                    Ver como funciona
-                    <Icons.ChevronDown />
-                  </button>
-                </div>
-              </div>
-
-              <div className="hero-logo-card">
-                <div className="hero-logo-inner">
-                  <img src="/logo.svg" alt="Logotipo completo Qlik Codex I.A." loading="lazy" />
-                </div>
-              </div>
-            </div>
-          </div>
+// Icons com animações
+const Icons = {
+  Radar: () => (
+    <div className="icon-wrapper icon-radar">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" className="radar-circle" />
+        <circle cx="12" cy="12" r="6" className="radar-circle-inner" />
+        <circle cx="12" cy="12" r="2" className="radar-dot" />
+        <path d="M12 2v4" className="radar-line" />
+        <path d="M12 18v4" className="radar-line" />
+        <path d="M2 12h4" className="radar-line" />
+        <path d="M18 12h4" className="radar-line" />
+      </svg>
+      <div className="icon-glow cyan" />
+    </div>
+  ),
+  Scanner: () => (
+    <div className="icon-wrapper icon-scanner">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 7V5a2 2 0 0 1 2-2h2" />
+        <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+        <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+        <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+        <path d="M7 12h10" className="scanner-line" />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
+      <div className="icon-glow pink" />
+    </div>
+  ),
+  Docs: () => (
+    <div className="icon-wrapper icon-docs">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
         <polyline points="14 2 14 8 20 8" />
         <path d="M16 13H8" className="doc-line" />
@@ -1176,7 +1166,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           position: relative;
           z-index: 2;
           text-align: center;
-          max-width: 900px;
+          max-width: 1100px;
           padding: 28px 28px 32px;
           margin: 0 auto;
           background: rgba(0, 0, 0, 0.3);
@@ -1184,6 +1174,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           border-radius: 20px;
           box-shadow: 0 30px 120px rgba(0, 0, 0, 0.45);
           backdrop-filter: blur(6px);
+        }
+
+        .hero-grid {
+          display: grid;
+          grid-template-columns: minmax(0, 1.5fr) minmax(260px, 1fr);
+          gap: 28px;
+          align-items: center;
+        }
+
+        .hero-text {
+          text-align: left;
         }
 
         .hero-eyebrow {
@@ -1327,8 +1328,38 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         .hero-actions {
           display: flex;
           flex-wrap: wrap;
-          justify-content: center;
+          justify-content: flex-start;
           gap: 16px;
+        }
+
+        .hero-logo-card {
+          width: 100%;
+          max-width: 340px;
+          justify-self: end;
+          background: radial-gradient(circle at 30% 20%, rgba(0, 242, 255, 0.08), transparent 60%),
+            rgba(0, 0, 0, 0.42);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 18px;
+          padding: 14px;
+          box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
+          backdrop-filter: blur(8px);
+        }
+
+        .hero-logo-inner {
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0));
+          border-radius: 14px;
+          padding: 14px;
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .hero-logo-inner img {
+          width: 100%;
+          height: auto;
+          display: block;
+          filter: drop-shadow(0 14px 30px rgba(0, 0, 0, 0.55));
         }
 
         .btn-hero-primary {
@@ -1545,7 +1576,26 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         }
 
         @media (max-width: 900px) {
-          .how-it-works-section {
+        @media (max-width: 980px) {
+          .hero-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .hero-logo-card {
+            justify-self: center;
+            max-width: 280px;
+          }
+
+          .hero-text {
+            text-align: center;
+          }
+
+          .hero-actions {
+            justify-content: center;
+          }
+        }
+
+        @media (max-width: 640px) {
             padding: 100px 28px 60px;
           }
 
