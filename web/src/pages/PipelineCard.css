@@ -368,6 +368,10 @@
   padding-right: 4px;
 }
 
+.card-substeps.nvidia-expanded {
+  max-height: 260px;
+}
+
 .card-substeps::-webkit-scrollbar {
   width: 4px;
 }
@@ -416,6 +420,46 @@
   background: linear-gradient(135deg, rgba(0, 242, 255, 0.05), rgba(112, 0, 255, 0.03));
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 10px;
+}
+
+.nvidia-fast-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.nvidia-fast-section {
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nvidia-fast-label {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.65);
+  letter-spacing: 0.02em;
+}
+
+.nvidia-fast-value {
+  font-size: 1rem;
+  color: #fff;
+}
+
+.nvidia-fast-note {
+  margin: 0;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.4;
+}
+
+.nvidia-fast-pill-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .nvidia-fast-tags {

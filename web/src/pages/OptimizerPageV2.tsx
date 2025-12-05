@@ -922,7 +922,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                         </summary>
 
                         {/* SUBTASKS DENTRO DO CARD */}
-                        <div className="card-substeps">
+                        <div className={`card-substeps ${isNvidiaFast ? 'nvidia-expanded' : ''}`}>
                           {hasSubSteps ? (
                             subSteps.map((subStep) => {
                               const isRunning = subStep.status === "running";
@@ -979,6 +979,26 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                                   <div className="nvidia-fast-stat">
                                     <span>Tempo</span>
                                     <strong>{durationLabel}</strong>
+                                  </div>
+                                </div>
+                                <div className="nvidia-fast-meta">
+                                  <div className="nvidia-fast-section">
+                                    <span className="nvidia-fast-label">Modelos GPU</span>
+                                    <strong className="nvidia-fast-value">Fila NVIDIA Fast</strong>
+                                    <p className="nvidia-fast-note">Execução dedicada em GPU; nomes de modelo aparecem conforme retorno do backend.</p>
+                                  </div>
+                                  <div className="nvidia-fast-section">
+                                    <span className="nvidia-fast-label">Modo de entrega</span>
+                                    <strong className="nvidia-fast-value">Script refatorado</strong>
+                                    <p className="nvidia-fast-note">Entrega focada no código final, sem relatório textual para reduzir latência.</p>
+                                  </div>
+                                  <div className="nvidia-fast-section">
+                                    <span className="nvidia-fast-label">Uso recomendado</span>
+                                    <div className="nvidia-fast-pill-row">
+                                      <span className="nvidia-chip muted">Respostas rápidas</span>
+                                      <span className="nvidia-chip muted">Reexecução frequente</span>
+                                      <span className="nvidia-chip muted">Ajustes pontuais</span>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
