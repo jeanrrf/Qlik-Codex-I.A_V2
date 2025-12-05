@@ -16,7 +16,7 @@ TASK: ANALYSIS_AND_PLAN
 Realize uma auditoria técnica abrangente E crie um plano estratégico de otimização em uma ÚNICA etapa.
 
 PARTE 1: ANÁLISE PROFUNDA
-1. **Análise Estrutural**: Identifique seções, tabelas e topologia de joins.
+1. **Análise Estrutural**: Identifique seções, tabelas e topologia de joins. Verifique se há sintaxe SQL inválida (ex: JOIN no FROM).
 2. **Gargalos de Desempenho**: Detecte operações O(n^2), cláusulas WHERE não otimizadas, "SELECT *", uso excessivo de RESIDENT LOAD.
 3. **Riscos do Modelo de Dados**: Preveja Chaves Sintéticas, Referências Circulares, Produtos Cartesianos.
 4. **Oportunidades de Otimização**: Sugira QVDs, Autonumber, SQL pushdown.
@@ -51,7 +51,7 @@ Formato de Saída: JSON com chaves:
 TASK: DEEP_ANALYSIS
 Realize uma auditoria técnica abrangente do Script de Carga Qlik fornecido.
 
-1. **Análise Estrutural**: Identifique seções, tabelas e topologia de joins.
+1. **Análise Estrutural**: Identifique seções, tabelas e topologia de joins. Verifique explicitamente se há sintaxe SQL (JOIN no FROM) misturada com Qlik.
 2. **Gargalos de Desempenho**:
    - Detecte operações O(n^2) (ex: Join dentro de loops).
    - Identifique cláusulas WHERE não otimizadas.
@@ -129,6 +129,13 @@ INSTRUÇÕES:
    - **PROIBIDO**: Não inclua assinaturas como "Gerado por AINEX", "Otimizado por Gemini" ou nomes de empresas. O cabeçalho deve ser neutro e profissional.
    - O corpo do script deve ser limpo, contendo apenas o código Qlik.
 5. **Segurança**: Garanta que todas as tabelas temporárias sejam DROPadas.
+6. **Sintaxe Qlik vs SQL (CRÍTICO)**:
+   - **PROIBIDO**: NUNCA use \`LEFT JOIN\`, \`INNER JOIN\` ou \`JOIN\` dentro da cláusula \`FROM\`. Isso é sintaxe SQL, não Qlik.
+   - **CORRETO**: Em Qlik, o \`JOIN\` deve ser um prefixo do comando \`LOAD\` subsequente.
+   - Exemplo ERRADO: \`LOAD * FROM TabelaA LEFT JOIN TabelaB ON ...\`
+   - Exemplo CORRETO: 
+     \`TabelaA: LOAD * FROM TabelaA;\`
+     \`LEFT JOIN (TabelaA) LOAD * FROM TabelaB;\`
 
 FORMATO DE SAÍDA:
 Retorne um objeto JSON.

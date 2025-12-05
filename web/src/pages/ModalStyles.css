@@ -264,7 +264,7 @@
   max-height: 500px;
   background: rgba(0, 0, 0, 0.4);
   position: relative;
-  overflow: hidden;
+  overflow: auto;
 }
 
 /* Coluna fixa de numeração */
@@ -645,7 +645,8 @@
 }
 
 .code-table tr:hover {
-  background-color: #2a2d2e; /* VS Code hover line */
+  background-color: #2a2d2e;
+  /* VS Code hover line */
 }
 
 .code-table td {
@@ -664,7 +665,8 @@
   user-select: none;
   white-space: nowrap;
   font-size: 12px;
-  line-height: 1.6; /* Match code line height */
+  line-height: 1.6;
+  /* Match code line height */
 }
 
 .line-number-cell::before {
@@ -686,10 +688,39 @@
 }
 
 /* VS Code Dark Theme Syntax Colors */
-.code-content.qlik-syntax .syntax-keyword { color: #569cd6 !important; font-weight: bold; text-shadow: none !important; animation: none !important; }
-.code-content.qlik-syntax .syntax-function { color: #dcdcaa !important; text-shadow: none !important; animation: none !important; }
-.code-content.qlik-syntax .syntax-string { color: #ce9178 !important; text-shadow: none !important; }
-.code-content.qlik-syntax .syntax-comment { color: #6a9955 !important; font-style: italic; }
-.code-content.qlik-syntax .syntax-number { color: #b5cea8 !important; text-shadow: none !important; }
-.code-content.qlik-syntax .syntax-operator { color: #d4d4d4 !important; text-shadow: none !important; }
-.code-content.qlik-syntax .syntax-identifier { color: #9cdcfe !important; }
+.code-content.qlik-syntax .syntax-keyword {
+  color: #569cd6 !important;
+  font-weight: bold;
+  text-shadow: none !important;
+  animation: none !important;
+}
+
+.code-content.qlik-syntax .syntax-function {
+  color: #dcdcaa !important;
+  text-shadow: none !important;
+  animation: none !important;
+}
+
+.code-content.qlik-syntax .syntax-string {
+  color: #ce9178 !important;
+  text-shadow: none !important;
+}
+
+.code-content.qlik-syntax .syntax-comment {
+  color: #6a9955 !important;
+  font-style: italic;
+}
+
+.code-content.qlik-syntax .syntax-number {
+  color: #b5cea8 !important;
+  text-shadow: none !important;
+}
+
+.code-content.qlik-syntax .syntax-operator {
+  color: #d4d4d4 !important;
+  text-shadow: none !important;
+}
+
+.code-content.qlik-syntax .syntax-identifier {
+  color: #9cdcfe !important;
+}

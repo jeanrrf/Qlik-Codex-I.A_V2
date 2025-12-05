@@ -363,6 +363,16 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
 
       if (res) {
         const { consultancyDocument, ...optResult } = res;
+
+        // Fix for NVIDIA/LLM sometimes returning literal escaped newlines
+        if (optResult.optimizedScript) {
+          if (optResult.optimizedScript.includes('\\n') && !optResult.optimizedScript.includes('\n')) {
+            optResult.optimizedScript = optResult.optimizedScript.replace(/\\n/g, '\n');
+          }
+          // Trim to avoid leading/trailing empty lines causing offsets
+          optResult.optimizedScript = optResult.optimizedScript.trim();
+        }
+
         setResult(optResult);
         if (consultancyDocument) {
           setConsultancyDoc(consultancyDocument);
