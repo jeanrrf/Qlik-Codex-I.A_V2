@@ -24,10 +24,25 @@ const router = Router();
 function getAuthCookieOptions(expiresInSeconds: number): CookieOptions {
   const isProduction = process.env.NODE_ENV === "production";
 
+  // Cross-site frontends need SameSite=None + Secure for cookies to flow with fetch credentials
+  const sameSiteEnv = process.env.AUTH_COOKIE_SAMESITE?.toLowerCase();
+  const sameSite: CookieOptions["sameSite"] =
+    sameSiteEnv === "none" || sameSiteEnv === "lax" || sameSiteEnv === "strict"
+      ? (sameSiteEnv as CookieOptions["sameSite"])
+      : isProduction
+        ? "none"
+        : "lax";
+
+  // Allow overriding cookie domain when frontend/backends live on different hosts
+  const domain = process.env.AUTH_COOKIE_DOMAIN || undefined;
+
+  const secure = sameSite === "none" ? true : isProduction;
+
   return {
     httpOnly: true,
-    secure: isProduction,
-    sameSite: "lax", // Use Lax for better compatibility with Proxy setup
+    secure,
+    sameSite,
+    domain,
     maxAge: expiresInSeconds * 1000
   };
 }
