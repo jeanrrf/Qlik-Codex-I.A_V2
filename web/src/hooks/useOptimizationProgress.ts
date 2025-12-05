@@ -343,6 +343,11 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
   const taskTimeoutRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map()); // Timeouts individuais
 
+  // Auto-retry state
+  const retryCountRef = useRef(0);
+  const isRetryingRef = useRef(false);
+  const MAX_RETRIES = 3;
+
 
 
   const updateStage = useCallback((stageIndex: number, updates: Partial<OptimizationStage>) => {
@@ -493,6 +498,12 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
   const startOptimization = useCallback(async (options: OptimizationOptions): Promise<OptimizeScriptApiResponse | null> => {
 
+    // Reset retry count if this is a fresh start (not an auto-retry)
+    if (!isRetryingRef.current) {
+      retryCountRef.current = 0;
+    }
+    isRetryingRef.current = false; // Reset flag for next time
+
     // Atualiza o modo atual e seleciona as stages corretas
 
     setCurrentMode(options.mode);
@@ -517,7 +528,31 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
     abortRef.current = new AbortController();
 
+    // Global Timeout Safeguard (15 min)
+    const globalTimeoutId = setTimeout(() => {
+      console.warn("[GLOBAL TIMEOUT] Tempo limite global excedido.");
 
+      if (retryCountRef.current < MAX_RETRIES) {
+        console.log(`[AUTO-RESTART] Global timeout. Reiniciando (Tentativa ${retryCountRef.current + 1}/${MAX_RETRIES})...`);
+        retryCountRef.current++;
+        isRetryingRef.current = true;
+
+        if (abortRef.current) abortRef.current.abort();
+        if (intervalRef.current) clearInterval(intervalRef.current);
+
+        setProgress(prev => ({
+          ...prev,
+          status: "running",
+          errorMessage: `Tempo limite global. Reiniciando (Tentativa ${retryCountRef.current}/${MAX_RETRIES})...`
+        }));
+
+        setTimeout(() => startOptimization(options).catch(console.error), 2000);
+      } else {
+        if (abortRef.current) abortRef.current.abort();
+        setError("Tempo limite global excedido (15 min). A operação foi cancelada.");
+        setProgress(prev => ({ ...prev, status: "error" }));
+      }
+    }, 15 * 60 * 1000);
 
     // Inicia com as stages corretas para este modo
 
@@ -737,8 +772,38 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
                 // Configura timeout de 3 minutos para esta tarefa
 
                 const timeoutId = setTimeout(() => {
+                  console.warn(`[TIMEOUT] Tarefa ${taskId} excedeu ${TASK_TIMEOUT_MS / 1000}s!`);
 
-                  console.warn(`[TIMEOUT] Tarefa ${taskId} excedeu 3 minutos!`);
+                  // Auto-Correction / Auto-Restart Logic
+                  if (retryCountRef.current < MAX_RETRIES) {
+                    console.log(`[AUTO-RESTART] Detectada falha/timeout. Reiniciando operação (Tentativa ${retryCountRef.current + 1}/${MAX_RETRIES})...`);
+
+                    // Increment retry count
+                    retryCountRef.current++;
+                    isRetryingRef.current = true;
+
+                    // Stop current execution
+                    if (abortRef.current) {
+                      abortRef.current.abort();
+                    }
+                    if (intervalRef.current) {
+                      clearInterval(intervalRef.current);
+                    }
+
+                    // Update status to show retrying
+                    setProgress(prev => ({
+                      ...prev,
+                      status: "running", // Keep running
+                      errorMessage: `Timeout detectado. Reiniciando automaticamente (Tentativa ${retryCountRef.current}/${MAX_RETRIES})...`
+                    }));
+
+                    // Restart after a short delay
+                    setTimeout(() => {
+                      startOptimization(options).catch(console.error);
+                    }, 2000);
+
+                    return;
+                  }
 
                   setProgress(prev => {
 
@@ -1044,7 +1109,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
               }
 
-
+              clearTimeout(globalTimeoutId);
 
               setResult(data);
 
@@ -1077,6 +1142,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
       throw new Error("Stream finalizado sem evento 'complete'");
 
     } catch (err) {
+      clearTimeout(globalTimeoutId);
 
       if (err instanceof Error && err.name === "AbortError") {
 

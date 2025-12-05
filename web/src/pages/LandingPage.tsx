@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { apiClient } from "../api/client";
 
 import QlikFormatterTool from "../components/QlikFormatterTool";
 
@@ -128,6 +129,29 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [copyFeedback, setCopyFeedback] = useState<CopyFeedback | null>(null);
   const copyTimeout = useRef<number | null>(null);
+
+  // Contact Form State
+  const [formState, setFormState] = useState({ name: "", email: "", company: "", message: "" });
+  const [isSending, setIsSending] = useState(false);
+  const [isSent, setIsSent] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSending(true);
+    setFormError(null);
+
+    try {
+      await apiClient.post('/api/contact', formState);
+      setIsSent(true);
+      setFormState({ name: "", email: "", company: "", message: "" });
+    } catch (err) {
+      console.error(err);
+      setFormError("Erro ao enviar mensagem. Tente novamente ou use o WhatsApp.");
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   const CONTACT_EMAIL = "rosso.jeandasilva@gmail.com";
   const WHATSAPP_NUMBER = "+55 48 991937304";
@@ -641,6 +665,62 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               <p className="contact-description">
                 Vamos conversar sobre como a AINEX pode transformar a produtividade do seu time de dados.
               </p>
+
+              {/* Contact Form */}
+              <div className="contact-form-wrapper">
+                {!isSent ? (
+                  <form className="contact-form" onSubmit={handleContactSubmit}>
+                    <div className="form-row">
+                      <input
+                        type="text"
+                        className="contact-input"
+                        placeholder="Nome"
+                        required
+                        value={formState.name}
+                        onChange={e => setFormState({ ...formState, name: e.target.value })}
+                      />
+                      <input
+                        type="email"
+                        className="contact-input"
+                        placeholder="E-mail Corporativo"
+                        required
+                        value={formState.email}
+                        onChange={e => setFormState({ ...formState, email: e.target.value })}
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      className="contact-input"
+                      placeholder="Empresa"
+                      required
+                      value={formState.company}
+                      onChange={e => setFormState({ ...formState, company: e.target.value })}
+                    />
+                    <textarea
+                      className="contact-input contact-textarea"
+                      placeholder="Mensagem (opcional)"
+                      rows={3}
+                      value={formState.message}
+                      onChange={e => setFormState({ ...formState, message: e.target.value })}
+                    />
+                    <button type="submit" className="btn btn-contact-submit" disabled={isSending}>
+                      {isSending ? "Enviando..." : "Enviar Mensagem"}
+                    </button>
+                    {formError && <p className="form-error">{formError}</p>}
+                  </form>
+                ) : (
+                  <div className="contact-success">
+                    <div className="success-icon">✓</div>
+                    <h3>Recebemos sua mensagem!</h3>
+                    <p>Entraremos em contato em breve pelo e-mail informado.</p>
+                    <button className="btn btn-ghost small" onClick={() => setIsSent(false)}>Nova mensagem</button>
+                  </div>
+                )}
+              </div>
+
+              <div className="contact-divider-text">
+                <span>ou use nossos canais diretos</span>
+              </div>
 
               <div className="contact-actions">
                 <button className="btn btn-contact-primary" onClick={() => window.location.href = 'mailto:rosso.jeandasilva@gmail.com'}>
@@ -2595,6 +2675,137 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             width: 100%;
             justify-content: center;
             padding: 14px 24px;
+          }
+        }
+
+        /* ===================== */
+        /* CONTACT FORM          */
+        /* ===================== */
+        
+        .contact-form-wrapper {
+          max-width: 500px;
+          margin: 0 auto 32px;
+          background: rgba(0, 0, 0, 0.2);
+          padding: 24px;
+          border-radius: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .contact-form {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .form-row {
+          display: flex;
+          gap: 12px;
+        }
+
+        .form-row input {
+          width: 50%;
+        }
+
+        .contact-input {
+          width: 100%;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 8px;
+          padding: 12px 16px;
+          color: #fff;
+          font-size: 0.95rem;
+          transition: all 0.2s;
+        }
+
+        .contact-input:focus {
+          outline: none;
+          border-color: var(--primary);
+          background: rgba(255, 255, 255, 0.08);
+          box-shadow: 0 0 0 2px rgba(0, 242, 255, 0.1);
+        }
+
+        .contact-textarea {
+          resize: vertical;
+          min-height: 80px;
+        }
+
+        .btn-contact-submit {
+          background: var(--primary);
+          color: #000;
+          border: none;
+          padding: 12px;
+          border-radius: 8px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s;
+          margin-top: 4px;
+        }
+
+        .btn-contact-submit:hover:not(:disabled) {
+          background: #fff;
+          transform: translateY(-1px);
+        }
+
+        .btn-contact-submit:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+        }
+
+        .form-error {
+          color: var(--danger);
+          font-size: 0.85rem;
+          margin-top: 8px;
+        }
+
+        .contact-success {
+          text-align: center;
+          padding: 20px;
+        }
+
+        .success-icon {
+          width: 48px;
+          height: 48px;
+          background: rgba(0, 255, 157, 0.2);
+          color: var(--success);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.5rem;
+          margin: 0 auto 16px;
+        }
+
+        .contact-success h3 {
+          color: var(--success);
+          margin-bottom: 8px;
+        }
+
+        .contact-divider-text {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 16px;
+          margin-bottom: 24px;
+          color: var(--text-secondary);
+          font-size: 0.85rem;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+        }
+
+        .contact-divider-text::before,
+        .contact-divider-text::after {
+          content: '';
+          height: 1px;
+          width: 40px;
+          background: rgba(255, 255, 255, 0.1);
+        }
+
+        @media (max-width: 640px) {
+          .form-row {
+            flex-direction: column;
+          }
+          .form-row input {
+            width: 100%;
           }
         }
       `}</style>

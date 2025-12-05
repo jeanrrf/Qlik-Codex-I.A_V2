@@ -623,3 +623,73 @@
     max-height: 300px;
   }
 }
+
+/* VS Code-like Table Styles */
+.code-content-wrapper {
+  overflow: auto;
+  background-color: #1e1e1e;
+  border-radius: 0 0 8px 8px;
+}
+
+.code-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  background-color: #1e1e1e;
+}
+
+.code-table tr {
+  background: transparent;
+}
+
+.code-table tr:hover {
+  background-color: #2a2d2e; /* VS Code hover line */
+}
+
+.code-table td {
+  padding: 0;
+  vertical-align: top;
+}
+
+.line-number-cell {
+  width: 50px;
+  min-width: 50px;
+  text-align: right;
+  padding-right: 15px !important;
+  color: #858585;
+  background-color: #1e1e1e;
+  border-right: 1px solid #333;
+  user-select: none;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 1.6; /* Match code line height */
+}
+
+.line-number-cell::before {
+  content: attr(data-line-number);
+}
+
+.code-cell {
+  padding-left: 15px !important;
+  color: #d4d4d4;
+  background-color: #1e1e1e;
+  width: 100%;
+  white-space: pre;
+  word-break: keep-all;
+}
+
+.code-line-content {
+  min-height: 1.5em;
+  line-height: 1.6;
+}
+
+/* VS Code Dark Theme Syntax Colors */
+.code-content.qlik-syntax .syntax-keyword { color: #569cd6 !important; font-weight: bold; text-shadow: none !important; animation: none !important; }
+.code-content.qlik-syntax .syntax-function { color: #dcdcaa !important; text-shadow: none !important; animation: none !important; }
+.code-content.qlik-syntax .syntax-string { color: #ce9178 !important; text-shadow: none !important; }
+.code-content.qlik-syntax .syntax-comment { color: #6a9955 !important; font-style: italic; }
+.code-content.qlik-syntax .syntax-number { color: #b5cea8 !important; text-shadow: none !important; }
+.code-content.qlik-syntax .syntax-operator { color: #d4d4d4 !important; text-shadow: none !important; }
+.code-content.qlik-syntax .syntax-identifier { color: #9cdcfe !important; }

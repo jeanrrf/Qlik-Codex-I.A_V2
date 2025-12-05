@@ -5,6 +5,7 @@ import "./ControlPanel.css";
 import "./PipelineCard.css";
 import "./ModalStyles.css";
 
+import { copyToClipboard } from "../lib/clipboard";
 import { apiClient } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import { UserRole } from "../types/auth";
@@ -1127,13 +1128,14 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                         <span className="line-count">{result.originalScript.split('\n').length} linhas</span>
                         <button
                           className="copy-btn"
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             const btn = e.currentTarget;
-                            navigator.clipboard.writeText(result.originalScript).then(() => {
+                            const success = await copyToClipboard(result.originalScript);
+                            if (success) {
                               const originalText = btn.innerHTML;
                               btn.innerHTML = '✓ Copiado';
                               setTimeout(() => btn.innerHTML = originalText, 2000);
-                            });
+                            }
                           }}
                           title="Copiar código original"
                         >
@@ -1141,42 +1143,29 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                         </button>
                       </div>
                     </div>
-                    <div className="code-content-wrapper">
-                      <div className="line-numbers-column">
-                        {result.originalScript.split(/\r?\n/).map((_, idx) => (
-                          <span key={idx} className="line-number">{idx + 1}</span>
-                        ))}
-                      </div>
-                      <div
-                        className="code-scroll-area"
-                        onScroll={(e) => {
-                          const target = e.currentTarget;
-                          const wrapper = target.parentElement as HTMLDivElement;
-                          const lineNumbers = wrapper?.querySelector('.line-numbers-column') as HTMLDivElement;
-                          if (lineNumbers) lineNumbers.scrollTop = target.scrollTop;
-
-                          // Sync with optimized panel
-                          const optimizedWrapper = wrapper?.parentElement?.parentElement?.querySelector('.optimized .code-content-wrapper') as HTMLDivElement;
-                          if (optimizedWrapper) {
-                            const optimizedScroll = optimizedWrapper.querySelector('.code-scroll-area') as HTMLDivElement;
-                            const optimizedLines = optimizedWrapper.querySelector('.line-numbers-column') as HTMLDivElement;
-
-                            if (optimizedScroll && Math.abs(optimizedScroll.scrollTop - target.scrollTop) > 1) {
-                              optimizedScroll.scrollTop = target.scrollTop;
-                              optimizedScroll.scrollLeft = target.scrollLeft;
-                            }
-                            if (optimizedLines) optimizedLines.scrollTop = target.scrollTop;
-                          }
-                        }}
-                      >
-                        <pre className="code-content qlik-syntax">
+                    <div
+                      className="code-content-wrapper"
+                      onScroll={(e) => {
+                        const target = e.currentTarget;
+                        const optimizedWrapper = target.closest('.code-comparison')?.querySelector('.optimized .code-content-wrapper');
+                        if (optimizedWrapper && Math.abs(optimizedWrapper.scrollTop - target.scrollTop) > 1) {
+                          optimizedWrapper.scrollTop = target.scrollTop;
+                          optimizedWrapper.scrollLeft = target.scrollLeft;
+                        }
+                      }}
+                    >
+                      <table className="code-table">
+                        <tbody>
                           {result.originalScript.split(/\r?\n/).map((line, idx) => (
-                            <div key={idx} className="code-line">
-                              <div className="code-line-content" dangerouslySetInnerHTML={{ __html: highlightQlikSyntax(line) || '&nbsp;' }} />
-                            </div>
+                            <tr key={idx}>
+                              <td className="line-number-cell" data-line-number={idx + 1}></td>
+                              <td className="code-cell">
+                                <div className="code-line-content code-content qlik-syntax" dangerouslySetInnerHTML={{ __html: highlightQlikSyntax(line) || '&nbsp;' }} />
+                              </td>
+                            </tr>
                           ))}
-                        </pre>
-                      </div>
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                   <div className="code-panel optimized">
@@ -1186,13 +1175,14 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                         <span className="line-count">{result.optimizedScript.split(/\r?\n/).length} linhas</span>
                         <button
                           className="copy-btn"
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             const btn = e.currentTarget;
-                            navigator.clipboard.writeText(result.optimizedScript).then(() => {
+                            const success = await copyToClipboard(result.optimizedScript);
+                            if (success) {
                               const originalText = btn.innerHTML;
                               btn.innerHTML = '✓ Copiado';
                               setTimeout(() => btn.innerHTML = originalText, 2000);
-                            });
+                            }
                           }}
                           title="Copiar código otimizado"
                         >
@@ -1200,42 +1190,29 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                         </button>
                       </div>
                     </div>
-                    <div className="code-content-wrapper">
-                      <div className="line-numbers-column">
-                        {result.optimizedScript.split(/\r?\n/).map((_, idx) => (
-                          <span key={idx} className="line-number">{idx + 1}</span>
-                        ))}
-                      </div>
-                      <div
-                        className="code-scroll-area"
-                        onScroll={(e) => {
-                          const target = e.currentTarget;
-                          const wrapper = target.parentElement as HTMLDivElement;
-                          const lineNumbers = wrapper?.querySelector('.line-numbers-column') as HTMLDivElement;
-                          if (lineNumbers) lineNumbers.scrollTop = target.scrollTop;
-
-                          // Sync with original panel
-                          const originalWrapper = wrapper?.parentElement?.parentElement?.querySelector('.original .code-content-wrapper') as HTMLDivElement;
-                          if (originalWrapper) {
-                            const originalScroll = originalWrapper.querySelector('.code-scroll-area') as HTMLDivElement;
-                            const originalLines = originalWrapper.querySelector('.line-numbers-column') as HTMLDivElement;
-
-                            if (originalScroll && Math.abs(originalScroll.scrollTop - target.scrollTop) > 1) {
-                              originalScroll.scrollTop = target.scrollTop;
-                              originalScroll.scrollLeft = target.scrollLeft;
-                            }
-                            if (originalLines) originalLines.scrollTop = target.scrollTop;
-                          }
-                        }}
-                      >
-                        <pre className="code-content qlik-syntax">
+                    <div
+                      className="code-content-wrapper"
+                      onScroll={(e) => {
+                        const target = e.currentTarget;
+                        const originalWrapper = target.closest('.code-comparison')?.querySelector('.original .code-content-wrapper');
+                        if (originalWrapper && Math.abs(originalWrapper.scrollTop - target.scrollTop) > 1) {
+                          originalWrapper.scrollTop = target.scrollTop;
+                          originalWrapper.scrollLeft = target.scrollLeft;
+                        }
+                      }}
+                    >
+                      <table className="code-table">
+                        <tbody>
                           {result.optimizedScript.split(/\r?\n/).map((line, idx) => (
-                            <div key={idx} className="code-line">
-                              <div className="code-line-content" dangerouslySetInnerHTML={{ __html: highlightQlikSyntax(line) || '&nbsp;' }} />
-                            </div>
+                            <tr key={idx}>
+                              <td className="line-number-cell" data-line-number={idx + 1}></td>
+                              <td className="code-cell">
+                                <div className="code-line-content code-content qlik-syntax" dangerouslySetInnerHTML={{ __html: highlightQlikSyntax(line) || '&nbsp;' }} />
+                              </td>
+                            </tr>
                           ))}
-                        </pre>
-                      </div>
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 </div>
@@ -3582,11 +3559,11 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
         .changes-count .badge.danger { background: rgba(255, 42, 109, 0.15); color: var(--danger); }
 
         .code-comparison {
-          display: flex;
-          flex-direction: column;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
           gap: 1.5rem;
           flex: 1;
-          min-height: 300px;
+          min-height: 400px;
         }
 
         .code-panel {
@@ -3967,7 +3944,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
           }
 
           .code-comparison {
-            flex-direction: column;
+            grid-template-columns: 1fr;
           }
         }
 

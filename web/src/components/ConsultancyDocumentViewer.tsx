@@ -4,6 +4,7 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { copyToClipboard } from "../lib/clipboard";
 import type { ConsultancyDocument } from '../types/consultancy';
 import { highlightQlikCode } from '../lib/qlikSyntaxHighlighter';
 import { formatDuration } from '../../../server/src/lib/formatTime';
@@ -410,23 +411,29 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
     highlights: Map<number, string>,
     keyPrefix: string
   ) => (
-    lines.map((line, idx) => {
-      const lineNumber = idx + 1;
-      const highlight = highlights.get(lineNumber);
-      const highlightedLine = highlightQlikCode(line);
-      return (
-        <div
-          key={`${keyPrefix}-${lineNumber}`}
-          className={`cd-code-line ${highlight ? `code-${highlight}` : ''}`}
-        >
-          <span className="cd-code-line-number">{lineNumber}</span>
-          <span
-            className="cd-code-line-content"
-            dangerouslySetInnerHTML={{ __html: highlightedLine || '&nbsp;' }}
-          />
-        </div>
-      );
-    })
+    <table className="code-table">
+      <tbody>
+        {lines.map((line, idx) => {
+          const lineNumber = idx + 1;
+          const highlight = highlights.get(lineNumber);
+          const highlightedLine = highlightQlikCode(line);
+          return (
+            <tr
+              key={`${keyPrefix}-${lineNumber}`}
+              className={`cd-code-line ${highlight ? `code-${highlight}` : ''}`}
+            >
+              <td className="line-number-cell" data-line-number={lineNumber}></td>
+              <td className="code-cell">
+                <div
+                  className="code-line-content code-content qlik-syntax"
+                  dangerouslySetInnerHTML={{ __html: highlightedLine || '&nbsp;' }}
+                />
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 
   // Format duration with HH:MM:SS - usando função importada
@@ -876,8 +883,8 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
                 <span className="cd-code-lines">{doc.codeComparison.diffStats.totalOriginal} linhas</span>
                 <button
                   className="cd-copy-btn"
-                  onClick={() => {
-                    navigator.clipboard.writeText(doc.codeComparison?.originalScript || '');
+                  onClick={async () => {
+                    await copyToClipboard(doc.codeComparison?.originalScript || '');
                     const btn = document.querySelector('.cd-code-panel:first-child .cd-copy-btn') as HTMLButtonElement;
                     if (btn) { btn.textContent = '✓ Copiado'; setTimeout(() => btn.textContent = '📋 Copiar', 2000); }
                   }}
@@ -903,8 +910,8 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
                 <span className="cd-code-lines">{doc.codeComparison.diffStats.totalOptimized} linhas</span>
                 <button
                   className="cd-copy-btn"
-                  onClick={() => {
-                    navigator.clipboard.writeText(doc.codeComparison?.optimizedScript || '');
+                  onClick={async () => {
+                    await copyToClipboard(doc.codeComparison?.optimizedScript || '');
                     const btn = document.querySelector('.cd-code-panel:last-of-type .cd-copy-btn') as HTMLButtonElement;
                     if (btn) { btn.textContent = '✓ Copiado'; setTimeout(() => btn.textContent = '📋 Copiar', 2000); }
                   }}
@@ -2231,64 +2238,73 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
 
         .cd-code-block {
           flex: 1;
-          padding: 8px 0;
           overflow: auto;
           max-height: 420px;
-          font-family: 'JetBrains Mono', monospace;
-          font-size: 0.75rem;
-          color: var(--text-secondary);
+          background-color: #1e1e1e;
         }
 
-        .cd-code-line {
-          display: flex;
-          gap: 10px;
-          padding: 0 16px; /* Reduced vertical padding, controlled by line-height */
-          border-left: 3px solid transparent;
-          align-items: flex-start; /* Fix alignment issues */
-          line-height: 1.5; /* Consistent line height */
+        /* VS Code-like Table Styles for Consultancy Viewer */
+        .code-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-family: 'JetBrains Mono', 'Consolas', monospace;
+          font-size: 13px;
+          line-height: 1.5;
+          background-color: #1e1e1e;
         }
 
-        .cd-code-line-number {
-          width: 40px;
+        .code-table tr {
+          background: transparent;
+        }
+
+        .code-table tr:hover {
+          background-color: #2a2d2e;
+        }
+
+        .code-table td {
+          padding: 0;
+          vertical-align: top;
+        }
+
+        .line-number-cell {
+          width: 50px;
+          min-width: 50px;
           text-align: right;
-          color: var(--text-tertiary);
-          font-size: 0.75rem; /* Match content font size */
-          line-height: 1.5;
+          padding-right: 15px !important;
+          color: #858585;
+          background-color: #1e1e1e;
+          border-right: 1px solid #333;
           user-select: none;
-          padding-top: 2px; /* Micro-adjustment for visual alignment */
+          white-space: nowrap;
+          font-size: 12px;
+          line-height: 1.6;
         }
 
-        .cd-code-line-content {
-          flex: 1;
+        .line-number-cell::before {
+          content: attr(data-line-number);
+        }
+
+        .code-cell {
+          padding-left: 15px !important;
+          color: #d4d4d4;
+          background-color: #1e1e1e;
+          width: 100%;
           white-space: pre;
-          font-size: 0.75rem;
-          line-height: 1.5;
-          padding-top: 2px; /* Match number padding */
+          word-break: keep-all;
         }
 
-        /* Qlik Syntax Highlighting */
-        .cd-code-line-content .qlik-keyword {
-          color: #ff6b9d;
-          font-weight: 600;
+        .code-line-content {
+          min-height: 1.5em;
+          line-height: 1.6;
         }
 
-        .cd-code-line-content .qlik-function {
-          color: #00f2ff;
-          font-weight: 500;
-        }
-
-        .cd-code-line-content .qlik-operator {
-          color: #c792ea;
-        }
-
-        .cd-code-line-content .qlik-string {
-          color: #c3e88d;
-        }
-
-        .cd-code-line-content .qlik-comment {
-          color: #546e7a;
-          font-style: italic;
-        }
+        /* VS Code Syntax Highlighting */
+        .code-content.qlik-syntax .syntax-keyword { color: #569cd6 !important; font-weight: bold; }
+        .code-content.qlik-syntax .syntax-function { color: #dcdcaa !important; }
+        .code-content.qlik-syntax .syntax-string { color: #ce9178 !important; }
+        .code-content.qlik-syntax .syntax-comment { color: #6a9955 !important; font-style: italic; }
+        .code-content.qlik-syntax .syntax-number { color: #b5cea8 !important; }
+        .code-content.qlik-syntax .syntax-operator { color: #d4d4d4 !important; }
 
         .cd-code-line-content .qlik-number {
           color: #f78c6c;
