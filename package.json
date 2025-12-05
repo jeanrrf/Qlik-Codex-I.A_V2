@@ -13,7 +13,6 @@
     "concurrently": "^8.2.0"
   },
   "dependencies": {
-    "cli": "^1.0.1",
-    "vercel": "^48.12.1"
+    "dotenv": "^16.4.7"
   }
 }

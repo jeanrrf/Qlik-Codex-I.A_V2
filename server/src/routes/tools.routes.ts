@@ -31,6 +31,11 @@ toolsRouter.post(
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
 
+    // Garante envio imediato dos headers em proxies como Nginx/Heroku
+    if (typeof (res as any).flushHeaders === "function") {
+      (res as any).flushHeaders();
+    }
+
     const send = (event: string, data: unknown) => {
       try {
         res.write(`event: ${event}\n`);
@@ -45,6 +50,12 @@ toolsRouter.post(
         res.write(`: keep-alive\n\n`);
       } catch { }
     }, 15000);
+
+    // Encerrar de forma limpa se o cliente fechar a conexão
+    req.on("close", () => {
+      clearInterval(keepAliveTimer);
+      try { res.end(); } catch { }
+    });
 
     try {
       // Progress simulation for UX

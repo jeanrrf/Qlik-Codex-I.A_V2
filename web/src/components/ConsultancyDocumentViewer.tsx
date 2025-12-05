@@ -1112,7 +1112,7 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
                     if (btn) { btn.textContent = '✓ Copiado'; setTimeout(() => btn.textContent = '📋 Copiar Otimizado', 2000); }
                   }}
                   title="Copiar código otimizado"
-                  >
+                >
                   📋 Copiar Otimizado
                 </button>
                 <button
