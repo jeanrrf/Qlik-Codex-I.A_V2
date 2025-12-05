@@ -82,8 +82,12 @@ export function extractContent(content?: NvidiaMessageContent): string | undefin
 
   if (typeof content === "string") {
     const trimmed = content.trim();
+
     // Fix: Se o texto vier "encavalado" com literais \n mas sem quebras reais
-    if (trimmed.length > 100 && !trimmed.includes('\n') && trimmed.includes('\\n')) {
+    // IMPORTANTE: Não aplicar se parecer JSON
+    const looksLikeJson = trimmed.startsWith('{') || trimmed.startsWith('[') || trimmed.includes('```json');
+
+    if (!looksLikeJson && trimmed.length > 100 && !trimmed.includes('\n') && trimmed.includes('\\n')) {
       return trimmed.replace(/\\n/g, '\n');
     }
     return trimmed.length > 0 ? trimmed : undefined;
@@ -130,7 +134,11 @@ export function extractContent(content?: NvidiaMessageContent): string | undefin
   const joined = parts.join("\n").trim();
 
   // Fix: Se o texto vier "encavalado" com literais \n mas sem quebras reais
-  if (joined.length > 100 && !joined.includes('\n') && joined.includes('\\n')) {
+  // IMPORTANTE: Não aplicar se parecer JSON, pois quebra a estrutura (ex: "val": "a\nb" vira "val": "a
+  // b" que é inválido)
+  const looksLikeJson = joined.startsWith('{') || joined.startsWith('[') || joined.includes('```json');
+
+  if (!looksLikeJson && joined.length > 100 && !joined.includes('\n') && joined.includes('\\n')) {
     return joined.replace(/\\n/g, '\n');
   }
 

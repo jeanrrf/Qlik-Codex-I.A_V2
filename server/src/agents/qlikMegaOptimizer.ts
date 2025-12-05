@@ -242,6 +242,14 @@ ${promptTemplate}
           const jsonMatch = responseText.match(/\{[\s\S]*\}/);
           const jsonStr = jsonMatch ? jsonMatch[0] : responseText;
           parsedResult = JSON.parse(jsonStr);
+
+          // Fix: Handle cases where NVIDIA/LLM returns double-escaped newlines in scripts
+          // This manifests as "1 line" code in frontend because \n is literal, not control char
+          if (parsedResult && typeof parsedResult.optimizedScript === 'string') {
+            if (parsedResult.optimizedScript.includes('\\n') && !parsedResult.optimizedScript.includes('\n')) {
+              parsedResult.optimizedScript = parsedResult.optimizedScript.replace(/\\n/g, '\n');
+            }
+          }
         } catch (e) {
           logger.warn(`[MegaOptimizer] Failed to parse JSON for ${taskName}`, { error: e, attempt });
           throw new Error(`JSON Parse Error for ${taskName}`);
