@@ -18,6 +18,7 @@ export function AuthCallback() {
         const params = new URLSearchParams(window.location.search);
         const success = params.get("success");
         const error = params.get("error");
+        const token = params.get("token");
 
         if (error) {
           setStatus("error");
@@ -30,6 +31,11 @@ export function AuthCallback() {
         }
 
         if (success === "true") {
+          // Salvar token se fornecido (fallback para cookies cross-domain)
+          if (token) {
+            localStorage.setItem("qlik-codex-access-token", token);
+          }
+
           // Autenticação bem-sucedida, recarregar dados do usuário
           await refreshUser();
           setStatus("success");

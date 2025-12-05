@@ -101,9 +101,9 @@ router.get(
       // Definir cookie httpOnly com token (ajustado para cenários cross-site em produção)
       res.cookie("auth_token", tokens.accessToken, getAuthCookieOptions(tokens.expiresIn));
 
-      // Redirecionar para frontend com sucesso
+      // Redirecionar para frontend com sucesso (incluindo token para fallback de localStorage)
       const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-      res.redirect(`${frontendUrl}/auth/callback?success=true`);
+      res.redirect(`${frontendUrl}/auth/callback?success=true&token=${tokens.accessToken}`);
     } catch (err) {
       logger.error("Google OAuth callback error", err);
 
