@@ -24,6 +24,12 @@ Interface web moderna para o otimizador de scripts Qlik.
   - Documentação gerada por IA
 - **Consultoria**: Geração de documento PDF/Markdown com análise profunda.
 
+### Visual diff alinhado (novo)
+- A visualização de "Comparação de Código" no documento de consultoria agora mostra um diff alinhado por linha (estilo git diff) — linhas adicionadas, removidas e modificadas aparecem lado a lado, sincronizadas por número de linha para facilitar a revisão humana.
+  - Além disso o diff agora tenta detectar mudanças intra-linha (marcando trechos removidos/ inseridos) para facilitar revisão fina.
+  - Também é possível exportar o diff como arquivo (.diff) para revisão externa/integração com processos git.
+  
+
 ## Como Rodar
 ```bash
 npm install

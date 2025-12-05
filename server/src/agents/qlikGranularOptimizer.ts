@@ -1,8 +1,9 @@
 import { sseEmitter } from "../lib/sseEmitter";
 import { logger } from "../lib/logger";
 import { ProviderOrchestrator, createOrchestrator } from "../lib/providerOrchestrator";
-import { QlikOptimizationKnowledgeBase } from "../lib/qlikOptimizationKnowledgeBase";
 import { OptimizationStepId, OPTIMIZATION_STEPS, StepExecutionResult } from "../types/optimization";
+import { parseQlikScript } from "../lib/qlikParser";
+import { buildGranularPrompt, buildParserSummary } from "./promptPlan";
 
 export interface GranularOptimizerOptions {
   signal?: AbortSignal;
@@ -12,10 +13,13 @@ export class QlikGranularOptimizer {
   private script: string;
   private orchestrator: ProviderOrchestrator;
   private abortSignal?: AbortSignal;
+  private parserSummary: string;
 
   constructor(script: string, options?: GranularOptimizerOptions) {
     this.script = script;
     this.abortSignal = options?.signal;
+    const parsed = parseQlikScript(this.script);
+    this.parserSummary = buildParserSummary(parsed);
 
     // Configuração otimizada para passos granulares (mais rápidos)
     this.orchestrator = createOrchestrator({
@@ -94,8 +98,7 @@ export class QlikGranularOptimizer {
     });
 
     try {
-      // Constrói o prompt usando a Base de Conhecimento
-      const prompt = QlikOptimizationKnowledgeBase.buildPrompt(stepId, currentScript);
+      const prompt = buildGranularPrompt(stepDef, currentScript, this.parserSummary);
 
       // Executa via orquestrador
       const response = await this.orchestrator.executeWithRotation(

@@ -52,8 +52,16 @@ class ScriptService {
       );
       const durationMs = Date.now() - startTime;
 
-      // Salva no cache
-      cacheService.set(payload.script, payload.mode, result, provider);
+      const hasValidationWarnings = result.analysis?.validationWarnings && result.analysis.validationWarnings.length > 0;
+
+      // Salva no cache apenas se passou pela validação determinística
+      if (!hasValidationWarnings) {
+        cacheService.set(payload.script, payload.mode, result, provider);
+      } else {
+        logger.warn("Cache SKIP - validação determinística encontrou alertas, não persistindo resultado em cache", {
+          warnings: result.analysis.validationWarnings?.slice(0, 3)
+        });
+      }
 
       logger.info("Optimization completed", { duration: durationMs });
 

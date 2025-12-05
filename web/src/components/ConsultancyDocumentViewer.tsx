@@ -228,6 +228,7 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
   const copyTimeout = useRef<number | null>(null);
   const originalCodeRef = useRef<HTMLDivElement | null>(null);
   const optimizedCodeRef = useRef<HTMLDivElement | null>(null);
+  const alignedCodeRef = useRef<HTMLDivElement | null>(null);
 
   // Auto-ajustar activeTab se a aba atual não estiver disponível
   useEffect(() => {
@@ -377,6 +378,215 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
   const optimizedLines = useMemo(() => {
     return (doc.codeComparison?.optimizedCode || '').split(/\r?\n/);
   }, [doc.codeComparison]);
+
+  // Helper: simple Levenshtein distance
+  const levenshtein = (a: string, b: string): number => {
+    const n = a.length;
+    const m = b.length;
+    if (n === 0) return m;
+    if (m === 0) return n;
+    const dp: number[][] = Array.from({ length: n + 1 }, () => Array(m + 1).fill(0));
+    for (let i = 0; i <= n; i++) dp[i][0] = i;
+    for (let j = 0; j <= m; j++) dp[0][j] = j;
+    for (let i = 1; i <= n; i++) {
+      for (let j = 1; j <= m; j++) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+      }
+    }
+    return dp[n][m];
+  };
+
+  const lineSimilarity = (a: string, b: string): number => {
+    if (!a && !b) return 1;
+    const maxLen = Math.max(a.length, b.length, 1);
+    const d = levenshtein(a, b);
+    return 1 - (d / maxLen);
+  };
+
+  // Escape HTML helper
+  const escapeHtml = (str: string) =>
+    String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+
+  // Char-level LCS-based intraline diff -> returns { leftHtml, rightHtml }
+  const intralineDiff = (left: string, right: string) => {
+    const a = left || '';
+    const b = right || '';
+    const n = a.length;
+    const m = b.length;
+    if (n === 0 && m === 0) return { leftHtml: '', rightHtml: '' };
+
+    // Build dp
+    const dp: number[][] = Array.from({ length: n + 1 }, () => Array(m + 1).fill(0));
+    for (let i = n - 1; i >= 0; i--) {
+      for (let j = m - 1; j >= 0; j--) {
+        if (a[i] === b[j]) dp[i][j] = 1 + dp[i + 1][j + 1];
+        else dp[i][j] = Math.max(dp[i + 1][j], dp[i][j + 1]);
+      }
+    }
+
+    // Backtrack to produce segments
+    let i = 0; let j = 0;
+    const leftParts: string[] = [];
+    const rightParts: string[] = [];
+
+    while (i < n || j < m) {
+      if (i < n && j < m && a[i] === b[j]) {
+        leftParts.push(escapeHtml(a[i]));
+        rightParts.push(escapeHtml(b[j]));
+        i++; j++; continue;
+      }
+
+      if (j < m && (i === n || dp[i][j + 1] >= dp[i + 1][j])) {
+        // insertion in right
+        let buf = '';
+        while (j < m && (i === n || dp[i][j + 1] >= dp[i + 1][j])) { buf += escapeHtml(b[j]); j++; }
+        rightParts.push(`<span class=\"cd-ins\">${buf}</span>`);
+        continue;
+      }
+
+      if (i < n) {
+        let buf = '';
+        while (i < n && (j === m || dp[i + 1][j] >= dp[i][j + 1])) { buf += escapeHtml(a[i]); i++; }
+        leftParts.push(`<span class=\"cd-del\">${buf}</span>`);
+        continue;
+      }
+    }
+
+    return { leftHtml: leftParts.join('') || escapeHtml(left), rightHtml: rightParts.join('') || escapeHtml(right) };
+  };
+
+  // Generate unified diff (simple) for export
+  const generateUnifiedDiff = (rows: any[], fileA = 'original', fileB = 'optimized') => {
+    const header = `--- ${fileA}\n+++ ${fileB}\n`;
+    const hunks: string[] = [];
+    let oldStart = 0, oldCount = 0, newStart = 0, newCount = 0;
+    const lines: string[] = [];
+    for (const r of rows) {
+      if (r.type === 'unchanged') {
+        lines.push(' ' + (r.leftText || r.rightText || ''));
+      } else if (r.type === 'removed') {
+        lines.push('-' + (r.leftText || ''));
+      } else if (r.type === 'added') {
+        lines.push('+' + (r.rightText || ''));
+      } else if (r.type === 'modified') {
+        lines.push('-' + (r.leftText || ''));
+        lines.push('+' + (r.rightText || ''));
+      }
+    }
+    return header + lines.join('\n');
+  };
+
+  // Compute an aligned, line-by-line diff (git-like) between originalLines and optimizedLines
+  const alignedRows = useMemo(() => {
+    // LCS dynamic programming approach to align lines
+    const A = originalLines;
+    const B = optimizedLines;
+    const n = A.length;
+    const m = B.length;
+
+    // dp table sized (n+1)x(m+1)
+    const dp: number[][] = Array.from({ length: n + 1 }, () => Array(m + 1).fill(0));
+    for (let i = n - 1; i >= 0; i--) {
+      for (let j = m - 1; j >= 0; j--) {
+        if (A[i] === B[j]) dp[i][j] = 1 + dp[i + 1][j + 1];
+        else dp[i][j] = Math.max(dp[i + 1][j], dp[i][j + 1]);
+      }
+    }
+
+    // Backtrack to produce aligned rows
+    let i = 0;
+    let j = 0;
+    type RowType = 'unchanged' | 'removed' | 'added' | 'modified';
+    const rows: { leftLine?: number; leftText: string; rightLine?: number; rightText: string; type: RowType }[] = [];
+
+    while (i < n || j < m) {
+      if (i < n && j < m && A[i] === B[j]) {
+        rows.push({ leftLine: i + 1, leftText: A[i], rightLine: j + 1, rightText: B[j], type: 'unchanged' });
+        i++; j++;
+        continue;
+      }
+
+      // Prefer additions when dp suggests so; otherwise removals
+      if (j < m && (i === n || dp[i][j + 1] >= dp[i + 1][j])) {
+        rows.push({ leftText: '', rightLine: j + 1, rightText: B[j], type: 'added' });
+        j++;
+        continue;
+      }
+
+      if (i < n) {
+        rows.push({ leftLine: i + 1, leftText: A[i], rightText: '', type: 'removed' });
+        i++;
+        continue;
+      }
+    }
+
+    // Post-process to combine consecutive removed+added sequences into modified pairs when possible
+    const merged: typeof rows = [];
+    let idx = 0;
+    while (idx < rows.length) {
+      const r = rows[idx];
+      if (r.type === 'removed') {
+        // collect consecutive removed
+        const removedSeq: typeof rows = [];
+        let k = idx;
+        while (k < rows.length && rows[k].type === 'removed') { removedSeq.push(rows[k]); k++; }
+
+        // then collect consecutive added
+        const addedSeq: typeof rows = [];
+        let kk = k;
+        while (kk < rows.length && rows[kk].type === 'added') { addedSeq.push(rows[kk]); kk++; }
+
+        if (removedSeq.length > 0 && addedSeq.length > 0) {
+          // attempt to pair removed lines with best matching added lines using similarity
+          const usedAdded = new Set<number>();
+          for (let rIndex = 0; rIndex < removedSeq.length; rIndex++) {
+            let bestScore = 0;
+            let bestIdx = -1;
+            for (let aIndex = 0; aIndex < addedSeq.length; aIndex++) {
+              if (usedAdded.has(aIndex)) continue;
+              const leftText = removedSeq[rIndex].leftText || '';
+              const rightText = addedSeq[aIndex].rightText || '';
+              const score = lineSimilarity(leftText, rightText);
+              if (score > bestScore) { bestScore = score; bestIdx = aIndex; }
+            }
+            if (bestIdx >= 0 && bestScore >= 0.38) {
+              // treat as modified pair
+              usedAdded.add(bestIdx);
+              const left = removedSeq[rIndex];
+              const right = addedSeq[bestIdx];
+              merged.push({ leftLine: left.leftLine, leftText: left.leftText || '', rightLine: right.rightLine, rightText: right.rightText || '', type: 'modified' });
+            } else {
+              // no good match -> keep removed
+              const left = removedSeq[rIndex];
+              merged.push({ leftLine: left.leftLine, leftText: left.leftText || '', rightText: '', type: 'removed' });
+            }
+          }
+
+          // remaining unmatched addedSeq entries become 'added'
+          for (let aIndex = 0; aIndex < addedSeq.length; aIndex++) {
+            if (!usedAdded.has(aIndex)) {
+              const right = addedSeq[aIndex];
+              merged.push({ leftText: '', rightLine: right.rightLine, rightText: right.rightText || '', type: 'added' });
+            }
+          }
+
+          idx = kk; // skip removed + added sequences
+          continue;
+        }
+      }
+
+      merged.push(r);
+      idx++;
+    }
+
+    return merged;
+  }, [originalLines, optimizedLines]);
 
   const originalHighlights = useMemo(() => {
     const allowed = new Set(['removed', 'modified', 'warning']);
@@ -875,54 +1085,86 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
       <div className="cd-tab-content">
         <h3 className="cd-tab-title">💻 Comparação de Código</h3>
 
-        <div className="cd-code-comparison">
+        {/* New: aligned, git-like side-by-side diff synchronized by rows */}
+        <div className="cd-code-comparison aligned">
           <div className="cd-code-panel">
             <div className="cd-code-header original">
-              <span className="cd-code-label">📄 Código Original</span>
+              <span className="cd-code-label">💻 Diff alinhado — Código Original ➜ Otimizado</span>
               <div className="cd-code-actions">
-                <span className="cd-code-lines">{doc.codeComparison.diffStats.totalOriginal} linhas</span>
+                <span className="cd-code-lines">{doc.codeComparison.diffStats.totalOriginal} → {doc.codeComparison.diffStats.totalOptimized} linhas</span>
                 <button
                   className="cd-copy-btn"
                   onClick={async () => {
-                    await copyToClipboard(doc.codeComparison?.originalScript || '');
+                    await copyToClipboard(doc.codeComparison?.originalCode || '');
                     const btn = document.querySelector('.cd-code-panel:first-child .cd-copy-btn') as HTMLButtonElement;
                     if (btn) { btn.textContent = '✓ Copiado'; setTimeout(() => btn.textContent = '📋 Copiar', 2000); }
                   }}
                   title="Copiar código original"
                 >
-                  📋 Copiar
+                  📋 Copiar Original
                 </button>
-              </div>
-            </div>
-            <div className="cd-code-block" ref={originalCodeRef}>
-              {renderCodeLines(originalLines, originalHighlights, 'orig')}
-            </div>
-          </div>
 
-          <div className="cd-code-divider">
-            <span>→</span>
-          </div>
-
-          <div className="cd-code-panel">
-            <div className="cd-code-header optimized">
-              <span className="cd-code-label">✨ Código Otimizado</span>
-              <div className="cd-code-actions">
-                <span className="cd-code-lines">{doc.codeComparison.diffStats.totalOptimized} linhas</span>
                 <button
                   className="cd-copy-btn"
                   onClick={async () => {
-                    await copyToClipboard(doc.codeComparison?.optimizedScript || '');
-                    const btn = document.querySelector('.cd-code-panel:last-of-type .cd-copy-btn') as HTMLButtonElement;
-                    if (btn) { btn.textContent = '✓ Copiado'; setTimeout(() => btn.textContent = '📋 Copiar', 2000); }
+                    await copyToClipboard(doc.codeComparison?.optimizedCode || '');
+                    const btn = document.querySelector('.cd-code-panel:first-child .cd-copy-btn:nth-of-type(2)') as HTMLButtonElement;
+                    if (btn) { btn.textContent = '✓ Copiado'; setTimeout(() => btn.textContent = '📋 Copiar Otimizado', 2000); }
                   }}
                   title="Copiar código otimizado"
+                  >
+                  📋 Copiar Otimizado
+                </button>
+                <button
+                  className="cd-copy-btn"
+                  onClick={() => {
+                    const txt = generateUnifiedDiff(alignedRows, 'original', 'optimized');
+                    const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `code-diff-${doc.id || 'report'}.diff`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                  }}
                 >
-                  📋 Copiar
+                  ⤓ Exportar Diff
                 </button>
               </div>
             </div>
-            <div className="cd-code-block" ref={optimizedCodeRef}>
-              {renderCodeLines(optimizedLines, optimizedHighlights, 'opt')}
+
+            <div className="cd-code-block" ref={alignedCodeRef}>
+              <table className="cd-aligned-diff">
+                <tbody>
+                  {alignedRows.map((row, idx) => (
+                    <tr key={`aligned-${idx}`} className={`aligned-row ${row.type}`}>
+                      <td className="gutter left">{row.leftLine ?? ''}</td>
+                      <td className="code left">
+                        {row.type === 'modified' ? (
+                          <div className="code-line-content" dangerouslySetInnerHTML={{ __html: intralineDiff(row.leftText || '', row.rightText || '').leftHtml }} />
+                        ) : (
+                          <div className="code-line-content code-content qlik-syntax" dangerouslySetInnerHTML={{ __html: highlightQlikCode(row.leftText || '') }} />
+                        )}
+                      </td>
+
+                      <td className="diff-marker">
+                        {row.type === 'added' ? '+' : row.type === 'removed' ? '-' : row.type === 'modified' ? '~' : ''}
+                      </td>
+
+                      <td className="gutter right">{row.rightLine ?? ''}</td>
+                      <td className="code right">
+                        {row.type === 'modified' ? (
+                          <div className="code-line-content" dangerouslySetInnerHTML={{ __html: intralineDiff(row.leftText || '', row.rightText || '').rightHtml }} />
+                        ) : (
+                          <div className="code-line-content code-content qlik-syntax" dangerouslySetInnerHTML={{ __html: highlightQlikCode(row.rightText || '') }} />
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -2242,6 +2484,21 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
           max-height: 420px;
           background-color: #1e1e1e;
         }
+
+        /* Aligned diff specific styles */
+        .cd-code-comparison.aligned { display: block; }
+        .cd-aligned-diff { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+        .cd-aligned-diff tr { vertical-align: top; }
+        .cd-aligned-diff .gutter { width: 60px; padding: 6px 8px; color: #9b9b9b; text-align: right; border-right: 1px solid rgba(255,255,255,0.03); }
+        .cd-aligned-diff .code { padding: 6px 12px; white-space: pre; }
+        .cd-aligned-diff .code.left { border-right: 1px solid rgba(255,255,255,0.03); }
+        .cd-aligned-diff .diff-marker { width: 36px; text-align: center; color: var(--text-tertiary); font-weight: 700; }
+        .aligned-row.added { background: rgba(0,255,157,0.05); }
+        .aligned-row.removed { background: rgba(255,42,109,0.04); }
+        .aligned-row.modified { background: rgba(255,184,0,0.04); }
+        .aligned-row.unchanged:hover { background: rgba(255,255,255,0.018); }
+        .cd-del { text-decoration: line-through; color: rgba(255,42,109,0.95); background: rgba(255,42,109,0.03); padding: 0 2px; border-radius: 2px; }
+        .cd-ins { background: rgba(0,255,157,0.06); color: rgba(0,200,120,1); padding: 0 2px; border-radius: 2px; }
 
         /* VS Code-like Table Styles for Consultancy Viewer */
         .code-table {

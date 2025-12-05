@@ -8,7 +8,7 @@ import {
   applySmartTruncation,
   SmartTruncationResult
 } from "../lib/scriptAnalyzer";
-import type { OptimizeMode, OptimizeResult } from "../types/qlik";
+import type { DeterministicValidationSnapshot, OptimizeMode, OptimizeResult } from "../types/qlik";
 import type { ConsultancyDocument } from "../types/consultancy";
 import type { LLMOptions } from "../types/optimization";
 // import type { GenerateStructuredJsonOptions } from "../lib/llmClient";
@@ -24,6 +24,7 @@ import {
 import { QlikMegaOptimizer } from "../agents/qlikMegaOptimizer";
 import { nvidiaProvider } from "../lib/llmProviders/nvidiaProvider";
 import { config } from "../lib/config";
+import { validateQlikScript } from "../validators/qlikValidator";
 
 export interface FullOptimizeResult extends OptimizeResult {
   explanation?: string;
@@ -63,6 +64,53 @@ function isRetryableProviderError(error: unknown): boolean {
   if (!message) return false;
   if (/abort/i.test(message)) return false;
   return RETRYABLE_PROVIDER_ERROR_PATTERNS.some(pattern => pattern.test(message));
+}
+
+function buildDeterministicValidationSnapshot(originalScript: string, optimizedScript: string): DeterministicValidationSnapshot {
+  const optimized = optimizedScript || originalScript;
+
+  return {
+    original: validateQlikScript(originalScript),
+    optimized: validateQlikScript(optimized)
+  };
+}
+
+function applyDeterministicValidation(result: FullOptimizeResult): FullOptimizeResult {
+  const validationStart = Date.now();
+  const optimizedScript = result.optimizedScript || result.originalScript;
+  const deterministicValidation = buildDeterministicValidationSnapshot(result.originalScript, optimizedScript);
+  const optimizedWarnings = deterministicValidation.optimized.warnings || [];
+  const optimizedSafe = deterministicValidation.optimized.safe && optimizedWarnings.length === 0;
+  const duration = Date.now() - validationStart;
+
+  result.analysis.deterministicValidation = deterministicValidation;
+  result.analysis.validationWarnings = optimizedWarnings;
+  result.analysis.safeToApply = result.analysis.safeToApply && optimizedSafe;
+
+  const warningPreview = optimizedWarnings.slice(0, 3).join(" | ");
+
+  sseEmitter.sendToCurrent({
+    type: "substep",
+    substep: {
+      id: "DETERMINISTIC_VALIDATION",
+      name: "Validação determinística (qlikValidator)",
+      status: optimizedSafe ? "success" : "warning",
+      description: optimizedSafe ? undefined : warningPreview,
+      duration,
+      endTime: new Date().toISOString()
+    }
+  });
+
+  if (!optimizedSafe) {
+    const message = `⚠️ Validação determinística encontrou ${optimizedWarnings.length} alerta(s). Revise antes de aplicar.`;
+    result.summary = `${message}\n\n${result.summary}`;
+    const note = warningPreview || optimizedWarnings.join(" | ");
+    result.analysis.notes = result.analysis.notes
+      ? `${result.analysis.notes}\n${message}${note ? `: ${note}` : ""}`
+      : `${message}${note ? `: ${note}` : ""}`;
+  }
+
+  return result;
 }
 
 /**
@@ -493,6 +541,8 @@ export async function optimizeScript(
     logger.info("MODO ULTRA EXPERT - Pipeline Avancado");
     result = await runUltraExpertMode(finalScript, llmOptions, generateConsultancy, truncationInfo?.wasTruncated || false, abortSignal);
   }
+
+  result = applyDeterministicValidation(result);
 
   if (truncationInfo?.wasTruncated) {
     result.summary = `${truncationInfo.warningMessage}\n\n${result.summary}`;

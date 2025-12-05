@@ -13,6 +13,16 @@ export interface OptimizeChange {
   riskLevel: BreakingRisk;
 }
 
+export interface ScriptValidationSnapshot {
+  safe: boolean;
+  warnings: string[];
+}
+
+export interface DeterministicValidationSnapshot {
+  original: ScriptValidationSnapshot;
+  optimized: ScriptValidationSnapshot;
+}
+
 // ══════════════════════════════════════════════════════════════
 // MÉTRICAS REAIS (Calculadas programaticamente, não fake)
 // ══════════════════════════════════════════════════════════════
@@ -76,6 +86,8 @@ export interface OptimizeResult {
     breakingRisk: BreakingRisk;
     safeToApply: boolean;
     mode: OptimizeMode;
+    deterministicValidation?: DeterministicValidationSnapshot;
+    validationWarnings?: string[];
     metricsEstimate: MetricsEstimate; // DEPRECATED
     realMetrics?: RealMetrics; // NOVO: métricas reais calculadas
     roi?: {  // REVENUE FEATURE: ROI calculation

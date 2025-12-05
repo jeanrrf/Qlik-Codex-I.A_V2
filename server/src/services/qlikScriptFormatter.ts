@@ -6,9 +6,8 @@
  * Prompt inteligente + Modelo = Formatação profissional
  */
 
-import { generateStructuredJson } from "../lib/llmClient";
 import { logger } from "../lib/logger";
-import { config } from "../lib/config";
+import { defaultOrchestrator } from "../lib/providerOrchestrator";
 
 export interface FormatterResult {
   formattedScript: string;
@@ -65,13 +64,18 @@ export async function formatQlikScript(script: string): Promise<FormatterResult>
   try {
     const prompt = buildPrompt(script.trim());
 
-    // Usando modelo configurado (default: gemini-2.5-flash)
-    const { text } = await generateStructuredJson(prompt, {
-      provider: "google",
-      model: config.geminiModel
-    });
+    // Usando orquestrador para respeitar rotação/timeout
+    const response = await defaultOrchestrator.executeWithRotation(
+      "formatter" as any,
+      prompt,
+      60000 // 60s
+    );
 
-    if (!text) throw new Error("LLM retornou vazio");
+    if (response.fallbackTriggered || !response.result) {
+      throw new Error(response.fallbackReason || "LLM retornou vazio");
+    }
+
+    const text = response.result;
 
     // Limpeza robusta de Markdown antes do parse
     const cleanedText = text.replace(/```json\s*|\s*```/g, "").trim();

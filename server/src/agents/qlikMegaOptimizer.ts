@@ -1,12 +1,13 @@
 import { sseEmitter } from "../lib/sseEmitter";
 import { logger } from "../lib/logger";
 import { ProviderOrchestrator, createOrchestrator } from "../lib/providerOrchestrator";
-import { MEGA_SYSTEM_PROMPT, TASK_PROMPTS } from "./megaPrompts";
 import { ZodSchema } from "zod";
 import { AnalysisAndPlanSchema, CodeGenSchema, FinalDeliverySchema } from "../validators/megaOptimizerSchemas";
 import { createHash } from "crypto";
 import type { OptimizationStepId } from "../types/optimization";
 import { QlikGranularOptimizer } from "./qlikGranularOptimizer";
+import { parseQlikScript } from "../lib/qlikParser";
+import { buildMegaPrompt, buildParserSummary, MegaTaskId } from "./promptPlan";
 
 // Performance constants
 const MAX_HISTORY_TOKENS = 500; // Limite de chars para resumo do histórico
@@ -63,6 +64,7 @@ export class QlikMegaOptimizer {
   private taskTimes: Record<string, number> = {};
   private orchestrator: ProviderOrchestrator;
   private abortSignal?: AbortSignal;
+  private parserSummary: string;
 
   constructor(script: string, options?: MegaOptimizerOptions) {
     // Sanitize input script to remove any HTML tags if the user pasted formatted code
@@ -70,6 +72,8 @@ export class QlikMegaOptimizer {
     this.script = QlikMegaOptimizer.sanitizeScript(script);
     this.scriptHash = createHash('sha256').update(this.script).digest('hex').substring(0, 16);
     this.abortSignal = options?.signal;
+    const parsed = parseQlikScript(this.script);
+    this.parserSummary = buildParserSummary(parsed);
 
     // Cria orquestrador com configuração otimizada para MegaOptimizer + Kimi K2
     this.orchestrator = createOrchestrator({
@@ -157,23 +161,10 @@ export class QlikMegaOptimizer {
       .replace(/<\/?>/g, '');                 // Remove empty tags
   }
 
-  private async executeTask(taskName: string, promptTemplate: string, schema?: ZodSchema): Promise<any> {
+  private async executeTask(taskName: MegaTaskId, schema?: ZodSchema): Promise<any> {
     const totalStart = Date.now();
 
-    // OTIMIZAÇÃO: Prompt compacto sem acumulação de histórico completo
-    const contextSection = this.compactHistory
-      ? `\n--- CONTEXTO ANTERIOR (Resumo) ---\n${this.compactHistory}\n`
-      : '';
-
-    const fullPrompt = `
-${MEGA_SYSTEM_PROMPT}
-
---- ORIGINAL SCRIPT ---
-${this.script}
-${contextSection}
---- CURRENT TASK ---
-${promptTemplate}
-    `;
+    const fullPrompt = buildMegaPrompt(taskName, this.script, this.parserSummary, this.compactHistory);
 
     const timeout = TASK_TIMEOUTS[taskName] || 90000;
     const stepId = `mega_${taskName.toLowerCase()}` as OptimizationStepId;
@@ -372,7 +363,7 @@ ${promptTemplate}
     } else {
       // 1 & 2. Analysis & Plan (Fused for Speed)
       logger.info("[MegaOptimizer] Running Fused Task: ANALYSIS_AND_PLAN");
-      analysisAndPlan = await this.executeTask("ANALYSIS_AND_PLAN", TASK_PROMPTS.ANALYSIS_AND_PLAN, AnalysisAndPlanSchema);
+      analysisAndPlan = await this.executeTask("ANALYSIS_AND_PLAN", AnalysisAndPlanSchema);
 
       // Cachear resultado para próximas execuções com mesmo script
       this.setCachedAnalysis(analysisAndPlan);
@@ -410,8 +401,8 @@ ${promptTemplate}
 
     const parallelStart = Date.now();
     const [codeGen, delivery] = await Promise.all([
-      this.executeTask("CODE_GEN", TASK_PROMPTS.CODE_GEN, CodeGenSchema),
-      this.executeTask("FINAL_DELIVERY", TASK_PROMPTS.FINAL_DELIVERY, FinalDeliverySchema)
+      this.executeTask("CODE_GEN", CodeGenSchema),
+      this.executeTask("FINAL_DELIVERY", FinalDeliverySchema)
     ]);
 
     logger.info(`[MegaOptimizer] Tarefas paralelas concluídas em ${Date.now() - parallelStart}ms`);
