@@ -78,7 +78,8 @@ export const config = {
   // Fallback NVIDIA (modelo ~500B, ex: Llama 3.1 405B na NIM)
   nvidiaFallbackModel: process.env.NVIDIA_FALLBACK_MODEL_NAME || "meta/llama-3.1-405b-instruct",
   // Modo rápido NVIDIA (modelo >100B por padrão; ajuste via env para variantes mais leves/rápidas)
-  nvidiaFastModel: process.env.NVIDIA_FAST_MODEL_NAME || "meta/llama-3.1-405b-instruct",
+  // ALTERADO: Usando 70B em vez de 405B para garantir velocidade no modo "Fast"
+  nvidiaFastModel: process.env.NVIDIA_FAST_MODEL_NAME || "meta/llama-3.1-70b-instruct",
   llmProviders,
   databaseUrl: process.env.DATABASE_URL || "",
   version: APP_VERSION,

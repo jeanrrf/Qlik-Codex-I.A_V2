@@ -1330,6 +1330,14 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
             </div>
           </div>
           <div className="cd-header-right">
+            <button
+              className="cd-btn secondary"
+              onClick={() => copyTextToClipboard(doc.codeComparison?.optimizedCode || '', 'Script Otimizado')}
+              title="Copiar Script Otimizado"
+            >
+              <Icons.Clipboard />
+              Copiar Script
+            </button>
             <button className="cd-btn secondary">
               <Icons.Download />
               Exportar
@@ -1389,9 +1397,9 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
         }
 
         .cd-viewer-container {
-          width: 100%;
-          max-width: 1400px;
-          max-height: 90vh;
+          width: 98%;
+          max-width: 1800px;
+          max-height: 95vh;
           background: #0a0d14;
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 20px;
@@ -2481,18 +2489,35 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
         .cd-code-block {
           flex: 1;
           overflow: auto;
-          max-height: 420px;
+          max-height: 75vh;
+          min-height: 400px;
           background-color: #1e1e1e;
+        }
+
+        .cd-code-block::-webkit-scrollbar {
+          width: 10px;
+          height: 10px;
+        }
+        .cd-code-block::-webkit-scrollbar-track {
+          background: #1e1e1e;
+        }
+        .cd-code-block::-webkit-scrollbar-thumb {
+          background: #444;
+          border-radius: 5px;
+          border: 2px solid #1e1e1e;
+        }
+        .cd-code-block::-webkit-scrollbar-thumb:hover {
+          background: #555;
         }
 
         /* Aligned diff specific styles */
         .cd-code-comparison.aligned { display: block; }
-        .cd-aligned-diff { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+        .cd-aligned-diff { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 13px; table-layout: fixed; }
         .cd-aligned-diff tr { vertical-align: top; }
-        .cd-aligned-diff .gutter { width: 60px; padding: 6px 8px; color: #9b9b9b; text-align: right; border-right: 1px solid rgba(255,255,255,0.03); }
-        .cd-aligned-diff .code { padding: 6px 12px; white-space: pre; }
+        .cd-aligned-diff .gutter { width: 50px; padding: 6px 8px; color: #9b9b9b; text-align: right; border-right: 1px solid rgba(255,255,255,0.03); user-select: none; }
+        .cd-aligned-diff .code { padding: 6px 12px; white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; }
         .cd-aligned-diff .code.left { border-right: 1px solid rgba(255,255,255,0.03); }
-        .cd-aligned-diff .diff-marker { width: 36px; text-align: center; color: var(--text-tertiary); font-weight: 700; }
+        .cd-aligned-diff .diff-marker { width: 30px; text-align: center; color: var(--text-tertiary); font-weight: 700; user-select: none; }
         .aligned-row.added { background: rgba(0,255,157,0.05); }
         .aligned-row.removed { background: rgba(255,42,109,0.04); }
         .aligned-row.modified { background: rgba(255,184,0,0.04); }

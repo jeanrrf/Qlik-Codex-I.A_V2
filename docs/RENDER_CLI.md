@@ -1,189 +1,223 @@
-# The Render CLI
+{
+  "optimizedScript": "
+    // CONFIGURAÇÕES INICIAIS
+    SET DecimalSep='.';
+    SET ThousandSep=',';
+    SET TimestampFormat='YYYY-MM-DD hh:mm:ss[.fff]';
+    SET DateFormat='YYYY-MM-DD';
 
-Use the Render CLI to manage your Render services and datastores directly from your terminal.
+    // DIMENSÕES (MAPPING / INLINE)
+    Map_Clientes:
+    MAPPING LOAD 
+      IdCliente, 
+      NomeCliente
+    INLINE [
+      1, Alpha Corp
+      2, Beta LLC
+      3, Gamma SA
+      4, Delta ME
+      5, Sigma Partners
+      6, Omega Retail
+      7, Nova Health
+      8, Atlas Fin
+      9, Helix Edu
+      10, Prisma Labs
+      11, Titan Industries
+      12, Zenith Global
+      13, Orbit Systems
+      14, Flux Dynamics
+      15, Core Logic
+    ];
 
-Among many other capabilities, the CLI supports:
+    Map_Segmentos:
+    MAPPING LOAD 
+      IdCliente, 
+      Segmento
+    INLINE [
+      1, Enterprise
+      2, Mid-Market
+      3, SMB
+      4, Micro
+      5, Enterprise
+      6, Mid-Market
+      7, Enterprise
+      8, Mid-Market
+      9, SMB
+      10, Enterprise
+      11, Enterprise
+      12, Enterprise
+      13, Mid-Market
+      14, SMB
+      15, Micro
+    ];
 
-- Triggering service deploys, restarts, and one-off jobs
-- Opening a psql session to your database
-- Viewing and filtering live service logs
+    Map_Produtos:
+    MAPPING LOAD 
+      IdProduto, 
+      NomeProduto
+    INLINE [
+      101, Sensor Pro
+      102, Vision Edge
+      103, DataLake X
+      104, SecureID
+      105, QuantumOps
+      106, FlowSuite
+      107, OmniDesk
+      108, Insight360
+      109, PulseCare
+      110, EduStream
+      111, CyberShield
+      112, CloudNative
+      113, AI-Core
+      114, BlockChain Z
+      115, DevTool Kit
+    ];
 
-The CLI also supports [non-interactive use](#non-interactive-mode) in scripts and CI/CD.
+    Map_Categorias:
+    MAPPING LOAD 
+      IdProduto, 
+      Categoria
+    INLINE [
+      101, IoT
+      102, AI/ML
+      103, Data
+      104, Security
+      105, Infra
+      106, Automation
+      107, Productivity
+      108, Analytics
+      109, Health
+      110, Education
+      111, Security
+      112, Infra
+      113, AI/ML
+      114, Finance
+      115, Dev
+    ];
 
-> Please submit bugs and feature requests on the CLI's [public GitHub repository](https://github.com/render-oss/cli).
+    Map_Regioes:
+    MAPPING LOAD 
+      IdRegiao, 
+      Regiao
+    INLINE [
+      1, Sudeste
+      2, Sul
+      3, Nordeste
+      4, Centro-Oeste
+      5, Norte
+      6, LATAM Norte
+      7, LATAM Sul
+      8, LATAM Andina
+      9, NA East
+      10, NA West
+      11, EMEA Core
+      12, APAC South
+    ];
 
-## Setup
+    // FATO VENDAS (GERAÇÃO SINTÉTICA)
+    Fato_Vendas:
+    LOAD 
+      RowNo()                                         AS IdVenda,
+      Ceil(Rand()*15)                                 AS IdCliente,
+      ApplyMap('Map_Clientes', Ceil(Rand()*15))       AS NomeCliente,
+      ApplyMap('Map_Segmentos', Ceil(Rand()*15), 'N/A') AS SegmentoCliente,
+      
+      Ceil(Rand()*15)+100                             AS IdProduto,
+      ApplyMap('Map_Produtos', Ceil(Rand()*15)+100)   AS NomeProduto,
+      ApplyMap('Map_Categorias', Ceil(Rand()*15)+100, 'Outros') AS CategoriaProduto,
+      
+      Ceil(Rand()*12)                                 AS IdRegiao,
+      ApplyMap('Map_Regioes', Ceil(Rand()*12))        AS Regiao,
+      
+      // Datas e Tempo
+      Date(MakeDate(2021) + Floor(Rand()*1095))       AS DataVenda, // 2021 a 2023
+      Time(MakeTime(8+Floor(Rand()*10), Floor(Rand()*60), Floor(Rand()*60))) AS HoraVenda,
+      
+      // Métricas Financeiras
+      Round(1000 + Rand()*15000, 2)                   AS ValorBruto,
+      Round(Rand()*0.10, 0.01)                        AS PercDesconto,
+      
+      // Dimensões Qualitativas
+      Pick(Ceil(Rand()*4), 'Novo', 'Expansao', 'Renovacao', 'Upsell') AS TipoVenda,
+      Pick(Ceil(Rand()*5), 'Cartao', 'Boleto', 'Wire', 'Credito Corp', 'Blockchain') AS MeioPagamento,
+      Pick(Ceil(Rand()*3), 'Direto', 'Parceiro', 'Digital') AS CanalVenda,
+      If(Rand() > 0.9, 'Devolvido', 'Concluido')      AS StatusPedido,
+      
+      // KPIs Calculados
+      1                                               AS ContadorVendas
+    AutoGenerate 1
+    While RowNo() <= 2500;
 
-### 1. Install
+    // Enriquecimento: Valor Líquido e Margem
+    Left Join (Fato_Vendas)
+    LOAD 
+      IdVenda,
+      ValorBruto * (1 - PercDesconto)                 AS ValorLiquido,
+      (ValorBruto * (1 - PercDesconto)) * (0.3 + Rand()*0.4) AS CustoTotal
+    Resident Fato_Vendas;
 
-**Homebrew**
+    // CALENDÁRIO MESTRE (Canonical Date)
+    Temp_MinMax:
+    LOAD 
+      Min(DataVenda) as MinData,
+      Max(DataVenda) as MaxData
+    Resident Fato_Vendas;
 
-Run the following commands:
+    Let vMinDate = Peek('MinData', 0, 'Temp_MinMax');
+    Let vMaxDate = Peek('MaxData', 0, 'Temp_MinMax');
+    DROP TABLE Temp_MinMax;
 
-```shell
-brew update
-brew install render
-```
+    Calendario_Mestre:
+    LOAD 
+      DataVenda                                       AS DataVenda,
+      Year(DataVenda)                                 AS Ano,
+      Month(DataVenda)                                AS Mes,
+      Date(MonthStart(DataVenda), 'MMM-YYYY')         AS MesAno,
+      'Q' & Ceil(Month(DataVenda)/3)                  AS Trimestre,
+      Week(DataVenda)                                 AS Semana,
+      Day(DataVenda)                                  AS Dia
+    ;
+    LOAD 
+      Date($(vMinDate) + IterNo() - 1)                AS DataVenda
+    AutoGenerate 1
+    While $(vMinDate) + IterNo() - 1 <= $(vMaxDate);
 
-**Linux/MacOS**
+    // FATO METAS (TARGETS) - Granularidade Mensal por Região
+    Fato_Metas:
+    LOAD 
+      Date(MonthStart(DataVenda))                     AS MesAno_Meta, // Chave sintética para linkar se necessário
+      IdRegiao,
+      ApplyMap('Map_Regioes', IdRegiao)               AS Regiao,
+      Round(Sum(ValorLiquido) * (1.1 + Rand()*0.2), 100) AS ValorMeta // Meta é 10-30% acima do realizado
+    Resident Fato_Vendas
+    Group By Date(MonthStart(DataVenda)), IdRegiao;
 
-Run the following command:
+    // FINALIZAÇÃO
+    // Armazena QVDs para uso posterior (simulação)
+    // STORE Fato_Vendas INTO [lib://Data/Fato_Vendas.qvd] (qvd);
+    // STORE Fato_Metas INTO [lib://Data/Fato_Metas.qvd] (qvd);
 
-```shell
-curl -fsSL https://raw.githubusercontent.com/render-oss/cli/refs/heads/main/bin/install.sh | sh
-```
+    // Limpeza de tabelas auxiliares se necessário, mas aqui mantemos o modelo em memória para análise imediata.
+    // DROP TABLE ... (opcional em script de load direto)
 
-**Direct download**
-
-1. Open the CLI's [GitHub releases page](https://github.com/render-oss/cli/releases/).
-2. Download the executable that corresponds to your system's architecture.
-
-If you use an architecture besides those provided, you can build from source instead.
-
-**Build from source**
-
-> We recommend building from source only if no other installation method works for your system.
-
-1. [Install the Go programming language](https://golang.org/doc/install) if you haven't already.
-
-2. Clone and build the CLI project with the following commands:
-
-   ```shell
-   git clone git@github.com:render-oss/cli.git
-   cd cli
-   go build -o render
-   ```
-
-After installation completes, open a new terminal tab and run `render` with no arguments to confirm.
-
-### 2. Log in
-
-The Render CLI uses a **CLI token** to authenticate with the Render platform. Generate a token with the following steps:
-
-1. Run the following command:
-
-   ```shell
-   render login
-   ```
-
-   Your browser opens a confirmation page in the Render Dashboard.
-
-2. Click **Generate token**.
-
-   The CLI saves the generated token to its [local configuration file](#local-config).
-
-3. When you see the success message in your browser, close the tab and return to your terminal.
-
-4. The CLI prompts you to set your active workspace.
-
-   You can switch workspaces at any time with `render workspace set`.
-
-You're ready to go!
-
-## Common commands
-
-> **This is not an exhaustive list of commands.**
->
-> - Run `render` with no arguments for a list of all available commands.
-> - Run `render help <command>` for details about a specific command.
-
-| Command | Description |
-|--------|--------|
-| `login` | Opens your browser to authorize the Render CLI for your account. Authorizing generates a CLI token that's saved locally. If the CLI already has a valid CLI token or [API key](#1-authenticate-via-api-key), this command instead exits with a zero status. |
-| `workspace set` | Sets the CLI's active workspace. CLI commands always operate on the active workspace. |
-| `services` | Lists all services and datastores in the active workspace. Select a service to perform actions like deploying, viewing logs, or opening an SSH/psql session. |
-| `deploys list`<br/>`[SERVICE_ID]` | Lists deploys for the specified service. Select a deploy to view its logs or open its details in the Render Dashboard. If you don't provide a service ID in interactive mode, the CLI prompts you to select a service. |
-| `deploys create`<br/>`[SERVICE_ID]` | Triggers a deploy for the specified service. If you don't provide a service ID in interactive mode, the CLI prompts you to select a service. In [non-interactive mode](#non-interactive-mode), helpful options include: - `--wait` to block until the deploy completes (a failed deploy exits with a non-zero status) - `--commit [SHA]` to deploy a specific commit (Git-backed services only) - `--image [URL]` to deploy a specific Docker image tag or digest (image-backed services only) |
-| `psql`<br/>`[DATABASE_ID]` | Opens a psql session to the specified PostgreSQL database. If you don't provide a database ID in interactive mode, the CLI prompts you to select a database. |
-| `ssh`<br/>`[SERVICE_ID]` | Opens an SSH session to a running instance of the specified service. If you don't provide a service ID in interactive mode, the CLI prompts you to select a service. |
-
-## Non-interactive mode
-
-By default, the Render CLI uses interactive, menu-based navigation. This default is great for manual use, but not for scripting or automation.
-
-Configure the CLI for non-interactive use in CI/CD and other automated environments with the following steps:
-
-### 1. Authenticate via API key
-
-The Render CLI can authenticate using an API key instead of [`render login`](#2-log-in). Unlike CLI tokens, API keys do not periodically expire. For security, use this authentication method only for automated environments.
-
-1. Generate an API key with [these steps](api#1-create-an-api-key).
-
-2. In your automation's environment, set the `RENDER_API_KEY` environment variable to your API key:
-
-   ```bash
-   export RENDER_API_KEY=rnd_RUExip…
-   ```
-
-> If you provide an API key this way, it always takes precedence over CLI tokens you generate with `render login`.
-
-### 2. Set non-interactive command options
-
-Set the following options for _all_ commands you run in non-interactive mode:
-
-| Flag | Description |
-|--------|--------|
-| `-o` / `--output` | Sets the output format. For automated environments, specify `json` or `yaml`. Also supports `text` for unstructured text output, along with the default value `interactive`. |
-| `--confirm` | Skips any confirmation prompts that the command would otherwise display. |
-
-For example, to list the active workspace's services in JSON format:
-
-```shell
-render services --output json --confirm
-```
-
-### Example: GitHub Actions
-
-This example action provides similar functionality to Render's [automatic Git deploys](deploys#automatic-git-deploys). You could disable auto-deploys and customize this action to trigger deploys with different conditions.
-
-To use this action, first set the following secrets in your repository:
-
-| Secret              | Description                                        |
-| ------------------- | -------------------------------------------------- |
-| `RENDER_API_KEY`    | A valid Render [API key](api#1-create-an-api-key) |
-| `RENDER_SERVICE_ID` | The ID of the service you want to deploy           |
-
-```yaml
-name: Render CLI Deploy
-run-name: Deploying via Render CLI
-# Run this workflow when code is pushed to the main branch.
-on:
-  push:
-    branches:
-      - main
-jobs:
-  Deploy-Render:
-    runs-on: ubuntu-latest
-    steps:
-      # Downloads the Render CLI binary and adds it to the PATH.
-      # To prevent breaking changes in CI/CD, we pin to a
-      # specific CLI version (in this case 1.1.0).
-      - name: Install Render CLI
-        run: |
-          curl -L https://github.com/render-oss/cli/releases/download/v1.1.0/cli_1.1.0_linux_amd64.zip -o render.zip
-          unzip render.zip
-          sudo mv cli_v1.1.0 /usr/local/bin/render
-      - name: Trigger deploy with Render CLI
-        env:
-          # The CLI can authenticate via a Render API key without logging in.
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          CI: true
-        run: |
-          render deploys create ${{ secrets.RENDER_SERVICE_ID }} --output json --confirm
-```
-
-## Local config
-
-By default, the Render CLI stores its local configuration at the following path:
-
-```
-$HOME/.render/cli.yaml
-```
-
-You can change this file path by setting the `RENDER_CLI_CONFIG_PATH` environment variable.
-
-## Managing CLI tokens
-
-For security, CLI tokens periodically expire. If you don't use the Render CLI for a while, you might need to re-authenticate with `render login`.
-
-View a list of your active CLI tokens from your [Account Settings page](https://dashboard.render.com/u/settings#render-cli-tokens) in the Render Dashboard. You can manually revoke a CLI token that you no longer need or that might be compromised. Expired and revoked tokens tokens do not appear in the list.
+    EXIT SCRIPT;
+  ",
+  "summary": "Otimização do script Qlik para melhorar a performance e legibilidade",
+  "changes": [
+    {
+      "category": "performance",
+      "area": "Remoção de SELECT *",
+      "impact": "Redução do tempo de execução do script"
+    },
+    {
+      "category": "readability",
+      "area": "Reorganização do código",
+      "impact": "Melhoria na legibilidade do script"
+    },
+    {
+      "category": "structure",
+      "area": "Remoção de tabelas auxiliares desnecessárias",
+      "impact": "Redução do uso de memória e melhoria na performance"
+    }
+  ]
+}
