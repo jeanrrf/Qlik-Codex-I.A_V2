@@ -144,6 +144,18 @@ const Icons = {
       <circle cx="10.8" cy="10.5" r="1" fill="currentColor" />
       <circle cx="7" cy="14.3" r="1" fill="currentColor" />
     </svg>
+  ),
+  Lock: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  ),
+  Unlock: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+    </svg>
   )
 };
 
@@ -181,6 +193,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
   const [showConsultancy, setShowConsultancy] = useState(false);
   const [showScriptInfo, setShowScriptInfo] = useState(false);
   const [scriptInfo, setScriptInfo] = useState<ScriptInfo | null>(null);
+  const [isScrollLocked, setIsScrollLocked] = useState(true);
 
   // === HOOKS ===
   const { user } = useAuth();
@@ -1114,6 +1127,14 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
               <div className="modal-header">
                 <h2>📊 Resultado da Otimização</h2>
                 <div className="result-header-actions">
+                  <button
+                    className={`action-btn small ${isScrollLocked ? 'primary' : 'secondary'}`}
+                    onClick={() => setIsScrollLocked(!isScrollLocked)}
+                    title={isScrollLocked ? "Desativar rolagem sincronizada" : "Ativar rolagem sincronizada"}
+                  >
+                    {isScrollLocked ? <Icons.Lock /> : <Icons.Unlock />}
+                    {isScrollLocked ? "Scroll Lock On" : "Scroll Lock Off"}
+                  </button>
                   <button className="action-btn secondary small" onClick={() => setDownloadModalOpen(true)}>
                     <Icons.Download /> Baixar ZIP
                   </button>
@@ -1175,6 +1196,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                     <div
                       className="code-content-wrapper"
                       onScroll={(e) => {
+                        if (!isScrollLocked) return;
                         const target = e.currentTarget;
                         const optimizedWrapper = target.closest('.code-comparison')?.querySelector('.optimized .code-content-wrapper');
                         if (optimizedWrapper && Math.abs(optimizedWrapper.scrollTop - target.scrollTop) > 1) {
@@ -1222,6 +1244,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
                     <div
                       className="code-content-wrapper"
                       onScroll={(e) => {
+                        if (!isScrollLocked) return;
                         const target = e.currentTarget;
                         const originalWrapper = target.closest('.code-comparison')?.querySelector('.original .code-content-wrapper');
                         if (originalWrapper && Math.abs(originalWrapper.scrollTop - target.scrollTop) > 1) {
