@@ -12,7 +12,7 @@ type DbType = 'sqlite' | 'postgres' | 'turso';
 /**
  * Detecta qual banco usar baseado em environment variable
  */
-function getDbType(): DbType {
+export function getDbType(): DbType {
   // Se TURSO_DATABASE_URL está definida, usar Turso (prioridade)
   if (process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN) {
     return 'turso';
@@ -30,13 +30,13 @@ function getDbType(): DbType {
 /**
  * Inicializa banco de dados (SQLite, Turso ou PostgreSQL)
  */
-export function initDb() {
+export async function initDb() {
   const dbType = getDbType();
 
   logger.info(`Initializing database: ${dbType}`);
 
   if (dbType === 'turso') {
-    return initTursoDb();
+    await initTursoDb();
   } else if (dbType === 'postgres') {
     return initPostgresDb();
   } else {

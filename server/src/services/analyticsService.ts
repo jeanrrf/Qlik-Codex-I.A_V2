@@ -6,7 +6,7 @@
 import { getSqliteDb } from '../lib/sqliteDb';
 import { getTursoDb, TursoSqliteWrapper } from '../lib/tursoDb';
 import { logger } from '../lib/logger';
-import type { User } from '../types/auth';
+import { getDbType, closeDb } from '../lib/dbAdapter';
 
 /**
  * Obtém instância do banco (SQLite local ou Turso)
@@ -362,117 +362,6 @@ export async function getAnalyticsSummary(limit = 10): Promise<AnalyticsSummary>
   }
 }
 
-// Total de eventos
-const eventsResult = db.prepare(
-  'SELECT COUNT(*) as count FROM analytics_events'
-).get() as { count: number };
-
-// Total de sessões
-const sessionsResult = db.prepare(
-  'SELECT COUNT(*) as count FROM analytics_sessions'
-).get() as { count: number };
-
-// Total de otimizações (do sistema principal)
-let optimizationsResult = { count: 0 };
-try {
-  optimizationsResult = db.prepare(
-    'SELECT COUNT(*) as count FROM optimization_history'
-  ).get() as { count: number };
-} catch {
-  // Tabela pode não existir ainda
-}
-
-// Usuários únicos
-const uniqueUsersResult = db.prepare(
-  'SELECT COUNT(DISTINCT user_id) as count FROM analytics_page_views WHERE user_id IS NOT NULL'
-).get() as { count: number };
-
-// Visitas do owner
-const ownerVisitsResult = db.prepare(
-  'SELECT COUNT(*) as count FROM analytics_page_views WHERE is_owner = 1'
-).get() as { count: number };
-
-// Eventos do owner
-const ownerEventsResult = db.prepare(
-  'SELECT COUNT(*) as count FROM analytics_events WHERE is_owner = 1'
-).get() as { count: number };
-
-// Top páginas
-const topPages = db.prepare(`
-      SELECT page, COUNT(*) as count 
-      FROM analytics_page_views 
-      GROUP BY page 
-      ORDER BY count DESC 
-      LIMIT ?
-    `).all(limit) as Array<{ page: string; count: number }>;
-
-// Top eventos
-const topEvents = db.prepare(`
-      SELECT event_type, COUNT(*) as count 
-      FROM analytics_events 
-      GROUP BY event_type 
-      ORDER BY count DESC 
-      LIMIT ?
-    `).all(limit) as Array<{ eventType: string; count: number }>;
-
-// Atividade recente (combinada)
-const recentPageViews = db.prepare(`
-      SELECT 'pageview' as type, timestamp, page as details, is_owner
-      FROM analytics_page_views 
-      ORDER BY timestamp DESC 
-      LIMIT ?
-    `).all(limit);
-
-const recentEvents = db.prepare(`
-      SELECT 'event' as type, timestamp, 
-             (event_type || ': ' || event_category) as details, is_owner
-      FROM analytics_events 
-      ORDER BY timestamp DESC 
-      LIMIT ?
-    `).all(limit);
-
-const recentSessions = db.prepare(`
-      SELECT 'session' as type, start_time as timestamp, 
-             ('Session: ' || session_id) as details, is_owner
-      FROM analytics_sessions 
-      ORDER BY start_time DESC 
-      LIMIT ?
-    `).all(Math.floor(limit / 2));
-
-const recentActivity = [
-  ...recentPageViews,
-  ...recentEvents,
-  ...recentSessions
-]
-  .sort((a: any, b: any) =>
-    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-  )
-  .slice(0, limit * 2)
-  .map((item: any) => ({
-    type: item.type,
-    timestamp: item.timestamp,
-    details: item.details,
-    isOwner: Boolean(item.is_owner)
-  }));
-
-return {
-  totalVisits: visitsResult.count,
-  totalEvents: eventsResult.count,
-  totalSessions: sessionsResult.count,
-  totalOptimizations: optimizationsResult.count,
-  uniqueUsers: uniqueUsersResult.count,
-  ownerVisits: ownerVisitsResult.count,
-  ownerEvents: ownerEventsResult.count,
-  topPages,
-  topEvents,
-  recentActivity
-};
-  } catch (err) {
-  logger.error('Erro ao obter resumo de analytics', err);
-  throw err;
-}
-}
-
 /**
  * Retorna dados detalhados de analytics com filtros
  */
@@ -611,5 +500,16 @@ export function cleanOldAnalytics(daysToKeep = 90): void {
     logger.info(`Analytics data older than ${daysToKeep} days cleaned`);
   } catch (err) {
     logger.error('Erro ao limpar analytics antigos', err);
+  }
+}
+
+export async function closeAnalyticsDb(): Promise<void> {
+  try {
+    const dbType = getDbType();
+    logger.info(`[Analytics] Closing ${dbType} database connection...`);
+    await closeDb();
+    logger.info(`[Analytics] ${dbType} database connection closed.`);
+  } finally {
+    // This block will run regardless of whether the try block succeeded
   }
 }

@@ -9,7 +9,7 @@ import cookieParser from "cookie-parser";
 
 import { config } from "./lib/config";
 import { logger } from "./lib/logger";
-import { initSqliteDb, closeSqliteDb } from "./lib/sqliteDb";
+import { initDb, closeDb } from "./lib/dbAdapter";
 import { errorHandler } from "./middleware/errorHandler";
 import { healthRouter } from "./routes/health.routes";
 import { contactRouter } from "./routes/contact.routes";
@@ -99,29 +99,39 @@ if (fs.existsSync(webBuildPath)) {
 
 app.use(errorHandler);
 
-// Inicializar banco de dados SQLite
-try {
-  initSqliteDb();
-} catch (err) {
-  logger.error("Failed to initialize SQLite database", err);
+async function startServer() {
+  try {
+    await initDb();
+  } catch (err) {
+    logger.error("Failed to initialize database", err);
+    process.exit(1);
+  }
+
+  const server = app.listen(config.port, () => {
+    logger.info("Qlik Codex I.A server rodando", {
+      port: config.port,
+      env: config.nodeEnv,
+    });
+  });
+
+  // Graceful shutdown
+  const gracefulShutdown = async (signal: string) => {
+    logger.info(`${signal} received, closing database connections...`);
+    try {
+      await closeDb();
+      logger.info("Database connections closed.");
+    } catch (err) {
+      logger.error("Error during database connection closing", err);
+    } finally {
+      server.close(() => {
+        logger.info("HTTP server closed.");
+        process.exit(0);
+      });
+    }
+  };
+
+  process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 }
 
-// Graceful shutdown
-process.on("SIGTERM", () => {
-  logger.info("SIGTERM received, closing SQLite database...");
-  closeSqliteDb();
-  process.exit(0);
-});
-
-process.on("SIGINT", () => {
-  logger.info("SIGINT received, closing SQLite database...");
-  closeSqliteDb();
-  process.exit(0);
-});
-
-app.listen(config.port, () => {
-  logger.info("Qlik Codex I.A server rodando", {
-    port: config.port,
-    env: config.nodeEnv
-  });
-});
+startServer();

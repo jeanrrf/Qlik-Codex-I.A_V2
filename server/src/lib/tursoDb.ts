@@ -3,7 +3,7 @@
  * Alternativa simples ao Supabase/PostgreSQL
  */
 
-import { createClient, Client } from '@libsql/client';
+import type { Client } from '@libsql/client';
 import { logger } from './logger';
 
 let tursoClient: Client | null = null;
@@ -11,7 +11,7 @@ let tursoClient: Client | null = null;
 /**
  * Inicializa cliente Turso
  */
-export function initTursoDb(): Client {
+export async function initTursoDb(): Promise<Client> {
   if (tursoClient) {
     return tursoClient;
   }
@@ -22,6 +22,8 @@ export function initTursoDb(): Client {
   if (!url || !authToken) {
     throw new Error('TURSO_DATABASE_URL and TURSO_AUTH_TOKEN must be set');
   }
+
+  const { createClient } = await import('@libsql/client');
 
   tursoClient = createClient({
     url,
@@ -120,7 +122,7 @@ async function createTables() {
  */
 export function getTursoDb(): Client {
   if (!tursoClient) {
-    return initTursoDb();
+    throw new Error('Turso client not initialized. Call initTursoDb() first.');
   }
   return tursoClient;
 }
