@@ -79,12 +79,13 @@ export const config = {
   // Fallback para Gemini
   geminiFallbackModel: process.env.GEMINI_FALLBACK_MODEL_NAME || "gemini-2.0-flash",
   nvidiaApiKey: process.env.NVIDIA_API_KEY || "",
-  nvidiaModel: process.env.NVIDIA_MODEL_NAME || "moonshotai/kimi-k2-instruct",  // Kimi K2 - 1T MoE model
+  // Default NVIDIA model used for optimizations. Switched to DeepSeek R1 per request.
+  nvidiaModel: process.env.NVIDIA_MODEL_NAME || "deepseek-ai/deepseek-r1",
   // Fallback NVIDIA (modelo ~500B, ex: Llama 3.1 405B na NIM)
   nvidiaFallbackModel: process.env.NVIDIA_FALLBACK_MODEL_NAME || "meta/llama-3.1-405b-instruct",
   // Modo rápido NVIDIA (modelo >100B por padrão; ajuste via env para variantes mais leves/rápidas)
-  // ALTERADO: Usando 70B em vez de 405B para garantir velocidade no modo "Fast"
-  nvidiaFastModel: process.env.NVIDIA_FAST_MODEL_NAME || "meta/llama-3.1-70b-instruct",
+  // Por padrão usamos o mesmo modelo deepseek-r1 para otimizações rápidas também — pode ser customizado via env
+  nvidiaFastModel: process.env.NVIDIA_FAST_MODEL_NAME || "deepseek-ai/deepseek-r1",
   llmProviders,
   databaseUrl: process.env.DATABASE_URL || "",
   version: APP_VERSION,

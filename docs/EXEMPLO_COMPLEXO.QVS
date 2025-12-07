@@ -158,23 +158,20 @@ Resident Fato_Vendas;
 // ----------------------------------------------------------------------------
 
 Temp_MinMax:
-LOAD
-  Min(DataVenda) as MinData,
-  Max(DataVenda) as MaxData
+LOAD Min(DataVenda) as MinData, Max(DataVenda) as MaxData
 Resident Fato_Vendas;
 
 Let vMinDate = Peek('MinData', 0, 'Temp_MinMax');
-Let vMaxDate = Peek('MaxData', 0, 'Temp_MinMax');
+     Let vMaxDate = Peek('MaxData', 0, 'Temp_MinMax');
 DROP TABLE Temp_MinMax;
 
 Calendario_Mestre:
-LOAD
-  DataVenda                                       AS DataVenda,
-  Year(DataVenda)                                 AS Ano,
+LOAD DataVenda                                       AS DataVenda,
+  Year(DataVenda)AS Ano,
   Month(DataVenda)                                AS Mes,
   Date(MonthStart(DataVenda), 'MMM-YYYY')         AS MesAno,
-  'Q' & Ceil(Month(DataVenda)/3)                  AS Trimestre,
-  Week(DataVenda)                                 AS Semana,
+  'Q' & Ceil(Month(DataVenda)/3)                          AS Trimestre,
+  Week(DataVenda)                                     AS Semana,
   Day(DataVenda)                                  AS Dia
 ;
 LOAD
@@ -190,7 +187,7 @@ Fato_Metas:
 LOAD
   Date(MonthStart(DataVenda))                     AS MesAno_Meta, // Chave sintética para linkar se necessário
   IdRegiao,
-  ApplyMap('Map_Regioes', IdRegiao)               AS Regiao,
+  ApplyMap('Map_Regioes', IdRegiao)                   AS Regiao,
   Round(Sum(ValorLiquido) * (1.1 + Rand()*0.2), 100) AS ValorMeta // Meta é 10-30% acima do realizado
 Resident Fato_Vendas
 Group By Date(MonthStart(DataVenda)), IdRegiao;
@@ -207,3 +204,4 @@ Group By Date(MonthStart(DataVenda)), IdRegiao;
 // DROP TABLE ... (opcional em script de load direto)
 
 EXIT SCRIPT;
+

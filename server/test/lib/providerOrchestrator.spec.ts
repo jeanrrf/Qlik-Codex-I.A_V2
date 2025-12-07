@@ -93,6 +93,48 @@ describe("ProviderOrchestrator", () => {
       expect(result.attempts[1].provider).toBe("nvidia");
       expect(result.attempts[1].success).toBe(true);
     });
+
+    it("deve abortar a chamada do provedor subjacente quando a tentativa expira", async () => {
+      const stepId: OptimizationStepId = "pre_003_abort_underlying_on_timeout";
+      const prompt = "test prompt";
+      const timeout = 100;
+
+      const { googleProvider } = await import("../../src/lib/llmProviders/googleProvider");
+      const { nvidiaProvider } = await import("../../src/lib/llmProviders/nvidiaProvider");
+
+      let abortedSeen = false;
+
+      // Google implementation that will be long-running but listens for the signal
+      vi.mocked(googleProvider.generateStructuredJson).mockImplementation(
+        (_prompt: string, options?: any) => new Promise((resolve, reject) => {
+          const signal: AbortSignal | undefined = options?.signal;
+          if (signal) {
+            signal.addEventListener('abort', () => {
+              abortedSeen = true;
+              reject(new Error('ABORTED_BY_SIGNAL'));
+            }, { once: true });
+          }
+
+          // resolve after a long time if not aborted
+          setTimeout(() => resolve({ text: '{"ok":true}', provider: 'google', metadata: { model: 'gemini' } }), 500);
+        })
+      );
+
+      // Nvidia returns quickly
+      vi.mocked(nvidiaProvider.generateStructuredJson).mockResolvedValue({
+        text: '{"result":"nvidia-success"}',
+        provider: 'nvidia',
+        metadata: { model: 'qwen3' }
+      });
+
+      const result = await orchestrator.executeWithRotation(stepId, prompt, timeout);
+
+      expect(abortedSeen).toBe(true);
+      expect(result.fallbackTriggered).toBe(false);
+      expect(result.result).toBe('{"result":"nvidia-success"}');
+      expect(result.attempts[0].success).toBe(false);
+      expect(result.attempts[0].error).toBeDefined();
+    });
   });
 
   describe("Rotação de Provedores", () => {

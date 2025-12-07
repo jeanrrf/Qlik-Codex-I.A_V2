@@ -8,7 +8,7 @@ async function test() {
   try {
     const result = await nvidiaProvider.generateStructuredJson(
       'Responda com um JSON: {"status": "ok"}',
-      { model: 'meta/llama-3.1-70b-instruct' }
+      { model: 'deepseek-ai/deepseek-r1' }
     );
     console.log('Success:', result);
   } catch (error) {

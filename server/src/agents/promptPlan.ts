@@ -45,7 +45,14 @@ Formato JSON:
 - Saída deve ser JSON (texto puro, sem markdown):
 {
   "optimizedScript": "SCRIPT_OTIMIZADO_EM_TEXTO_PURO",
-  "changesApplied": ["..."],
+  "changesApplied": [
+    {
+      "category": "performance",
+      "area": "Descrição concisa da área otimizada (ex: joins, RESIDENT, QVD)",
+      "impact": "Impacto da mudança (ex: redução de tempo de carga)",
+      "riskLevel": "low"
+    }
+  ],
   "completenessCheck": true
 }`,
   FINAL_DELIVERY: `TAREFA: VALIDAÇÃO + DOC FINAL (uma resposta JSON)

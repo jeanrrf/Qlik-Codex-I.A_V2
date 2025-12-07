@@ -273,9 +273,9 @@ export interface UseOptimizationProgressReturn {
 
   stop: () => void;
 
+  /** Restaura o progresso de uma sessão salva */
+  restoreProgress: (savedProgress: OptimizationProgress) => void;
 }
-
-
 
 /**
 
@@ -595,37 +595,29 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
 
         // Atualiza tempo real de cada tarefa em execução
-
         newProgress.stages = prev.stages.map(stage => {
+          // Update stage running time if stage itself is running
+          let stageRunningTime = stage.currentRunningTime;
+          if (stage.status === 'running' && stage.startTime) {
+            stageRunningTime = now - stage.startTime;
+          }
 
-          if (!stage.subSteps) return stage;
-
-
+          if (!stage.subSteps) {
+            return { ...stage, currentRunningTime: stageRunningTime };
+          }
 
           const updatedSubSteps = stage.subSteps.map(sub => {
-
             if (sub.status === 'running') {
-
               const taskStartTime = taskStartTimeRef.current.get(sub.id);
-
               if (taskStartTime) {
-
                 const runningTime = now - taskStartTime;
-
                 return { ...sub, currentRunningTime: runningTime };
-
               }
-
             }
-
             return sub;
-
           });
 
-
-
-          return { ...stage, subSteps: updatedSubSteps };
-
+          return { ...stage, subSteps: updatedSubSteps, currentRunningTime: stageRunningTime };
         });
 
 
@@ -1210,20 +1202,72 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
 
 
+  const restoreProgress = useCallback((savedProgress: OptimizationProgress) => {
+    setProgress(savedProgress);
+    if (savedProgress.status === 'running') {
+      setIsRunning(true);
+      // Restart timer if it was running
+      startTimeRef.current = Date.now() - savedProgress.elapsedTime;
+
+      // Restore task start times
+      savedProgress.stages.forEach(stage => {
+        if (stage.subSteps) {
+          stage.subSteps.forEach(sub => {
+            if (sub.status === 'running' && sub.currentRunningTime) {
+              taskStartTimeRef.current.set(sub.id, Date.now() - sub.currentRunningTime);
+            }
+          });
+        }
+      });
+
+      // Restart interval
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      intervalRef.current = setInterval(() => {
+        const now = Date.now();
+        setProgress(prev => {
+          const newProgress = {
+            ...prev,
+            elapsedTime: now - startTimeRef.current
+          };
+
+          newProgress.stages = prev.stages.map(stage => {
+            let stageRunningTime = stage.currentRunningTime;
+            if (stage.status === 'running' && stage.startTime) {
+              stageRunningTime = now - stage.startTime;
+            }
+
+            if (!stage.subSteps) {
+              return { ...stage, currentRunningTime: stageRunningTime };
+            }
+
+            const updatedSubSteps = stage.subSteps.map(sub => {
+              if (sub.status === 'running') {
+                const taskStartTime = taskStartTimeRef.current.get(sub.id);
+                if (taskStartTime) {
+                  const runningTime = now - taskStartTime;
+                  return { ...sub, currentRunningTime: runningTime };
+                }
+              }
+              return sub;
+            });
+
+            return { ...stage, subSteps: updatedSubSteps, currentRunningTime: stageRunningTime };
+          });
+
+          return newProgress;
+        });
+      }, 100);
+    }
+  }, []);
+
   return {
-
     progress,
-
     result,
-
     startOptimization,
-
     reset,
-
     resetProgress: reset,
-
+    restoreProgress,
     updateMode,
-
     isRunning,
 
     // Propriedades SSE

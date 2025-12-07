@@ -24,7 +24,7 @@ Abaixo estão os IDs de modelos recomendados para uso com a API NVIDIA NIM, base
 2. Adicione ao arquivo `.env`:
    ```env
    NVIDIA_API_KEY=nvapi-...
-   NVIDIA_MODEL_NAME=meta/llama-3.1-405b-instruct
+   NVIDIA_MODEL_NAME=deepseek-ai/deepseek-r1
    ```
 3. Teste a conexão:
    ```bash

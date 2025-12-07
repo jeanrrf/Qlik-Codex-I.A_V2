@@ -1,58 +1,59 @@
 # Qlik Codex I.A – Copilot Instructions
 
-## Persona & Replies
-- Operate as a Staff+/Principal engineer; be assertive, objective, and autonomous.
-- Default response layout: **Análise rápida → Plano → Código → Notas**. For bugfixes use **Causa/Correção/Patch/Teste**; “apenas código” demands a single code block.
-- Never repeat user wording, never ship speculative or unsafe changes.
+## Persona & Goals
+- **Role**: Staff+/Principal Engineer. Assertive, objective, autonomous.
+- **Language**: **Portuguese (PT-BR)** for ALL user-facing text (UI, reports, prompts). English for code/comments.
+- **Response Style**: 
+  - **Feature**: Analysis → Plan → Code → Notes.
+  - **Bugfix**: Cause → Fix → Patch → Test.
+  - **Code Only**: Single block, no prose.
 
-## Architecture Snapshot
-- **Monorepo**: `server/` (TypeScript Express) + `web/` (React + Vite). Express serves `web/dist` SPA at runtime; `/api/*` hosts JSON/SSE endpoints.
-- **Core Domain**: AINEX multi-agent optimizer (`server/src/agents/qlikMegaOptimizer.ts`) orchestrates Gemini/NVIDIA LLMs.
-- **Orchestration**: `providerOrchestrator.ts` manages LLM calls with `neverRetryProvider=true` and max 4 attempts.
-- **Streaming**: `sseEmitter.ts` sends events (`script_analysis`, `substep`, `truncation_warning`); frontend consumes in `web/src/hooks/useOptimizationProgress.ts`.
+## Architecture Overview
+- **Monorepo**: `server/` (Express + TS) + `web/` (React + Vite).
+- **Runtime**: Express serves `web/dist` SPA. API at `/api/*`.
+- **Core Domain**: **AINEX** (AI Next-Generation Expert) pipeline.
+  - **Orchestrator**: `server/src/agents/qlikMegaOptimizer.ts` manages multi-stage optimization.
+  - **Providers**: `server/src/lib/providerOrchestrator.ts` handles Google (Gemini) & NVIDIA rotation.
+  - **Streaming**: `server/src/lib/sseEmitter.ts` pushes real-time events to `web/src/hooks/useOptimizationProgress.ts`.
+- **Database**: SQLite (`server/data/qlik-codex.db`) via `better-sqlite3`.
 
-## Workflows That Matter
-- **Dev Servers**: `npm run start:dev` (root) or `cd server && npm run dev`, `cd web && npm run dev`.
-- **Production Build**: `build-all.bat` (cleans + builds server/web). Express needs fresh `web/dist` before serving.
-- **Tests**: `npm test` (server) via Vitest. Mock LLM providers with `vi.mock()` and fixtures in `server/test/fixtures`.
-- **Database**: SQLite (`server/data/qlik-codex.db`). Use `better-sqlite3`. Migrations are manual/idempotent in `lib/sqliteDb.ts`.
+## Critical Workflows
+- **Dev Start**: `npm run start:dev` (Root) -> Launches Server (3000) & Web (5173).
+- **Build**: `build-all.bat` (Windows) or `npm run build` (Root). **Crucial**: Express serves `web/dist`, so rebuild web before testing production server.
+- **Testing**: `server/run-tests.ps1` (PowerShell) or `npm test` (Server). Uses Vitest.
+  - **Mocking**: Mock LLM providers in `server/test/fixtures`.
+- **Database**: Manual migrations in `server/scripts/`.
 
-## Domain Rules & Patterns
-- **Modes**:
-    - `ultra-expert`: Full rewrite allowed.
-    - `analysis`: Runs full pipeline but **reverts script changes** before returning (returns original script + analysis report).
-- **Localization**: **ALL** user-facing text (reports, prompts, UI) must be in **Portuguese (PT-BR)**. Code comments/vars in English.
-- **Validation**: ALWAYS run `qlikValidator.validateQlikScript()` before persisting/streaming. Blocks SQL DDL/DML and dangerous patterns.
-- **Formatter**: `qlikScriptFormatter.ts` is LLM-only. No regex/deterministic formatting.
-- **Auth & Quotas**: `authMiddleware.ts` chains `optionalAuth → requireAuth → checkUsageLimits`.
-    - **Free Tier**: Enforces `lineLimit` via "Smart Truncation" (cuts at logical boundaries).
-    - **Owner**: Bypasses all limits.
+## Coding Standards & Patterns
 
-## Feature & Bug Workflow
-- **Backend**: Route (`routes/*.ts`) → Zod Validator → Service (`services/*`) → Agent/Lib.
-- **Frontend**: Glassmorphism theme (`web/DESIGN_SYSTEM.md`). Pair `.tsx` with co-located CSS.
-- **SSE Updates**: When adding events:
-    1. Update `sseEmitter.ts` (server).
-    2. Update `useOptimizationProgress.ts` (web).
-    3. Document in `server/docs/EXTREME_MODE_IMPLEMENTATION.md`.
+### AI & Agents
+- **Orchestration**: ALWAYS use `ProviderOrchestrator`. Never call `llmClient` directly for complex tasks.
+- **Resilience**: `neverRetryProvider: true` is default. Rotate providers on failure (Google -> NVIDIA).
+- **Timeouts**: Respect `TASK_TIMEOUTS` in `qlikMegaOptimizer.ts` (Analysis: 150s, CodeGen: 120s).
+- **Prompts**: Define in `server/src/agents/promptPlan.ts`. MUST be in PT-BR.
 
-## Common Pitfalls to Avoid
-- **React Hooks**: Watch out for conditional hook execution in complex viewers (e.g., `ConsultancyDocumentViewer`). Always declare hooks at top level.
-- **Syntax Highlighting**: `qlikSyntaxHighlighter.ts` must **strip existing HTML** before re-highlighting to avoid nested/broken tags (`<span class=...`).
-- **Prompt Language**: Ensure `megaPrompts.ts` and other agent prompts are in **PT-BR**.
-- **Provider Retry**: Never retry the same LLM provider immediately (`providerOrchestrator` handles rotation).
-- **Build Sync**: Serving frontend without rebuilding `web/dist` causes 404s.
+### Validation & Security
+- **Strict Validation**: ALWAYS run `qlikValidator.validateQlikScript()` before saving/streaming.
+  - **Prohibited**: `CREATE`, `DROP`, `INSERT`, `UPDATE`, `DELETE`, `GRANT`.
+  - **Hallucinations**: Check `HALLUCINATED_FUNCTIONS` (e.g., `DATEDIFF` -> `Interval`, `CASE WHEN` -> `Pick(Match())`).
+- **Sanitization**: Strip HTML from scripts before processing (`QlikMegaOptimizer.sanitizeScript`).
 
-## Agent Coding Guidelines
-- **Abort/Cancel**: Propagate `AbortSignal` everywhere. Clean up resources in `finally`.
-- **Timing**: Register step timing with `stepTimingService`. No fake progress bars.
-- **Error Handling**: Fail fast with clear errors. Return remaining quota info for 429s.
-- **Testing**: Include at least one failing-path test (timeout/provider rotation) for new logic.
+### Real-Time Updates (SSE)
+- **Flow**: Server `sseEmitter.sendToCurrent()` -> Web `useOptimizationProgress`.
+- **Events**: `script_analysis`, `substep`, `truncation_warning`.
+- **Implementation**: When adding events, update BOTH backend emitter and frontend hook.
 
-### Quick response templates
-- **Bugfix**: Causa → Correção → Patch → Teste.
-- **Feature**: Análise → Plano → Código → Notas.
-- **Only code**: Single code block, zero prose.
+### Frontend (React + Vite)
+- **Styling**: Glassmorphism theme. CSS Modules or global `styles.css`.
+- **Hooks**: `useSessionPersistence` for state recovery.
+- **Components**: `ConsultancyDocumentViewer` for reports.
 
-### Abort/timeout defaults
-- Prefer per-stage timeouts (60–120s). Always pass `AbortSignal` to downstream calls and perform cleanup in `finally`.
+## Common Pitfalls
+- **Fake Progress**: Do NOT simulate progress bars. Use real events from `stepTimingService`.
+- **Syntax Highlighting**: `qlikSyntaxHighlighter.ts` must remove existing HTML tags before re-applying to prevent nesting errors.
+- **Async/Await**: Propagate `AbortSignal` through all agent layers. Handle cancellation in `finally` blocks.
+- **File Paths**: Use absolute paths for tool calls.
+
+## Project Specifics
+- **Smart Truncation**: Free tier limits lines but cuts at logical boundaries (not mid-statement).
+- **Modes**: `ultra-expert` (rewrite), `analysis` (report only, reverts script).

@@ -1,5 +1,5 @@
 ﻿// web/src/pages/OptimizerPageV2.tsx
-import React, { useMemo, useState, useEffect, useCallback } from "react";
+import React, { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import "./OptimizerPageV2.css";
 import "./ControlPanel.css";
 import "./PipelineCard.css";
@@ -26,6 +26,7 @@ import type { ConsultancyDocument } from "../types/consultancy";
 import { UploadedFileMeta, UploadedFilePayload } from "../types/ui";
 import ScriptCaptureModal from "../components/ScriptCaptureModal";
 import DownloadModal from "../components/DownloadModal";
+import HistoryModal from "../components/HistoryModal";
 import { useOptimizationProgress } from "../hooks/useOptimizationProgress";
 import { useSessionPersistence } from "../hooks/useSessionPersistence";
 import { highlightQlikCode } from "../lib/qlikSyntaxHighlighter";
@@ -178,6 +179,7 @@ type RunHistoryItem = {
   status: "success" | "error";
   finishedAt: string;
   provider?: string;
+  duration?: number;
 };
 
 const HISTORY_STORAGE_KEY = "qlik_codex_recent_runs_v1";
@@ -216,6 +218,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
   const [showScriptInfo, setShowScriptInfo] = useState(false);
   const [scriptInfo, setScriptInfo] = useState<ScriptInfo | null>(null);
   const [isScrollLocked, setIsScrollLocked] = useState(true);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const originalScrollRef = React.useRef<HTMLDivElement | null>(null);
   const optimizedScrollRef = React.useRef<HTMLDivElement | null>(null);
   const isSyncingScrollRef = React.useRef(false);
@@ -325,6 +328,8 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
     }
   }, [script, uploadMeta, scriptInfo]);
 
+  const isRestoringRef = useRef(false);
+
   // === AUTO RESTORE SESSION ON MOUNT ===
   useEffect(() => {
     // Tenta recuperar sessão ativa ao carregar
@@ -333,6 +338,8 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
         const restored = await session.restoreSession();
         if (restored && restored.progressData) {
           console.warn("✓ Sessão ativa restaurada");
+          isRestoringRef.current = true;
+
           setScript(restored.script);
           if (restored.mode) {
             handleModeChange(restored.mode as OptimizeMode);
@@ -341,11 +348,21 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
             const llmOption = LLM_OPTIONS.find(opt => opt.provider === restored.llmProvider);
             if (llmOption) setLlmOptionId(llmOption.id);
           }
-          // Restaura progresso se estava em execução
-          if (restored.status === "running") {
-            console.warn("ℹ️ Sessão estava em execução, mas não pode ser retomada automaticamente");
-            // Usuário precisará executar novamente
+
+          // Restaura progresso completo
+          if (restored.progressData) {
+            optimization.restoreProgress(restored.progressData);
           }
+
+          // Se estava concluído, tenta restaurar resultado se disponível (não persistido atualmente, mas preparado)
+          if (restored.status === "completed") {
+            // TODO: Persistir resultado final também para restauração completa
+          }
+
+          // Reset flag after a short delay to allow effects to run
+          setTimeout(() => {
+            isRestoringRef.current = false;
+          }, 500);
         }
       } catch (error) {
         console.warn("Não foi possível restaurar sessão:", error);
@@ -362,6 +379,8 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
   // to avoid re-running on every render due to the whole `optimization` object
   // changing identity (which caused a maximum update depth loop).
   useEffect(() => {
+    if (isRestoringRef.current) return; // Skip reset if restoring session
+
     optimization.resetProgress();
     setResult(null);
     setConsultancyDoc(null);
@@ -459,7 +478,8 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
           mode,
           status: "success",
           finishedAt: new Date().toISOString(),
-          provider: providerForMode
+          provider: providerForMode,
+          duration: optimization.progress.elapsedTime
         });
       } else if (optimization.progress.errorMessage) {
         setError(optimization.progress.errorMessage);
@@ -480,7 +500,8 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
           mode,
           status: "error",
           finishedAt: new Date().toISOString(),
-          provider: providerForMode
+          provider: providerForMode,
+          duration: optimization.progress.elapsedTime
         });
       }
     } catch (err) {
@@ -493,7 +514,8 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
         mode,
         status: "error",
         finishedAt: new Date().toISOString(),
-        provider: providerForMode
+        provider: providerForMode,
+        duration: optimization.progress.elapsedTime
       });
     } finally {
       // Disconnect SSE stream
@@ -587,107 +609,70 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
         <div className="bg-grid" />
       </div>
 
-      {/* Header Minimalista */}
-      <header className="opt-header-minimal">
-        <div className="header-brand-minimal">
-          <button className="back-btn-minimal" onClick={handleBackNavigation} title="Voltar">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <BrandMark variant="full" size="sm" showBeta className="opt-brand-mark" />
-        </div>
-
-        <div className="header-center">
-          {/* NVIDIA Logo Display */}
-          {mode === 'nvidia-fast' && (
-            <div className="nvidia-header-badge">
-              <NvidiaLogo />
-              <span className="nvidia-text">NIM INFERENCE NVIDIA</span>
-            </div>
-          )}
-        </div>
-
-        <div className="header-user">
-          <UserMenu />
-        </div>
-      </header>
-
-      {/* FREE TIER WARNING BANNER */}
-      {!isOwner && willBeTruncated && showFreeTierWarning && (
-        <div className="free-tier-warning-banner">
-          <div className="warning-icon">⚠️</div>
-          <div className="warning-content">
-            <strong>FREE TIER - Limite de Linhas Excedido</strong>
-            <p>
-              Seu script tem <strong>{scriptLineCount} linhas</strong>, mas o FREE TIER limita a <strong>{FREE_TIER_LINE_LIMIT} linhas</strong>.
-              O script será automaticamente truncado com <strong>corte inteligente</strong> (até +30 linhas extras para completar blocos).
-            </p>
+      {/* Header Unificado */}
+      <header className="opt-header-minimal unified-header">
+        <div className="header-left-section">
+          <div className="header-brand-minimal">
+            <button className="back-btn-minimal" onClick={handleBackNavigation} title="Voltar">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <BrandMark variant="full" size="sm" showBeta className="opt-brand-mark" />
           </div>
-          <button className="warning-dismiss" onClick={() => setShowFreeTierWarning(false)} title="Entendi">
-            ✕
-          </button>
-        </div>
-      )}
 
-      {/* Control Panel Master - Layout Grid Redesigned */}
-      <div className={`control-panel-master-compact expert-mode`}>
-        {/* Coluna Esquerda: Modo + Status */}
-        <div className="control-left-section">
+          <div className="header-separator"></div>
+
           {/* Modos */}
-          <div className="control-section-compact mode-section-compact">
-            <div className="section-icon-compact">🎯</div>
-            <div className="mode-cards-horizontal">
-              {Object.entries(modeInfo).map(([modeKey, info]) => {
-                const option = modeKey as OptimizeMode;
-                const isUltra = option === "ultra-expert";
-                const isSelected = mode === option;
-                const disabled = isUltra && !isOwner && !hasUltraExpertQuotaLeft;
-                const quotaTitle = !isOwner && !hasUltraExpertQuotaLeft
-                  ? 'Quota diária de Ultra Expert esgotada. Limite geral: 4 execuções/dia. Aguarde renovação.'
-                  : undefined;
+          <div className="mode-cards-horizontal header-mode-selector">
+            {Object.entries(modeInfo).map(([modeKey, info]) => {
+              const option = modeKey as OptimizeMode;
+              const isUltra = option === "ultra-expert";
+              const isSelected = mode === option;
+              const disabled = isUltra && !isOwner && !hasUltraExpertQuotaLeft;
+              const quotaTitle = !isOwner && !hasUltraExpertQuotaLeft
+                ? 'Quota diária de Ultra Expert esgotada. Limite geral: 4 execuções/dia. Aguarde renovação.'
+                : undefined;
 
-                return (
-                  <button
-                    key={option}
-                    className={`mode-card-compact ${isSelected ? 'active' : ''} ${isUltra ? 'expert' : ''} ${info.accentClass || ''}`}
-                    onClick={() => handleModeChange(option)}
-                    disabled={disabled}
-                    title={isUltra ? quotaTitle : info.description}
-                  >
-                    <div className="mode-card-icon-compact">
-                      {info.icon}
+              return (
+                <button
+                  key={option}
+                  className={`mode-card-compact ${isSelected ? 'active' : ''} ${isUltra ? 'expert' : ''} ${info.accentClass || ''}`}
+                  onClick={() => handleModeChange(option)}
+                  disabled={disabled}
+                  title={isUltra ? quotaTitle : info.description}
+                >
+                  <div className="mode-card-icon-compact">
+                    {info.icon}
+                  </div>
+                  <div className="mode-card-text-compact">
+                    <div className="mode-card-heading">
+                      <h4>{info.title}</h4>
+                      {info.badge && <span className="mode-card-badge">{info.badge}</span>}
                     </div>
-                    <div className="mode-card-text-compact">
-                      <div className="mode-card-heading">
-                        <h4>{info.title}</h4>
-                        {info.badge && <span className="mode-card-badge">{info.badge}</span>}
+                    <p>{info.description}</p>
+                    {info.helper && (
+                      <span className="mode-card-helper">{info.helper}</span>
+                    )}
+                    {isUltra && !isOwner && (
+                      <div className={`ultra-expert-quota ${!hasUltraExpertQuotaLeft ? 'quota-exhausted' : ''}`}>
+                        <span className="quota-icon">{hasUltraExpertQuotaLeft ? '🎟️' : '🚫'}</span>
+                        <span className="quota-text">
+                          {Math.max(0, MAX_ULTRA_EXPERT_RUNS - ultraExpertUsageCount)} de {MAX_ULTRA_EXPERT_RUNS} execuções
+                        </span>
                       </div>
-                      <p>{info.description}</p>
-                      {info.helper && (
-                        <span className="mode-card-helper">{info.helper}</span>
-                      )}
-                      {isUltra && !isOwner && (
-                        <div className={`ultra-expert-quota ${!hasUltraExpertQuotaLeft ? 'quota-exhausted' : ''}`}>
-                          <span className="quota-icon">{hasUltraExpertQuotaLeft ? '🎟️' : '🚫'}</span>
-                          <span className="quota-text">
-                            {Math.max(0, MAX_ULTRA_EXPERT_RUNS - ultraExpertUsageCount)} de {MAX_ULTRA_EXPERT_RUNS} execuções
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className={`mode-active-dot ${isUltra ? 'expert' : ''}`} />
-                    {isUltra && <div className="expert-flame-mini" />}
-                  </button>
-                );
-              })}
-            </div>
+                    )}
+                  </div>
+                  <div className={`mode-active-dot ${isUltra ? 'expert' : ''}`} />
+                  {isUltra && <div className="expert-flame-mini" />}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Coluna Central: Executar + Stop (Grande e Destacado) */}
-        <div className="control-center-section">
-          <div className="execution-controls">
+        <div className="header-center-section">
+          <div className="execution-controls header-execution">
             {!optimization.isRunning ? (
               <button
                 className={`btn-execute-main ${!canOptimize ? 'disabled' : ''}`}
@@ -733,76 +718,75 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
           </div>
         </div>
 
-        {/* Coluna Direita: Ações Secundárias */}
-        <div className="control-right-section">
-          <div className="control-section-compact actions-section-compact">
-            <div className="action-cards-compact">
-              {/* Consultoria */}
-              <button
-                className={`action-btn-compact consultancy ${!consultancyDoc ? 'disabled-blur' : ''}`}
-                onClick={() => consultancyDoc && setShowConsultancy(true)}
-                disabled={!consultancyDoc}
-                title={consultancyDoc ? "Ver Auditoria/Consultoria" : "Auditoria será gerada após otimização"}
-              >
-                📊
-              </button>
+        <div className="header-right-section">
+          <div className="action-cards-compact header-actions">
+            {/* Consultoria */}
+            <button
+              className={`action-btn-compact consultancy ${!consultancyDoc ? 'disabled-blur' : ''}`}
+              onClick={() => consultancyDoc && setShowConsultancy(true)}
+              disabled={!consultancyDoc}
+              title={consultancyDoc ? "Ver Auditoria/Consultoria" : "Auditoria será gerada após otimização"}
+            >
+              📊
+            </button>
 
-              {/* Ver Resultado */}
-              <button
-                className={`action-btn-compact result ${!result ? 'disabled-blur' : ''}`}
-                onClick={() => result && setShowResultViewer(true)}
-                disabled={!result}
-                title={result ? "Ver resultado da otimização" : "Resultado será exibido após otimização"}
-              >
-                📄
-              </button>
+            {/* Ver Resultado */}
+            <button
+              className={`action-btn-compact result ${!result ? 'disabled-blur' : ''}`}
+              onClick={() => result && setShowResultViewer(true)}
+              disabled={!result}
+              title={result ? "Ver resultado da otimização" : "Resultado será exibido após otimização"}
+            >
+              📄
+            </button>
 
-              {/* Baixar */}
-              <button
-                className={`action-btn-compact download ${!result ? 'disabled-blur' : ''}`}
-                onClick={() => result && setDownloadModalOpen(true)}
-                disabled={!result}
-                title={result ? "Baixar arquivos" : "Download disponível após otimização"}
-              >
-                <Icons.Download />
-              </button>
-            </div>
+            {/* Baixar */}
+            <button
+              className={`action-btn-compact download ${!result ? 'disabled-blur' : ''}`}
+              onClick={() => result && setDownloadModalOpen(true)}
+              disabled={!result}
+              title={result ? "Baixar arquivos" : "Download disponível após otimização"}
+            >
+              <Icons.Download />
+            </button>
+
+            {/* Histórico */}
+            <button
+              className="action-btn-compact history"
+              onClick={() => setShowHistoryModal(true)}
+              title="Histórico de Execuções"
+            >
+              <Icons.Clock />
+            </button>
+          </div>
+
+          <div className="header-user">
+            <UserMenu />
           </div>
         </div>
-      </div>
+      </header>
 
+      {/* FREE TIER WARNING BANNER */}
+      {!isOwner && willBeTruncated && showFreeTierWarning && (
+        <div className="free-tier-warning-banner">
+          <div className="warning-icon">⚠️</div>
+          <div className="warning-content">
+            <strong>FREE TIER - Limite de Linhas Excedido</strong>
+            <p>
+              Seu script tem <strong>{scriptLineCount} linhas</strong>, mas o FREE TIER limita a <strong>{FREE_TIER_LINE_LIMIT} linhas</strong>.
+              O script será automaticamente truncado com <strong>corte inteligente</strong> (até +30 linhas extras para completar blocos).
+            </p>
+          </div>
+          <button className="warning-dismiss" onClick={() => setShowFreeTierWarning(false)} title="Entendi">
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="opt-content">
         {/* Left Panel - Controls */}
         <aside className="opt-sidebar">
-          <div className="ctrl-card history-card">
-            <div className="ctrl-header">
-              <Icons.Clock />
-              <span>Últimas execuções</span>
-            </div>
-            {recentRuns.length === 0 ? (
-              <div className="ctrl-empty">Nenhuma execução recente.</div>
-            ) : (
-              <div className="history-list">
-                {recentRuns.map((run, index) => (
-                  <div key={`${run.id}-${run.finishedAt}-${index}`} className="history-item">
-                    <div className="history-main">
-                      <span className="history-mode">{run.mode}</span>
-                      <span className={`history-status ${run.status}`}>
-                        {run.status === 'success' ? 'Sucesso' : 'Erro'}
-                      </span>
-                    </div>
-                    <div className="history-meta">
-                      <span>{new Date(run.finishedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-                      {run.provider && <span className="history-provider">{run.provider}</span>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
           {/* Script Input with File Details */}
           <div className="ctrl-card script-card">
             <div className="ctrl-header">
@@ -964,7 +948,9 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
                     const isComplete = stage?.status === "success" || (totalSubSteps > 0 && subSteps.every(s => s.status === "success"));
                     const isActive = stage?.status === "running" || subSteps.some(s => s.status === "running");
                     const hasError = stage?.status === "error" || subSteps.some(s => s.status === "error");
-                    const cardDuration = subSteps.reduce((sum, sub) => sum + (sub.duration || 0), 0) || (stage?.duration || 0);
+                    const cardDuration = subSteps.length > 0
+                      ? subSteps.reduce((sum, sub) => sum + (sub.duration || 0) + ((sub.status === 'running' && sub.currentRunningTime) ? sub.currentRunningTime : 0), 0)
+                      : (stage?.duration || 0) + ((stage?.status === 'running' && stage?.currentRunningTime) ? stage.currentRunningTime : 0);
                     const isNvidiaFast = stage.id === "NVIDIA_FAST";
                     const statusLabel = stage.status === "running"
                       ? "Executando"
@@ -1088,7 +1074,10 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
                                   </div>
                                   <div className="nvidia-fast-stat">
                                     <span>Tempo</span>
-                                    <strong>{durationLabel}</strong>
+                                    <strong>
+                                      {stage.status === 'running' && <span className="running-clock-icon">⏱️</span>}
+                                      {durationLabel}
+                                    </strong>
                                   </div>
                                 </div>
                                 <div className="nvidia-fast-meta">
@@ -1406,7 +1395,14 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
         )
       }
 
-      
+
+      {/* History Modal */}
+      <HistoryModal
+        isOpen={showHistoryModal}
+        onClose={() => setShowHistoryModal(false)}
+        history={recentRuns}
+      />
+
     </div >
   );
 };

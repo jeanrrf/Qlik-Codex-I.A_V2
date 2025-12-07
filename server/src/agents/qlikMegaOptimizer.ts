@@ -21,7 +21,7 @@ const TASK_TIMEOUTS: Record<string, number> = {
   CODE_GEN: 120000,            // 2 min - geração de código
   FINAL_DELIVERY: 90000       // 1.5 min - documentação final
 };
-const MAX_TASK_RETRIES = 2;
+const MAX_TASK_RETRIES = 3;
 const RETRYABLE_TASK_ERROR_PATTERNS = [
   /timeout/i,
   /json/i,
@@ -42,6 +42,7 @@ interface MegaOptimizerResult {
   originalScript: string;
   optimizedScript: string;
   analysis: any;
+  changes?: any[]; // Added for frontend compatibility
   plan: any;
   validation: any;
   documentation: any;
@@ -178,15 +179,17 @@ export class QlikMegaOptimizer {
       logger.info(`[MegaOptimizer] Starting task: ${taskName} (attempt ${attempt}/${MAX_TASK_RETRIES})`);
 
       const statusLabel = attempt > 1
-        ? `Regenerating ${taskName} (tentativa ${attempt}/${MAX_TASK_RETRIES})`
-        : `Executing ${taskName}...`;
+        ? `Regenerando ${taskName} (tentativa ${attempt}/${MAX_TASK_RETRIES})`
+        : `Executando ${taskName}...`;
 
       sseEmitter.sendToCurrent({
         type: "substep",
         substep: {
-          id: taskName,
+          id: `${taskName.toLowerCase()}_attempt_${attempt}` as OptimizationStepId,
           name: statusLabel,
-          description: attempt > 1 ? `Retry automático ${attempt}/${MAX_TASK_RETRIES}` : undefined,
+          description: attempt > 1
+            ? `Retry automático ${attempt}/${MAX_TASK_RETRIES}`
+            : `Primeira tentativa de ${taskName}`,
           status: "running",
           startTime: new Date().toISOString()
         }
@@ -249,11 +252,26 @@ export class QlikMegaOptimizer {
         if (schema) {
           const validation = schema.safeParse(parsedResult);
           if (!validation.success) {
+            const formattedIssues = validation.error.format();
+
             logger.warn(`[MegaOptimizer] Schema validation failed for ${taskName}`, {
-              issues: validation.error.format(),
+              issues: formattedIssues,
               attempt
             });
-            throw new Error(`Schema Validation Error: ${JSON.stringify(validation.error.format())}`);
+
+            sseEmitter.sendToCurrent({
+              type: "substep",
+              substep: {
+                id: `${taskName.toLowerCase()}_schema_error_attempt_${attempt}` as OptimizationStepId,
+                name: `Erro de schema em ${taskName}`,
+                description: `Tentativa ${attempt}/${MAX_TASK_RETRIES} falhou na validação de schema. Ver detalhes técnicos nos logs.`,
+                status: attempt < MAX_TASK_RETRIES ? "warning" as any : "error" as any,
+                startTime: new Date().toISOString(),
+                endTime: new Date().toISOString()
+              }
+            });
+
+            throw new Error(`Schema Validation Error: ${JSON.stringify(formattedIssues)}`);
           }
           parsedResult = validation.data;
         }
@@ -278,8 +296,8 @@ export class QlikMegaOptimizer {
         sseEmitter.sendToCurrent({
           type: "substep",
           substep: {
-            id: taskName,
-            name: `Completed ${taskName}`,
+            id: `${taskName.toLowerCase()}_attempt_${attempt}` as OptimizationStepId,
+            name: `${taskName} concluída (tentativa ${attempt})`,
             status: "success",
             duration,
             endTime: new Date().toISOString()
@@ -303,8 +321,8 @@ export class QlikMegaOptimizer {
           sseEmitter.sendToCurrent({
             type: "substep",
             substep: {
-              id: taskName,
-              name: `Retrying ${taskName} (${attempt + 1}/${MAX_TASK_RETRIES})`,
+              id: `${taskName.toLowerCase()}_retry_${attempt}` as OptimizationStepId,
+              name: `Retry ${taskName} (${attempt + 1}/${MAX_TASK_RETRIES})`,
               status: "running",
               error: errorMessage,
               startTime: new Date().toISOString()
@@ -317,8 +335,8 @@ export class QlikMegaOptimizer {
         sseEmitter.sendToCurrent({
           type: "substep",
           substep: {
-            id: taskName,
-            name: `Failed ${taskName}`,
+            id: `${taskName.toLowerCase()}_failed` as OptimizationStepId,
+            name: `Falha definitiva em ${taskName}`,
             status: "error",
             error: errorMessage,
             duration: failureDuration,
@@ -417,10 +435,20 @@ export class QlikMegaOptimizer {
     // Coleta estatísticas do orquestrador
     const orchestratorStats = this.orchestrator.getStats();
 
+    // Prepare changes list
+    const changes = codeGen.changesApplied || [];
+
+    // Inject changes into analysis for frontend compatibility (KPIs)
+    const analysisWithChanges = {
+      ...analysis,
+      changes: changes
+    };
+
     return {
       originalScript: this.script,
       optimizedScript: codeGen.optimizedScript || this.script,
-      analysis,
+      analysis: analysisWithChanges,
+      changes: changes, // Add to root for list view
       plan,
       validation: delivery.validation,
       documentation: delivery.documentation,

@@ -70,6 +70,7 @@ export interface OptimizeResult {
   originalScript: string;
   optimizedScript: string;
   summary: string;
+  changes?: OptimizeChange[]; // Added for compatibility with backend response
   analysis: {
     changes: OptimizeChange[];
     breakingRisk: BreakingRisk;

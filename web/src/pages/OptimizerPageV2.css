@@ -198,17 +198,209 @@
 
 /* --- FREE TIER / QUOTAS --- */
 .free-tier-warning-banner {
+  background: rgba(255, 165, 0, 0.1);
+  border-bottom: 1px solid rgba(255, 165, 0, 0.3);
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  backdrop-filter: blur(10px);
   position: relative;
   z-index: 8;
+}
+
+/* --- UNIFIED HEADER STYLES --- */
+.opt-header-minimal.unified-header {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 90px;
+  padding: 0 32px;
+  gap: 24px;
+  background: linear-gradient(180deg, rgba(3, 5, 8, 0.98) 0%, rgba(3, 5, 8, 0.95) 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.header-left-section {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  flex: 1;
+}
+
+.header-center-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.header-right-section {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 24px;
+  flex: 1;
+}
+
+.header-separator {
+  width: 1px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Adjustments for components inside header */
+.unified-header .mode-cards-horizontal {
+  gap: 6px;
+}
+
+.unified-header .mode-card-compact {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  min-width: auto;
+  border-radius: 8px;
+  height: 48px;
+}
+
+.unified-header .mode-card-compact:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.unified-header .mode-card-compact.active {
+  background: rgba(0, 242, 255, 0.1);
+  border-color: rgba(0, 242, 255, 0.3);
+}
+
+.unified-header .mode-card-compact.active.expert {
+  background: rgba(255, 140, 0, 0.1);
+  border-color: rgba(255, 140, 0, 0.4);
+}
+
+.unified-header .mode-card-heading h4 {
+  font-size: 0.9rem;
+  margin-bottom: 0;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.unified-header .mode-card-text-compact {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.unified-header .mode-card-text-compact p {
+  display: none;
+}
+
+.unified-header .mode-card-helper {
+  display: none;
+}
+
+.unified-header .mode-card-badge {
+  font-size: 0.6rem;
+  padding: 1px 4px;
+  margin-left: 6px;
+}
+
+.unified-header .ultra-expert-quota {
+  display: none;
+}
+
+.unified-header .btn-execute-main {
+  height: 48px;
+  padding: 0 24px;
+  border-radius: 8px;
+  background: var(--primary);
+  border: none;
+  color: #000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
+  transition: all 0.2s;
+}
+
+.unified-header .btn-execute-main:hover:not(:disabled) {
+  background: #33f5ff;
+  transform: translateY(-1px);
+  box-shadow: 0 0 25px rgba(0, 242, 255, 0.5);
+}
+
+.unified-header .btn-execute-main.disabled {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.3);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.unified-header .btn-execute-text {
+  display: flex;
+  flex-direction: column;
   align-items: flex-start;
-  gap: 16px;
-  padding: 16px 24px;
-  background: linear-gradient(135deg, rgba(255, 184, 0, 0.12) 0%, rgba(255, 140, 0, 0.08) 100%);
-  border-bottom: 2px solid rgba(255, 184, 0, 0.3);
-  border-top: 1px solid rgba(255, 184, 0, 0.15);
-  backdrop-filter: blur(10px);
-  animation: banner-slide-down 0.4s ease-out;
+  line-height: 1.1;
+}
+
+.unified-header .btn-execute-label {
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.unified-header .btn-execute-sublabel {
+  font-size: 0.65rem;
+  opacity: 0.8;
+  font-weight: 600;
+}
+
+.unified-header .btn-execute-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.unified-header .action-cards-compact {
+  display: flex;
+  gap: 8px;
+}
+
+.unified-header .action-btn-compact {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.unified-header .action-btn-compact:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.unified-header .header-user {
+  margin-left: 16px;
+  padding-left: 16px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+position: relative;
+z-index: 8;
+display: flex;
+align-items: flex-start;
+gap: 16px;
+padding: 16px 24px;
+background: linear-gradient(135deg, rgba(255, 184, 0, 0.12) 0%, rgba(255, 140, 0, 0.08) 100%);
+border-bottom: 2px solid rgba(255, 184, 0, 0.3);
+border-top: 1px solid rgba(255, 184, 0, 0.15);
+backdrop-filter: blur(10px);
+animation: banner-slide-down 0.4s ease-out;
 }
 
 @keyframes banner-slide-down {
@@ -1339,4 +1531,185 @@
     width: 100%;
     justify-content: center;
   }
+}
+
+/* History Modal Styles */
+.history-modal .modal-container {
+  max-width: 800px;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.history-table th,
+.history-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.history-table th {
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.history-table tr:last-child td {
+  border-bottom: none;
+}
+
+.history-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.success {
+  background: rgba(0, 255, 157, 0.1);
+  color: var(--success);
+  border: 1px solid rgba(0, 255, 157, 0.2);
+}
+
+.status-badge.error {
+  background: rgba(255, 42, 109, 0.1);
+  color: var(--danger);
+  border: 1px solid rgba(255, 42, 109, 0.2);
+}
+
+.mode-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mode-indicator.ultra-expert {
+  color: #ff2a6d;
+}
+
+.mode-indicator.nvidia-fast {
+  color: #39ff14;
+}
+
+.provider-tag {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+}
+
+.empty-history {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.modal-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.modal-icon {
+  display: none;
+}
+
+/* ===============================================
+   NVIDIA MODE LAYOUT FIXES
+   =============================================== */
+
+/* Ensure the main container doesn't scroll the whole page */
+.opt-page.nvidia-mode-active .opt-main {
+  overflow: hidden !important;
+  height: 100%;
+  /* Use 100% of the grid cell */
+  padding-bottom: 0 !important;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure the content grid takes full height */
+.opt-page.nvidia-mode-active .opt-content {
+  overflow: hidden !important;
+  /* height: 100% !important;  <-- REMOVED to avoid conflict with flex parent */
+  flex: 1;
+  /* Ensure it takes available space */
+  display: grid;
+  /* grid-template-rows: 100%; <-- REMOVED to avoid conflict with column layout */
+  align-items: stretch;
+}
+
+/* Force the pipeline card to expand and fill the main area */
+.opt-page.nvidia-mode-active .pipeline-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  /* Let flex handle height */
+  margin-bottom: 0;
+  overflow: hidden;
+}
+
+/* Force the stage cards row to expand */
+.opt-page.nvidia-mode-active .stage-cards-row {
+  flex: 1;
+  margin-bottom: 0;
+  height: auto;
+  /* Let flex handle height */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Force the single stage card to expand */
+.opt-page.nvidia-mode-active .stage-card-v3 {
+  flex: 1;
+  height: auto;
+  /* Let flex handle height */
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+/* Allow the substeps to take remaining space and scroll internally */
+.opt-page.nvidia-mode-active .card-substeps.nvidia-expanded {
+  max-height: none;
+  flex: 1;
+  height: auto;
+  overflow-y: auto;
+}
+
+/* Hide scrollbar track for cleaner look in NVIDIA mode */
+.opt-page.nvidia-mode-active .card-substeps::-webkit-scrollbar {
+  width: 4px;
+}
+
+.opt-page.nvidia-mode-active .card-substeps::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.opt-page.nvidia-mode-active .card-substeps::-webkit-scrollbar-thumb {
+  background: rgba(57, 255, 20, 0.2);
+  /* NVIDIA Green tint */
+  border-radius: 4px;
+}
+
+.opt-page.nvidia-mode-active .card-substeps::-webkit-scrollbar-thumb:hover {
+  background: rgba(57, 255, 20, 0.4);
 }

@@ -103,6 +103,12 @@ export class ProviderOrchestrator {
     for (const plan of attemptPlan) {
       ensureNotAborted();
 
+      // Se configurado para não repetir o mesmo provider, pule se já usamos esse provider
+      if (this.rotationConfig.neverRetryProvider && usedProviders.has(plan.provider)) {
+        logger.info("Pular provedor repetido devido a neverRetryProvider=true", { stepId, provider: plan.provider, model: plan.model });
+        continue;
+      }
+
       if (attemptCount >= this.rotationConfig.maxAttemptsPerStep) {
         logger.warn("Limite de tentativas atingido", {
           stepId,
@@ -248,7 +254,8 @@ export class ProviderOrchestrator {
     const startTime = Date.now();
     let warningTimer: NodeJS.Timeout | undefined;
     let criticalTimer: NodeJS.Timeout | undefined;
-    let abortCleanup: (() => void) | undefined;
+    let timeoutTimer: NodeJS.Timeout | undefined;
+    const abortCleanupFns: Array<() => void> = [];
 
     try {
       // Verifica disponibilidade
@@ -263,8 +270,30 @@ export class ProviderOrchestrator {
         };
       }
 
+      // Create a per-attempt AbortController so we can cancel the underlying provider
+      // call when this attempt times out or when the external abort signal fires.
+      const perAttemptController = new AbortController();
+
+      if (abortSignal) {
+        // Propagate external aborts to per-attempt controller so the provider call stops.
+        if (abortSignal.aborted) {
+          perAttemptController.abort();
+        } else {
+          const outerHandler = () => perAttemptController.abort();
+          abortSignal.addEventListener("abort", outerHandler, { once: true });
+          // Keep a record of cleanup actions
+          abortCleanupFns.push(() => abortSignal.removeEventListener("abort", outerHandler));
+        }
+      }
+
+      // Single timer that aborts the per-attempt controller and rejects the timeout promise
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error("TIMEOUT")), timeout);
+        timeoutTimer = setTimeout(() => {
+          // Abort the ongoing provider call when we hit our per-attempt timeout so the
+          // provider doesn't keep working in the background and consume resources.
+          try { perAttemptController.abort(); } catch (_) { /* ignore */ }
+          reject(new Error("TIMEOUT"));
+        }, timeout);
       });
 
       const abortPromise = abortSignal
@@ -277,7 +306,7 @@ export class ProviderOrchestrator {
             abortSignal.removeEventListener("abort", handler);
             reject(new Error("ABORTED"));
           };
-          abortCleanup = () => abortSignal.removeEventListener("abort", handler);
+          abortCleanupFns.push(() => abortSignal.removeEventListener("abort", handler));
           abortSignal.addEventListener("abort", handler, { once: true });
         })
         : null;
@@ -305,7 +334,8 @@ export class ProviderOrchestrator {
 
       const callPromise = provider.generateStructuredJson(prompt, {
         model: modelOverride,
-        signal: abortSignal
+        // Use the per-attempt signal so timeout / per-attempt abort will cancel the underlying call
+        signal: perAttemptController.signal
       });
 
       const races = abortPromise ? [callPromise, timeoutPromise, abortPromise] : [callPromise, timeoutPromise];
@@ -313,7 +343,8 @@ export class ProviderOrchestrator {
 
       if (warningTimer) clearTimeout(warningTimer);
       if (criticalTimer) clearTimeout(criticalTimer);
-      if (abortCleanup) abortCleanup();
+      if (timeoutTimer) clearTimeout(timeoutTimer);
+      for (const fn of abortCleanupFns) fn();
 
       const duration = Date.now() - startTime;
 
@@ -332,7 +363,8 @@ export class ProviderOrchestrator {
 
       if (warningTimer) clearTimeout(warningTimer);
       if (criticalTimer) clearTimeout(criticalTimer);
-      if (abortCleanup) abortCleanup();
+      if (timeoutTimer) clearTimeout(timeoutTimer);
+      for (const fn of abortCleanupFns) fn();
 
       if (errorMessage === "ABORTED") {
         throw error;
