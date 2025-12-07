@@ -28,7 +28,7 @@ export async function optimizeScript(
 
 const ACCESS_TOKEN_KEY = "qlik-codex-access-token";
 
-function getHeaders(): HeadersInit {
+function getHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json'
   };

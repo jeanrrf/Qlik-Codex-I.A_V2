@@ -3,7 +3,7 @@
  * Sistema automático de tracking de eventos e page views
  */
 
-import { useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 interface AnalyticsConfig {
@@ -18,7 +18,7 @@ interface TrackEventOptions {
   eventCategory: string;
   eventLabel?: string;
   eventValue?: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 const DEFAULT_CONFIG: AnalyticsConfig = {
@@ -57,7 +57,7 @@ export function useAnalytics(config: AnalyticsConfig = {}) {
    * Envia evento para o backend
    */
   const sendToBackend = useCallback(
-    async (endpoint: string, data: any) => {
+    async (endpoint: string, data: unknown) => {
       try {
         await fetch(`${mergedConfig.apiUrl}${endpoint}`, {
           method: 'POST',
@@ -69,7 +69,7 @@ export function useAnalytics(config: AnalyticsConfig = {}) {
         });
 
         if (mergedConfig.debug) {
-          console.log('[Analytics]', endpoint, data);
+          console.warn('[Analytics]', endpoint, data);
         }
       } catch (error) {
         if (mergedConfig.debug) {

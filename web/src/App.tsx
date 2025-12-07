@@ -30,7 +30,7 @@ const AppContent: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
 
   // Hook de Analytics com tracking automático
-  const { trackPageView, trackClick, trackError } = useAnalytics();
+  const { trackPageView } = useAnalytics();
 
   // Rastrear mudanças de view
   useEffect(() => {
@@ -45,7 +45,7 @@ const AppContent: React.FC = () => {
           page: window.location.pathname,
           referrer: document.referrer
         });
-      } catch (err) {
+      } catch (_err) {
         // Silent fail for analytics
       }
     };
@@ -65,7 +65,7 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     try {
       localStorage.setItem("codex-last-view", view);
-    } catch (err) {
+    } catch (_err) {
       // ignore storage errors
     }
   }, [view]);
