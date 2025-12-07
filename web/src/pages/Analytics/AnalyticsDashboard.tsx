@@ -182,33 +182,33 @@ export default function AnalyticsDashboard() {
           <div className="analytics-kpis">
             <div className="kpi-card">
               <div className="kpi-icon">👁️</div>
-              <div className="kpi-value">{summary.totalVisits.toLocaleString()}</div>
+              <div className="kpi-value">{(summary.totalVisits ?? 0).toLocaleString()}</div>
               <div className="kpi-label">Total de Visitas</div>
-              <div className="kpi-owner">Owner: {summary.ownerVisits}</div>
+              <div className="kpi-owner">Owner: {summary.ownerVisits ?? 0}</div>
             </div>
 
             <div className="kpi-card">
               <div className="kpi-icon">⚡</div>
-              <div className="kpi-value">{summary.totalEvents.toLocaleString()}</div>
+              <div className="kpi-value">{(summary.totalEvents ?? 0).toLocaleString()}</div>
               <div className="kpi-label">Total de Eventos</div>
-              <div className="kpi-owner">Owner: {summary.ownerEvents}</div>
+              <div className="kpi-owner">Owner: {summary.ownerEvents ?? 0}</div>
             </div>
 
             <div className="kpi-card">
               <div className="kpi-icon">🔗</div>
-              <div className="kpi-value">{summary.totalSessions.toLocaleString()}</div>
+              <div className="kpi-value">{(summary.totalSessions ?? 0).toLocaleString()}</div>
               <div className="kpi-label">Sessões</div>
             </div>
 
             <div className="kpi-card">
               <div className="kpi-icon">🤖</div>
-              <div className="kpi-value">{summary.totalOptimizations.toLocaleString()}</div>
+              <div className="kpi-value">{(summary.totalOptimizations ?? 0).toLocaleString()}</div>
               <div className="kpi-label">Otimizações IA</div>
             </div>
 
             <div className="kpi-card">
               <div className="kpi-icon">👥</div>
-              <div className="kpi-value">{summary.uniqueUsers.toLocaleString()}</div>
+              <div className="kpi-value">{(summary.uniqueUsers ?? 0).toLocaleString()}</div>
               <div className="kpi-label">Usuários Únicos</div>
             </div>
           </div>
@@ -217,7 +217,7 @@ export default function AnalyticsDashboard() {
           <div className="analytics-section">
             <h3>🔝 Páginas Mais Visitadas</h3>
             <div className="analytics-list">
-              {summary.topPages.map((page, index) => (
+              {(summary.topPages ?? []).map((page, index) => (
                 <div key={index} className="list-item">
                   <span className="item-rank">#{index + 1}</span>
                   <span className="item-label">{page.page}</span>
@@ -231,7 +231,7 @@ export default function AnalyticsDashboard() {
           <div className="analytics-section">
             <h3>⚡ Eventos Mais Frequentes</h3>
             <div className="analytics-list">
-              {summary.topEvents.map((event, index) => (
+              {(summary.topEvents ?? []).map((event, index) => (
                 <div key={index} className="list-item">
                   <span className="item-rank">#{index + 1}</span>
                   <span className="item-label">{event.eventType}</span>
@@ -245,7 +245,7 @@ export default function AnalyticsDashboard() {
           <div className="analytics-section">
             <h3>🕒 Atividade Recente</h3>
             <div className="analytics-timeline">
-              {summary.recentActivity.map((activity, index) => (
+              {(summary.recentActivity ?? []).map((activity, index) => (
                 <div
                   key={index}
                   className={`timeline-item ${activity.isOwner ? 'owner' : ''}`}

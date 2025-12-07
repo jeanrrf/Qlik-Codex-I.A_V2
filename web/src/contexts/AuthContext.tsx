@@ -5,7 +5,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
-import { User, AuthContextValue, AuthState } from "../types/auth";
+import { User, AuthContextValue, AuthState, UserRole } from "../types/auth";
 import {
   checkAuthStatus,
   getCurrentUser,
@@ -207,7 +207,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     login,
     loginWithGoogle,
     logout,
-    refreshUser
+    refreshUser,
+    isOwner: () => state.user?.role === UserRole.OWNER
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

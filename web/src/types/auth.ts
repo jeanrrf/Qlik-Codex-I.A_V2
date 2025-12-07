@@ -36,4 +36,5 @@ export interface AuthContextValue extends AuthState {
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  isOwner: () => boolean;
 }
