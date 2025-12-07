@@ -30,12 +30,12 @@ const AppContent: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
 
   // Hook de Analytics com tracking automático
-  const analytics = useAnalytics();
+  const { trackPageView, trackClick, trackError } = useAnalytics();
 
   // Rastrear mudanças de view
   useEffect(() => {
-    analytics.trackPageView(`/${view}`);
-  }, [view, analytics]);
+    trackPageView(`/${view}`);
+  }, [view, trackPageView]);
 
   // Legacy analytics (backward compatibility)
   useEffect(() => {
