@@ -1,19 +1,17 @@
 import React, { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
 export function AuthCallback() {
   const { revalidate } = useAuth();
-  const navigate = useNavigate();
 
   useEffect(() => {
     const handleAuth = async () => {
       await revalidate();
-      navigate("/optimize");
+      window.location.href = "/";
     };
 
     handleAuth();
-  }, [revalidate, navigate]);
+  }, [revalidate]);
 
   return (
     <div
