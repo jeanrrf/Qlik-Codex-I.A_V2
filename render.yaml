@@ -34,3 +34,5 @@ services:
         sync: false
       - key: OWNER_EMAIL
         sync: false
+      - key: VITE_OWNER_EMAIL
+        sync: false

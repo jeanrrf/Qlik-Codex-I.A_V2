@@ -145,6 +145,21 @@ export function LoginPage() {
             </a>
           </p>
         </div>
+
+        {/* Support contact for authentication errors */}
+        <div className="login-support" style={{ marginTop: 12, color: '#f8f8f8' }}>
+          <strong>Problemas no login?</strong>
+          <p style={{ margin: '6px 0' }}>
+            Caso não consiga autenticar, descreva o problema rapidamente e envie para o nosso email de suporte:
+            {' '}
+            <a
+              href={`mailto:${import.meta.env.VITE_OWNER_EMAIL ?? 'owner@qlikcodex.local'}?subject=Erro%20de%20autenticacao%20-%20Login`}
+              style={{ color: '#00f2ff' }}
+            >
+              {import.meta.env.VITE_OWNER_EMAIL ?? 'owner@qlikcodex.local'}
+            </a>
+          </p>
+        </div>
       </div>
 
       {/* Background Effect */}

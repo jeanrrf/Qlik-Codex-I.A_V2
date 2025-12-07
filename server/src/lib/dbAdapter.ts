@@ -23,7 +23,12 @@ export function getDbType(): DbType {
     return 'postgres';
   }
 
-  // Caso contrário, usar SQLite (desenvolvimento local)
+  // Em produção, exigir DB externo (Turso ou Postgres) — não usar SQLite
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('No production database configured. Set TURSO_DATABASE_URL + TURSO_AUTH_TOKEN or DATABASE_URL for Postgres');
+  }
+
+  // Caso contrário (dev), usar SQLite local
   return 'sqlite';
 }
 

@@ -101,6 +101,24 @@ app.use(errorHandler);
 
 async function startServer() {
   try {
+    // Startup summary (non-sensitive flags only)
+    logger.info('Startup configuration', {
+      nodeEnv: config.nodeEnv,
+      tursoConfigured: Boolean(process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN),
+      postgresConfigured: Boolean(process.env.DATABASE_URL),
+      ownerEmailSet: Boolean(process.env.OWNER_EMAIL),
+      viteOwnerEmailSet: Boolean(process.env.VITE_OWNER_EMAIL)
+    });
+
+    // Quick validations / hints
+    if (config.jwtSecret === 'qlik-codex-ia-secret-change-in-production' && config.nodeEnv === 'production') {
+      logger.warn('JWT_SECRET is using the default value in production — set a strong JWT_SECRET in env vars');
+    }
+
+    if (!config.googleClientId || !config.googleClientSecret) {
+      logger.warn('Google OAuth environment variables missing (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET). OAuth login may fail.');
+    }
+
     await initDb();
   } catch (err) {
     logger.error("Failed to initialize database", err);
