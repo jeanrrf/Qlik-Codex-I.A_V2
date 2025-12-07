@@ -102,13 +102,22 @@ export function UserMenu() {
 
           <div className="menu-items">
             {user.role === UserRole.OWNER && (
-              <button className="menu-item" onClick={() => {
-                navigateTo('profile');
-                setIsOpen(false);
-              }}>
-                <span style={{ marginRight: '8px', fontSize: '1.1em' }}>👑</span>
-                <span>KPI de Acesso</span>
-              </button>
+              <>
+                <button className="menu-item" onClick={() => {
+                  navigateTo('analytics');
+                  setIsOpen(false);
+                }}>
+                  <span style={{ marginRight: '8px', fontSize: '1.1em' }}>📊</span>
+                  <span>Analytics Dashboard</span>
+                </button>
+                <button className="menu-item" onClick={() => {
+                  navigateTo('profile');
+                  setIsOpen(false);
+                }}>
+                  <span style={{ marginRight: '8px', fontSize: '1.1em' }}>👑</span>
+                  <span>KPI de Acesso</span>
+                </button>
+              </>
             )}
 
             <button className="menu-item" onClick={() => {

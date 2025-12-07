@@ -414,6 +414,108 @@ function createTables() {
     ON user_daily_usage(mode, executed_at DESC);
   `);
 
+  // ========== ANALYTICS TABLES (Sistema de Monitoramento Enterprise) ==========
+  
+  // Tabela de visualizações de página
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS analytics_page_views (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT,
+      session_id TEXT,
+      page TEXT NOT NULL,
+      referrer TEXT,
+      ip TEXT,
+      user_agent TEXT,
+      is_owner INTEGER NOT NULL DEFAULT 0,
+      metadata TEXT,
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_analytics_pv_page 
+    ON analytics_page_views(page, timestamp DESC);
+    
+    CREATE INDEX IF NOT EXISTS idx_analytics_pv_user 
+    ON analytics_page_views(user_id, timestamp DESC);
+    
+    CREATE INDEX IF NOT EXISTS idx_analytics_pv_session 
+    ON analytics_page_views(session_id, timestamp DESC);
+    
+    CREATE INDEX IF NOT EXISTS idx_analytics_pv_owner 
+    ON analytics_page_views(is_owner, timestamp DESC);
+    
+    CREATE INDEX IF NOT EXISTS idx_analytics_pv_timestamp 
+    ON analytics_page_views(timestamp DESC);
+  `);
+
+  // Tabela de eventos customizados
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS analytics_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT,
+      session_id TEXT,
+      event_type TEXT NOT NULL,
+      event_category TEXT NOT NULL,
+      event_label TEXT,
+      event_value INTEGER,
+      is_owner INTEGER NOT NULL DEFAULT 0,
+      metadata TEXT,
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_analytics_ev_type 
+    ON analytics_events(event_type, timestamp DESC);
+    
+    CREATE INDEX IF NOT EXISTS idx_analytics_ev_category 
+    ON analytics_events(event_category, timestamp DESC);
+    
+    CREATE INDEX IF NOT EXISTS idx_analytics_ev_user 
+    ON analytics_events(user_id, timestamp DESC);
+    
+    CREATE INDEX IF NOT EXISTS idx_analytics_ev_session 
+    ON analytics_events(session_id, timestamp DESC);
+    
+    CREATE INDEX IF NOT EXISTS idx_analytics_ev_owner 
+    ON analytics_events(is_owner, timestamp DESC);
+    
+    CREATE INDEX IF NOT EXISTS idx_analytics_ev_timestamp 
+    ON analytics_events(timestamp DESC);
+  `);
+
+  // Tabela de sessões de navegação
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS analytics_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id TEXT UNIQUE NOT NULL,
+      user_id TEXT,
+      ip TEXT,
+      user_agent TEXT,
+      is_owner INTEGER NOT NULL DEFAULT 0,
+      landing_page TEXT,
+      page_count INTEGER NOT NULL DEFAULT 0,
+      event_count INTEGER NOT NULL DEFAULT 0,
+      start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+      last_activity DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_analytics_sess_id 
+    ON analytics_sessions(session_id);
+    
+    CREATE INDEX IF NOT EXISTS idx_analytics_sess_user 
+    ON analytics_sessions(user_id, start_time DESC);
+    
+    CREATE INDEX IF NOT EXISTS idx_analytics_sess_owner 
+    ON analytics_sessions(is_owner, start_time DESC);
+    
+    CREATE INDEX IF NOT EXISTS idx_analytics_sess_start 
+    ON analytics_sessions(start_time DESC);
+    
+    CREATE INDEX IF NOT EXISTS idx_analytics_sess_activity 
+    ON analytics_sessions(last_activity DESC);
+  `);
+
   // Reduz ruído no console: não logar criação/validação de tabelas a cada boot
 }
 

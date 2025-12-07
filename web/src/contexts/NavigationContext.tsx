@@ -1,6 +1,6 @@
 import React, { createContext, useContext, ReactNode } from "react";
 
-type View = "landing" | "optimizer" | "profile";
+type View = "landing" | "optimizer" | "profile" | "analytics";
 
 interface NavigationContextType {
   navigateTo: (view: View) => void;

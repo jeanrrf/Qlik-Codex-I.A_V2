@@ -1,0 +1,244 @@
+/**
+ * useAnalytics Hook
+ * Sistema automático de tracking de eventos e page views
+ */
+
+import { useEffect, useCallback, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+
+interface AnalyticsConfig {
+  apiUrl?: string;
+  enablePageTracking?: boolean;
+  enableEventTracking?: boolean;
+  debug?: boolean;
+}
+
+interface TrackEventOptions {
+  eventType: string;
+  eventCategory: string;
+  eventLabel?: string;
+  eventValue?: number;
+  metadata?: Record<string, any>;
+}
+
+const DEFAULT_CONFIG: AnalyticsConfig = {
+  apiUrl: '/api/analytics',
+  enablePageTracking: true,
+  enableEventTracking: true,
+  debug: false
+};
+
+// Session ID persistente no sessionStorage
+const getOrCreateSessionId = (): string => {
+  let sessionId = sessionStorage.getItem('analytics_session_id');
+  if (!sessionId) {
+    sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    sessionStorage.setItem('analytics_session_id', sessionId);
+  }
+  return sessionId;
+};
+
+export function useAnalytics(config: AnalyticsConfig = {}) {
+  const mergedConfig = { ...DEFAULT_CONFIG, ...config };
+  const location = useLocation();
+  const { user, isOwner } = useAuth();
+  const sessionId = useRef(getOrCreateSessionId());
+  const lastPageRef = useRef<string>('');
+
+  /**
+   * Envia evento para o backend
+   */
+  const sendToBackend = useCallback(
+    async (endpoint: string, data: any) => {
+      try {
+        await fetch(`${mergedConfig.apiUrl}${endpoint}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify(data)
+        });
+
+        if (mergedConfig.debug) {
+          console.log('[Analytics]', endpoint, data);
+        }
+      } catch (error) {
+        if (mergedConfig.debug) {
+          console.error('[Analytics] Error:', error);
+        }
+      }
+    },
+    [mergedConfig.apiUrl, mergedConfig.debug]
+  );
+
+  /**
+   * Rastreia visualização de página
+   */
+  const trackPageView = useCallback(
+    (page?: string) => {
+      if (!mergedConfig.enablePageTracking) return;
+
+      const currentPage = page || location.pathname;
+      const referrer = lastPageRef.current || document.referrer;
+
+      sendToBackend('/pageview', {
+        userId: user?.id,
+        sessionId: sessionId.current,
+        page: currentPage,
+        referrer,
+        isOwner: isOwner(),
+        metadata: {
+          search: location.search,
+          hash: location.hash
+        }
+      });
+
+      lastPageRef.current = currentPage;
+    },
+    [location, user, isOwner, sendToBackend, mergedConfig.enablePageTracking]
+  );
+
+  /**
+   * Rastreia evento customizado
+   */
+  const trackEvent = useCallback(
+    (options: TrackEventOptions) => {
+      if (!mergedConfig.enableEventTracking) return;
+
+      sendToBackend('/event', {
+        userId: user?.id,
+        sessionId: sessionId.current,
+        eventType: options.eventType,
+        eventCategory: options.eventCategory,
+        eventLabel: options.eventLabel,
+        eventValue: options.eventValue,
+        isOwner: isOwner(),
+        metadata: options.metadata
+      });
+    },
+    [user, isOwner, sendToBackend, mergedConfig.enableEventTracking]
+  );
+
+  /**
+   * Inicializa sessão no backend
+   */
+  const startSession = useCallback(() => {
+    sendToBackend('/session/start', {
+      userId: user?.id,
+      sessionId: sessionId.current,
+      isOwner: isOwner(),
+      landingPage: location.pathname
+    });
+  }, [user, isOwner, location.pathname, sendToBackend]);
+
+  /**
+   * Tracking automático de page view na mudança de rota
+   */
+  useEffect(() => {
+    trackPageView();
+  }, [location.pathname, trackPageView]);
+
+  /**
+   * Inicializa sessão no mount
+   */
+  useEffect(() => {
+    startSession();
+  }, [startSession]);
+
+  /**
+   * Atalhos para eventos comuns
+   */
+  const trackClick = useCallback(
+    (label: string, value?: number, metadata?: Record<string, any>) => {
+      trackEvent({
+        eventType: 'click',
+        eventCategory: 'user_interaction',
+        eventLabel: label,
+        eventValue: value,
+        metadata
+      });
+    },
+    [trackEvent]
+  );
+
+  const trackFormSubmit = useCallback(
+    (formName: string, success: boolean, metadata?: Record<string, any>) => {
+      trackEvent({
+        eventType: 'form_submit',
+        eventCategory: 'conversion',
+        eventLabel: formName,
+        eventValue: success ? 1 : 0,
+        metadata
+      });
+    },
+    [trackEvent]
+  );
+
+  const trackError = useCallback(
+    (errorMessage: string, metadata?: Record<string, any>) => {
+      trackEvent({
+        eventType: 'error',
+        eventCategory: 'system',
+        eventLabel: errorMessage,
+        metadata
+      });
+    },
+    [trackEvent]
+  );
+
+  const trackOptimization = useCallback(
+    (mode: string, success: boolean, metadata?: Record<string, any>) => {
+      trackEvent({
+        eventType: 'optimization',
+        eventCategory: 'ai_execution',
+        eventLabel: mode,
+        eventValue: success ? 1 : 0,
+        metadata
+      });
+    },
+    [trackEvent]
+  );
+
+  const trackFeatureUse = useCallback(
+    (featureName: string, metadata?: Record<string, any>) => {
+      trackEvent({
+        eventType: 'feature_use',
+        eventCategory: 'engagement',
+        eventLabel: featureName,
+        metadata
+      });
+    },
+    [trackEvent]
+  );
+
+  return {
+    trackPageView,
+    trackEvent,
+    trackClick,
+    trackFormSubmit,
+    trackError,
+    trackOptimization,
+    trackFeatureUse,
+    sessionId: sessionId.current
+  };
+}
+
+/**
+ * HOC para componentes que precisam de analytics
+ */
+export function withAnalytics<P extends object>(
+  Component: React.ComponentType<P>,
+  eventType: string
+) {
+  return function WithAnalyticsComponent(props: P) {
+    const { trackFeatureUse } = useAnalytics();
+
+    useEffect(() => {
+      trackFeatureUse(eventType);
+    }, [trackFeatureUse]);
+
+    return <Component {...props} />;
+  };
+}

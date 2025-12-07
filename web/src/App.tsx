@@ -7,11 +7,13 @@ import { AuthCallback } from "./pages/AuthCallback";
 import LandingPage from "./pages/LandingPage";
 import OptimizerPageV2 from "./pages/OptimizerPageV2";
 import { ProfilePage } from "./pages/ProfilePage";
+import AnalyticsDashboard from "./pages/Analytics/AnalyticsDashboard";
 import { apiClient } from "./api/client";
+import { useAnalytics } from "./hooks/useAnalytics";
 
-type View = "landing" | "optimizer" | "profile";
+type View = "landing" | "optimizer" | "profile" | "analytics";
 
-const ALLOWED_VIEWS: View[] = ["landing", "optimizer", "profile"];
+const ALLOWED_VIEWS: View[] = ["landing", "optimizer", "profile", "analytics"];
 
 const AppContent: React.FC = () => {
   const [view, setView] = useState<View>(() => {
@@ -27,7 +29,15 @@ const AppContent: React.FC = () => {
   });
   const { isAuthenticated, isLoading } = useAuth();
 
-  // Analytics: Log Visit
+  // Hook de Analytics com tracking automático
+  const analytics = useAnalytics();
+
+  // Rastrear mudanças de view
+  useEffect(() => {
+    analytics.trackPageView(`/${view}`);
+  }, [view, analytics]);
+
+  // Legacy analytics (backward compatibility)
   useEffect(() => {
     const logVisit = async () => {
       try {
@@ -37,7 +47,6 @@ const AppContent: React.FC = () => {
         });
       } catch (err) {
         // Silent fail for analytics
-        console.error('Analytics error:', err);
       }
     };
     logVisit();
@@ -110,6 +119,7 @@ const AppContent: React.FC = () => {
       {view === "landing" && <LandingPage onStart={() => setView("optimizer")} />}
       {view === "profile" && <ProfilePage />}
       {view === "optimizer" && <OptimizerPageV2 onBackToLanding={() => setView("landing")} />}
+      {view === "analytics" && <AnalyticsDashboard />}
     </NavigationProvider>
   );
 };
