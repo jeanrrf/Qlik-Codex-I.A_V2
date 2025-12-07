@@ -20,8 +20,6 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-const ACCESS_TOKEN_KEY = "qlik-codex-access-token";
-
 export function AuthProvider({ children }: AuthProviderProps) {
   const [state, setState] = useState<AuthState>({
     user: null,
@@ -32,44 +30,47 @@ export function AuthProvider({ children }: AuthProviderProps) {
   });
 
   /**
-   * Verifica autenticação ao carregar a aplicação
+   * Função utilitária para validar sessão usando cookies HttpOnly
    */
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const status = await checkAuthStatus();
+  const revalidate = async () => {
+    try {
+      const status = await checkAuthStatus();
 
-        if (status.authenticated && status.user) {
-          const userData = await getCurrentUser();
-          setState({
-            user: userData.user as User,
-            isAuthenticated: true,
-            isLoading: false,
-            error: null,
-            accessToken: "cookie" // Placeholder for cookie-based auth
-          });
-        } else {
-          setState({
-            user: null,
-            isAuthenticated: false,
-            isLoading: false,
-            error: null,
-            accessToken: null
-          });
-        }
-      } catch (err) {
-        console.error("Auth initialization error:", err);
+      if (status.authenticated && status.user) {
+        const userData = await getCurrentUser();
+        setState({
+          user: userData.user as User,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
+          accessToken: "cookie"
+        });
+      } else {
         setState({
           user: null,
           isAuthenticated: false,
           isLoading: false,
-          error: "Failed to check authentication status",
+          error: null,
           accessToken: null
         });
       }
-    };
+    } catch (err) {
+      console.error("Auth initialization error:", err);
+      setState({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        error: "Failed to check authentication status",
+        accessToken: null
+      });
+    }
+  };
 
-    initAuth();
+  /**
+   * Verifica autenticação ao carregar a aplicação
+   */
+  useEffect(() => {
+    revalidate();
   }, []);
 
   /**
@@ -110,7 +111,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
-      const authUrl = await getGoogleAuthUrl(state.accessToken || undefined);
+      const authUrl = await getGoogleAuthUrl();
 
       // Redirecionar para URL de autenticação do Google
       window.location.href = authUrl;
@@ -131,11 +132,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logout = async () => {
     try {
       await logoutApi();
-      try {
-        // localStorage.removeItem(ACCESS_TOKEN_KEY);
-      } catch {
-        // ignore storage errors
-      }
 
       setState({
         user: null,
@@ -162,22 +158,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
    */
   const refreshUser = async () => {
     try {
-      const token =
-        state.accessToken ||
-        (() => {
-          try {
-            return localStorage.getItem(ACCESS_TOKEN_KEY);
-          } catch {
-            return null;
-          }
-        })() ||
-        undefined;
-
-      const userData = await getCurrentUser(token);
+      const userData = await getCurrentUser();
       setState((prev) => ({
         ...prev,
         user: userData.user as User,
-        accessToken: token || prev.accessToken || null
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+        accessToken: "cookie"
       }));
     } catch (err) {
       console.error("Refresh user error:", err);
@@ -197,6 +185,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     login,
     loginWithGoogle,
     logout,
+    revalidate,
     refreshUser,
     isOwner: () => state.user?.role === UserRole.OWNER
   };
