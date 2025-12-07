@@ -42,6 +42,22 @@ Exemplo via env:
 
 ```powershell
 $env:SKIP_WEB_BUILD = 'true'; python build_all.py
+
+If you want to skip both the web build and Vercel deployment (common in CI/CD when frontend is on Vercel), use:
+
+```powershell
+python build_all.py --skip-web --skip-vercel --auto
+```
+
+Or using env vars:
+
+```powershell
+$env:SKIP_WEB_BUILD = 'true'; $env:SKIP_VERCEL = 'true'; python build_all.py
+```
+
+Notes:
+- When `--skip-web` is active the script will **automatically** skip the Vercel step unless `--skip-vercel` is set to false explicitly — this avoids triggering a frontend deploy if we didn't build the frontend.
+- Control commit behavior with `--commit-msg` or env `COMMIT_MSG` and `--allow-empty-commit` / env `ALLOW_EMPTY_COMMIT`.
 ```
 
 Esses ajustes tornam o fluxo mais seguro e alinhado ao split Frontend(Vercel) / Backend(Render).
