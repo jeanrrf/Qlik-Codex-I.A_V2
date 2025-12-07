@@ -144,7 +144,7 @@ export interface StepExecutionResult {
   provider?: LLMProviderName;
   model?: string;
   error?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   subSteps?: SubStepExecution[];
 }
 

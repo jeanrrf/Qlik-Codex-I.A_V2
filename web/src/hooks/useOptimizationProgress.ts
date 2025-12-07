@@ -823,7 +823,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
                         ...newSubSteps[subIdx],
 
-                        status: 'timeout' as any,
+                        status: 'timeout' as const,
 
                         error: 'Timeout: Tarefa excedeu 3 minutos',
 
@@ -1061,7 +1061,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
                       if (stage.subSteps && stage.subSteps.length > 0) {
 
-                        stage.status = calculateStageStatus(stage.subSteps) as any;
+                        stage.status = calculateStageStatus(stage.subSteps);
 
                         if (stage.status === "success") {
 

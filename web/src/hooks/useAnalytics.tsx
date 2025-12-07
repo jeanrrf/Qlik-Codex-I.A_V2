@@ -3,7 +3,7 @@
  * Sistema automático de tracking de eventos e page views
  */
 
-import { useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 interface AnalyticsConfig {
@@ -18,7 +18,7 @@ interface TrackEventOptions {
   eventCategory: string;
   eventLabel?: string;
   eventValue?: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 const DEFAULT_CONFIG: AnalyticsConfig = {
@@ -57,7 +57,7 @@ export function useAnalytics(config: AnalyticsConfig = {}) {
    * Envia evento para o backend
    */
   const sendToBackend = useCallback(
-    async (endpoint: string, data: any) => {
+    async (endpoint: string, data: unknown) => {
       try {
         await fetch(`${mergedConfig.apiUrl}${endpoint}`, {
           method: 'POST',
@@ -69,7 +69,7 @@ export function useAnalytics(config: AnalyticsConfig = {}) {
         });
 
         if (mergedConfig.debug) {
-          console.log('[Analytics]', endpoint, data);
+          console.warn('[Analytics]', endpoint, data);
         }
       } catch (error) {
         if (mergedConfig.debug) {
@@ -171,7 +171,7 @@ export function useAnalytics(config: AnalyticsConfig = {}) {
    * Atalhos para eventos comuns
    */
   const trackClick = useCallback(
-    (label: string, value?: number, metadata?: Record<string, any>) => {
+    (label: string, value?: number, metadata?: Record<string, unknown>) => {
       trackEvent({
         eventType: 'click',
         eventCategory: 'user_interaction',
@@ -184,7 +184,7 @@ export function useAnalytics(config: AnalyticsConfig = {}) {
   );
 
   const trackFormSubmit = useCallback(
-    (formName: string, success: boolean, metadata?: Record<string, any>) => {
+    (formName: string, success: boolean, metadata?: Record<string, unknown>) => {
       trackEvent({
         eventType: 'form_submit',
         eventCategory: 'conversion',
@@ -197,7 +197,7 @@ export function useAnalytics(config: AnalyticsConfig = {}) {
   );
 
   const trackError = useCallback(
-    (errorMessage: string, metadata?: Record<string, any>) => {
+    (errorMessage: string, metadata?: Record<string, unknown>) => {
       trackEvent({
         eventType: 'error',
         eventCategory: 'system',
@@ -209,7 +209,7 @@ export function useAnalytics(config: AnalyticsConfig = {}) {
   );
 
   const trackOptimization = useCallback(
-    (mode: string, success: boolean, metadata?: Record<string, any>) => {
+    (mode: string, success: boolean, metadata?: Record<string, unknown>) => {
       trackEvent({
         eventType: 'optimization',
         eventCategory: 'ai_execution',
@@ -222,7 +222,7 @@ export function useAnalytics(config: AnalyticsConfig = {}) {
   );
 
   const trackFeatureUse = useCallback(
-    (featureName: string, metadata?: Record<string, any>) => {
+    (featureName: string, metadata?: Record<string, unknown>) => {
       trackEvent({
         eventType: 'feature_use',
         eventCategory: 'engagement',

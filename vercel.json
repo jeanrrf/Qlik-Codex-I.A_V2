@@ -3,14 +3,17 @@
   "installCommand": "npm install --prefix web",
   "buildCommand": "npm run build --prefix web",
   "outputDirectory": "web/dist",
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": "https://qlik-codex-i-a-v2.onrender.com/api/$1"
+      "src": "/api/(.*)",
+      "dest": "https://qlik-codex-i-a-v2.onrender.com/api/$1"
     },
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }

@@ -131,7 +131,7 @@ router.post(
     }
 
     // Importar função de verificação
-    const { verifyOwnerToken, ensureOwnerUser } = await import("../services/authService.js");
+    const { verifyOwnerToken, ensureOwnerUser } = await import("../services/authService");
 
     if (!verifyOwnerToken(token)) {
       res.status(401).json({

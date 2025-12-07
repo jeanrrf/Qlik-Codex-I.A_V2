@@ -8,7 +8,7 @@ import {
 
 const ACCESS_TOKEN_KEY = "qlik-codex-access-token";
 
-function getAuthHeaders(): HeadersInit {
+function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json"
   };

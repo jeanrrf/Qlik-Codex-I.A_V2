@@ -446,14 +446,14 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
         // insertion in right
         let buf = '';
         while (j < m && (i === n || dp[i][j + 1] >= dp[i + 1][j])) { buf += escapeHtml(b[j]); j++; }
-        rightParts.push(`<span class=\"cd-ins\">${buf}</span>`);
+        rightParts.push(`<span class="cd-ins">${buf}</span>`);
         continue;
       }
 
       if (i < n) {
         let buf = '';
         while (i < n && (j === m || dp[i + 1][j] >= dp[i][j + 1])) { buf += escapeHtml(a[i]); i++; }
-        leftParts.push(`<span class=\"cd-del\">${buf}</span>`);
+        leftParts.push(`<span class="cd-del">${buf}</span>`);
         continue;
       }
     }
@@ -462,7 +462,7 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
   };
 
   // Generate unified diff (simple) for export
-  const generateUnifiedDiff = (rows: any[], fileA = 'original', fileB = 'optimized') => {
+  const generateUnifiedDiff = (rows: Array<{ type: string; leftText?: string; rightText?: string }>, fileA = 'original', fileB = 'optimized') => {
     const header = `--- ${fileA}\n+++ ${fileB}\n`;
     const hunks: string[] = [];
     let oldStart = 0, oldCount = 0, newStart = 0, newCount = 0;
