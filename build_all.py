@@ -138,13 +138,17 @@ def deploy_sequence(auto=False, skip_web=False, skip_vercel=False, commit_msg: s
         subprocess.run(["git", "commit", "-m", msg])
 
     print(f"[GIT] Pulling changes from origin/{branch}...")
-    try:
-        run_command(f"git pull origin {branch}")
-    except Exception:
-        print("[WARN] Git pull failed (maybe no upstream?). Continuing...")
+    # Use subprocess.run directly here to avoid run_command calling sys.exit on non-zero
+    pull_proc = subprocess.run(["git", "pull", "origin", branch], capture_output=True, text=True)
+    if pull_proc.returncode != 0:
+        print(f"[WARN] Git pull failed (exit {pull_proc.returncode}). Continuing...\n{pull_proc.stdout}\n{pull_proc.stderr}")
 
     print(f"[GIT] Push para origin/{branch}...")
-    run_command(f"git push origin {branch}")
+    push_proc = subprocess.run(["git", "push", "origin", branch], capture_output=True, text=True)
+    if push_proc.returncode != 0:
+        print(f"[WARN] Git push failed (exit {push_proc.returncode}).\n{push_proc.stdout}\n{push_proc.stderr}")
+    else:
+        print(push_proc.stdout)
 
     print("\n[INFO] O push para o Git deve disparar o deploy automatico no Render.")
 
