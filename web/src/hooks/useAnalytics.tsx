@@ -4,7 +4,6 @@
  */
 
 import { useEffect, useCallback, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 interface AnalyticsConfig {
@@ -41,10 +40,18 @@ const getOrCreateSessionId = (): string => {
 
 export function useAnalytics(config: AnalyticsConfig = {}) {
   const mergedConfig = { ...DEFAULT_CONFIG, ...config };
-  const location = useLocation();
   const { user, isOwner } = useAuth();
   const sessionId = useRef(getOrCreateSessionId());
   const lastPageRef = useRef<string>('');
+
+  const getLocationSnapshot = () => {
+    const { pathname, search, hash } = window.location;
+    return {
+      pathname: pathname || '/',
+      search: search || '',
+      hash: hash || ''
+    };
+  };
 
   /**
    * Envia evento para o backend
@@ -80,7 +87,8 @@ export function useAnalytics(config: AnalyticsConfig = {}) {
     (page?: string) => {
       if (!mergedConfig.enablePageTracking) return;
 
-      const currentPage = page || location.pathname;
+      const loc = getLocationSnapshot();
+      const currentPage = page || loc.pathname;
       const referrer = lastPageRef.current || document.referrer;
 
       sendToBackend('/pageview', {
@@ -90,14 +98,14 @@ export function useAnalytics(config: AnalyticsConfig = {}) {
         referrer,
         isOwner: isOwner(),
         metadata: {
-          search: location.search,
-          hash: location.hash
+          search: loc.search,
+          hash: loc.hash
         }
       });
 
       lastPageRef.current = currentPage;
     },
-    [location, user, isOwner, sendToBackend, mergedConfig.enablePageTracking]
+    [user, isOwner, sendToBackend, mergedConfig.enablePageTracking]
   );
 
   /**
@@ -125,20 +133,32 @@ export function useAnalytics(config: AnalyticsConfig = {}) {
    * Inicializa sessão no backend
    */
   const startSession = useCallback(() => {
+    const loc = getLocationSnapshot();
     sendToBackend('/session/start', {
       userId: user?.id,
       sessionId: sessionId.current,
       isOwner: isOwner(),
-      landingPage: location.pathname
+      landingPage: loc.pathname
     });
-  }, [user, isOwner, location.pathname, sendToBackend]);
+  }, [user, isOwner, sendToBackend]);
 
   /**
    * Tracking automático de page view na mudança de rota
    */
   useEffect(() => {
     trackPageView();
-  }, [location.pathname, trackPageView]);
+  }, [trackPageView]);
+
+  // Track browser navigation changes (back/forward/hash)
+  useEffect(() => {
+    const handleNavChange = () => trackPageView();
+    window.addEventListener('popstate', handleNavChange);
+    window.addEventListener('hashchange', handleNavChange);
+    return () => {
+      window.removeEventListener('popstate', handleNavChange);
+      window.removeEventListener('hashchange', handleNavChange);
+    };
+  }, [trackPageView]);
 
   /**
    * Inicializa sessão no mount
