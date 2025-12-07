@@ -37,23 +37,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        let storedToken: string | undefined;
-        try {
-          storedToken = localStorage.getItem(ACCESS_TOKEN_KEY) || undefined;
-        } catch {
-          storedToken = undefined;
-        }
-
-        const status = await checkAuthStatus(storedToken);
+        const status = await checkAuthStatus();
 
         if (status.authenticated && status.user) {
-          const userData = await getCurrentUser(storedToken);
+          const userData = await getCurrentUser();
           setState({
             user: userData.user as User,
             isAuthenticated: true,
             isLoading: false,
             error: null,
-            accessToken: storedToken || null
+            accessToken: "cookie" // Placeholder for cookie-based auth
           });
         } else {
           setState({
@@ -87,18 +80,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       const response = await loginWithToken(token);
-      try {
-        localStorage.setItem(ACCESS_TOKEN_KEY, response.tokens.accessToken);
-      } catch {
-        // ignore storage failures
-      }
+      // No need to save token in localStorage for HttpOnly cookies
+      // localStorage.setItem(ACCESS_TOKEN_KEY, response.tokens.accessToken);
 
       setState({
         user: response.user as User,
         isAuthenticated: true,
         isLoading: false,
         error: null,
-        accessToken: response.tokens.accessToken
+        accessToken: "cookie"
       });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Login failed";
@@ -142,7 +132,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       await logoutApi();
       try {
-        localStorage.removeItem(ACCESS_TOKEN_KEY);
+        // localStorage.removeItem(ACCESS_TOKEN_KEY);
       } catch {
         // ignore storage errors
       }
