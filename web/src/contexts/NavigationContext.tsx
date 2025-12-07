@@ -4,19 +4,28 @@ type View = "landing" | "optimizer" | "profile" | "analytics";
 
 interface NavigationContextType {
   navigateTo: (view: View) => void;
+  navigateBack: (fallback?: View) => void;
+  currentView: View;
+  lastView: View | null;
 }
 
 const NavigationContext = createContext<NavigationContextType | undefined>(undefined);
 
 export function NavigationProvider({
   children,
-  onNavigate
+  navigateTo,
+  navigateBack,
+  currentView,
+  lastView
 }: {
   children: ReactNode;
-  onNavigate: (view: View) => void;
+  navigateTo: (view: View) => void;
+  navigateBack: (fallback?: View) => void;
+  currentView: View;
+  lastView: View | null;
 }) {
   return (
-    <NavigationContext.Provider value={{ navigateTo: onNavigate }}>
+    <NavigationContext.Provider value={{ navigateTo, navigateBack, currentView, lastView }}>
       {children}
     </NavigationContext.Provider>
   );

@@ -236,6 +236,70 @@
   padding: 8px;
 }
 
+.history-card {
+  border-left: 3px solid var(--primary);
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-item {
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.history-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+.history-mode {
+  text-transform: capitalize;
+}
+
+.history-status {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.history-status.success {
+  background: rgba(0, 255, 157, 0.12);
+  color: var(--success);
+  border-color: rgba(0, 255, 157, 0.35);
+}
+
+.history-status.error {
+  background: rgba(255, 42, 109, 0.12);
+  color: var(--danger);
+  border-color: rgba(255, 42, 109, 0.35);
+}
+
+.history-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.history-provider {
+  color: var(--primary);
+}
+
 /* --- SCRIPT CARD --- */
 .script-card {
   border-left: 3px solid var(--primary);

@@ -1,5 +1,5 @@
 // web/src/pages/OptimizerPageV2.tsx
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import "./OptimizerPageV2.css";
 import "./ControlPanel.css";
 import "./PipelineCard.css";
@@ -8,6 +8,7 @@ import "./ModalStyles.css";
 import { copyToClipboard } from "../lib/clipboard";
 import { apiClient } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
+import { useNavigation } from "../contexts/NavigationContext";
 import { UserRole } from "../types/auth";
 import { formatDuration } from "../lib/formatTime";
 import { UserMenu } from "../components/UserMenu";
@@ -30,7 +31,6 @@ import { useSessionPersistence } from "../hooks/useSessionPersistence";
 import { highlightQlikCode } from "../lib/qlikSyntaxHighlighter";
 
 interface OptimizerPageProps {
-  onBackToLanding: () => void;
 }
 
 // Icons
@@ -172,13 +172,35 @@ const Spinner: React.FC<{ size?: number }> = ({ size = 20 }) => (
   </svg>
 );
 
+type RunHistoryItem = {
+  id: string;
+  mode: OptimizeMode;
+  status: "success" | "error";
+  finishedAt: string;
+  provider?: string;
+};
+
+const HISTORY_STORAGE_KEY = "qlik_codex_recent_runs_v1";
+
+const loadHistory = (): RunHistoryItem[] => {
+  try {
+    const stored = localStorage.getItem(HISTORY_STORAGE_KEY);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored);
+    if (Array.isArray(parsed)) return parsed;
+    return [];
+  } catch (_err) {
+    return [];
+  }
+};
+
 // Função para syntax highlighting de Qlik usando o módulo centralizado
 // highlightQlikCode já faz limpeza de HTML existente antes de aplicar highlighting
 const highlightQlikSyntax = (line: string): string => {
   return highlightQlikCode(line);
 };
 
-const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
+const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
   // === STATE ===
   const [script, setScript] = useState<string>("");
   const [mode, setMode] = useState<OptimizeMode>("ultra-expert");
@@ -199,6 +221,20 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
   const { user } = useAuth();
   const optimization = useOptimizationProgress();
   const session = useSessionPersistence();
+  const { navigateBack } = useNavigation();
+
+  const [recentRuns, setRecentRuns] = useState<RunHistoryItem[]>(loadHistory);
+  const pushHistory = useCallback((entry: RunHistoryItem) => {
+    setRecentRuns(prev => {
+      const next = [entry, ...prev].slice(0, 5);
+      try {
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(next));
+      } catch (_err) {
+        // ignore storage errors
+      }
+      return next;
+    });
+  }, []);
 
   // Check if user is OWNER (has full features)
   const isOwner = user?.role === UserRole.OWNER;
@@ -347,6 +383,10 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
   }, [optimization.isRunning, optimization.progress, script, mode, providerForMode, llmModelForMode, session]);
 
   // === HANDLERS ===
+  const handleBackNavigation = () => {
+    navigateBack("landing");
+  };
+
   const handleOptimize = async () => {
     setError(null);
     setResult(null);
@@ -407,6 +447,14 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
           progressData: optimization.progress,
           status: "completed"
         }).catch(console.error);
+
+        pushHistory({
+          id: session.sessionId,
+          mode,
+          status: "success",
+          finishedAt: new Date().toISOString(),
+          provider: providerForMode
+        });
       } else if (optimization.progress.errorMessage) {
         setError(optimization.progress.errorMessage);
 
@@ -420,11 +468,27 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
           progressData: optimization.progress,
           status: "error"
         }).catch(console.error);
+
+        pushHistory({
+          id: session.sessionId,
+          mode,
+          status: "error",
+          finishedAt: new Date().toISOString(),
+          provider: providerForMode
+        });
       }
     } catch (err) {
       console.error("Optimization error:", err);
       const errorMessage = err instanceof Error ? err.message : "Erro desconhecido";
       setError(errorMessage);
+
+      pushHistory({
+        id: session.sessionId,
+        mode,
+        status: "error",
+        finishedAt: new Date().toISOString(),
+        provider: providerForMode
+      });
     } finally {
       // Disconnect SSE stream
       optimization.disconnect();
@@ -520,7 +584,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
       {/* Header Minimalista */}
       <header className="opt-header-minimal">
         <div className="header-brand-minimal">
-          <button className="back-btn-minimal" onClick={onBackToLanding} title="Voltar">
+          <button className="back-btn-minimal" onClick={handleBackNavigation} title="Voltar">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
@@ -706,6 +770,33 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = ({ onBackToLanding }) => {
       <div className="opt-content">
         {/* Left Panel - Controls */}
         <aside className="opt-sidebar">
+          <div className="ctrl-card history-card">
+            <div className="ctrl-header">
+              <Icons.Clock />
+              <span>Últimas execuções</span>
+            </div>
+            {recentRuns.length === 0 ? (
+              <div className="ctrl-empty">Nenhuma execução recente.</div>
+            ) : (
+              <div className="history-list">
+                {recentRuns.map((run, index) => (
+                  <div key={`${run.id}-${run.finishedAt}-${index}`} className="history-item">
+                    <div className="history-main">
+                      <span className="history-mode">{run.mode}</span>
+                      <span className={`history-status ${run.status}`}>
+                        {run.status === 'success' ? 'Sucesso' : 'Erro'}
+                      </span>
+                    </div>
+                    <div className="history-meta">
+                      <span>{new Date(run.finishedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                      {run.provider && <span className="history-provider">{run.provider}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Script Input with File Details */}
           <div className="ctrl-card script-card">
             <div className="ctrl-header">

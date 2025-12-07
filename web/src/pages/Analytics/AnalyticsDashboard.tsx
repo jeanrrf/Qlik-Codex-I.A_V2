@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigation } from '../../contexts/NavigationContext';
 import './AnalyticsDashboard.css';
 
 interface AnalyticsSummary {
@@ -32,8 +33,10 @@ interface RealtimeEvent {
 
 export default function AnalyticsDashboard() {
   const { isOwner } = useAuth();
+  const { navigateBack } = useNavigation();
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [realtimeEvents, setRealtimeEvents] = useState<RealtimeEvent[]>([]);
+  const [realtimeEnabled, setRealtimeEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'summary' | 'realtime' | 'detailed'>('summary');
@@ -53,7 +56,7 @@ export default function AnalyticsDashboard() {
 
   // Realtime SSE
   useEffect(() => {
-    if (!isOwner() || activeTab !== 'realtime') return;
+    if (!isOwner() || activeTab !== 'realtime' || !realtimeEnabled) return;
 
     const eventSource = new EventSource('/api/analytics/realtime', {
       withCredentials: true
@@ -63,7 +66,8 @@ export default function AnalyticsDashboard() {
       try {
         const data = JSON.parse(e.data);
         if (data.type === 'event' || data.type === 'pageview') {
-          setRealtimeEvents((prev) => [data, ...prev].slice(0, 50));
+          if (data.type === 'pageview' && data.page === '/') return; // ignora root
+          setRealtimeEvents((prev) => [data, ...prev].slice(0, 20));
         }
       } catch (err) {
         console.error('Erro ao processar evento SSE', err);
@@ -78,7 +82,7 @@ export default function AnalyticsDashboard() {
     return () => {
       eventSource.close();
     };
-  }, [isOwner, activeTab]);
+  }, [isOwner, activeTab, realtimeEnabled]);
 
   async function loadSummary() {
     try {
@@ -147,32 +151,44 @@ export default function AnalyticsDashboard() {
   return (
     <div className="analytics-dashboard">
       <div className="analytics-header">
-        <h1>📊 Analytics Dashboard</h1>
-        <p className="analytics-subtitle">
-          Sistema de monitoramento enterprise de acessos e eventos
-        </p>
-      </div>
+        <div className="analytics-topbar">
+          <button className="analytics-back" onClick={() => navigateBack('optimizer')}>
+            <span className="back-icon">←</span>
+            <span>Voltar</span>
+          </button>
 
-      {/* Tabs */}
-      <div className="analytics-tabs">
-        <button
-          className={activeTab === 'summary' ? 'active' : ''}
-          onClick={() => setActiveTab('summary')}
-        >
-          📈 Resumo
-        </button>
-        <button
-          className={activeTab === 'realtime' ? 'active' : ''}
-          onClick={() => setActiveTab('realtime')}
-        >
-          🔴 Tempo Real
-        </button>
-        <button
-          className={activeTab === 'detailed' ? 'active' : ''}
-          onClick={() => setActiveTab('detailed')}
-        >
-          📋 Detalhado
-        </button>
+          <div className="analytics-tabs">
+            <button
+              className={activeTab === 'summary' ? 'active' : ''}
+              onClick={() => setActiveTab('summary')}
+            >
+              📈 Resumo
+            </button>
+            <button
+              className={activeTab === 'realtime' ? 'active' : ''}
+              onClick={() => setActiveTab('realtime')}
+            >
+              🔴 Tempo Real
+            </button>
+            <button
+              className={activeTab === 'detailed' ? 'active' : ''}
+              onClick={() => setActiveTab('detailed')}
+            >
+              📋 Detalhado
+            </button>
+          </div>
+        </div>
+
+        <div className="analytics-hero">
+          <div>
+            <p className="eyebrow">Monitoramento em tempo real</p>
+            <h1>Analytics Dashboard</h1>
+            <p className="analytics-subtitle">
+              Sistema de acompanhamento de acessos, eventos e otimizações
+            </p>
+          </div>
+          <div className="badge-pill">Enterprise</div>
+        </div>
       </div>
 
       {/* Summary Tab */}
@@ -284,28 +300,50 @@ export default function AnalyticsDashboard() {
       {activeTab === 'realtime' && (
         <div className="analytics-content">
           <div className="realtime-header">
-            <h3>🔴 Eventos em Tempo Real</h3>
-            <div className="realtime-status">
-              <span className="status-indicator"></span>
-              Conectado
+            <div>
+              <h3>🔴 Eventos em Tempo Real</h3>
+              <p className="realtime-hint">Desative para poupar recursos.</p>
+            </div>
+            <div className="realtime-actions">
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={realtimeEnabled}
+                  onChange={(e) => {
+                    setRealtimeEvents([]);
+                    setRealtimeEnabled(e.target.checked);
+                  }}
+                />
+                <span className="toggle-slider"></span>
+                <span className="toggle-label">{realtimeEnabled ? 'Ativo' : 'Pausado'}</span>
+              </label>
+              <button className="btn-clean" onClick={() => setRealtimeEvents([])}>
+                Limpar feed
+              </button>
             </div>
           </div>
 
           <div className="realtime-feed">
-            {realtimeEvents.length === 0 ? (
+            {!realtimeEnabled && (
+              <p className="realtime-empty">Streaming pausado. Ative para visualizar eventos.</p>
+            )}
+
+            {realtimeEnabled && realtimeEvents.length === 0 && (
               <p className="realtime-empty">Aguardando eventos...</p>
-            ) : (
+            )}
+
+            {realtimeEnabled && realtimeEvents.length > 0 && (
               realtimeEvents.map((event, index) => (
                 <div key={index} className="realtime-event">
                   <div className="event-icon">
                     {event.type === 'event' ? '⚡' : '👁️'}
                   </div>
                   <div className="event-content">
-                    <div className="event-type">{event.type}</div>
+                    <div className="event-type">{event.type === 'event' ? 'Evento' : 'Pageview'}</div>
                     <div className="event-details">
-                      {event.type === 'pageview' && event.data.page}
+                      {event.type === 'pageview' && (event.data.page || '—')}
                       {event.type === 'event' &&
-                        `${event.data.event_type} - ${event.data.event_category}`}
+                        `${event.data.event_type || 'evento'} - ${event.data.event_category || ''}`}
                     </div>
                     <div className="event-time">
                       {new Date(event.data.timestamp).toLocaleTimeString('pt-BR')}

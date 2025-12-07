@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { NavigationProvider } from "./contexts/NavigationContext";
@@ -15,18 +15,21 @@ type View = "landing" | "optimizer" | "profile" | "analytics";
 
 const ALLOWED_VIEWS: View[] = ["landing", "optimizer", "profile", "analytics"];
 
-const AppContent: React.FC = () => {
-  const [view, setView] = useState<View>(() => {
-    try {
-      const stored = localStorage.getItem("codex-last-view") as View | null;
-      if (stored && ALLOWED_VIEWS.includes(stored)) {
-        return stored;
-      }
-    } catch (err) {
-      // ignore storage errors
+const getInitialView = (): View => {
+  try {
+    const stored = localStorage.getItem("codex-last-view") as View | null;
+    if (stored && ALLOWED_VIEWS.includes(stored)) {
+      return stored;
     }
-    return "landing";
-  });
+  } catch (_err) {
+    // ignore storage errors
+  }
+  return "landing";
+};
+
+const AppContent: React.FC = () => {
+  const [view, setView] = useState<View>(getInitialView);
+  const [history, setHistory] = useState<View[]>(() => [getInitialView()]);
   const { isAuthenticated, isLoading } = useAuth();
 
   // Hook de Analytics com tracking automático
@@ -36,21 +39,6 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     trackPageView(`/${view}`);
   }, [view, trackPageView]);
-
-  // Legacy analytics (backward compatibility)
-  useEffect(() => {
-    const logVisit = async () => {
-      try {
-        await apiClient.post('/analytics/visit', {
-          page: window.location.pathname,
-          referrer: document.referrer
-        });
-      } catch (_err) {
-        // Silent fail for analytics
-      }
-    };
-    logVisit();
-  }, []);
 
   // Verificar se estamos na rota de callback
   useEffect(() => {
@@ -69,6 +57,35 @@ const AppContent: React.FC = () => {
       // ignore storage errors
     }
   }, [view]);
+
+  const navigateTo = useCallback((next: View) => {
+    setHistory(prev => {
+      const last = prev[prev.length - 1];
+      if (last === next) return prev;
+      const updated = [...prev, next];
+      return updated.slice(-10);
+    });
+    setView(next);
+  }, []);
+
+  const navigateBack = useCallback((fallback: View = "landing") => {
+    setHistory(prev => {
+      if (prev.length > 1) {
+        const updated = prev.slice(0, -1);
+        const target = updated[updated.length - 1];
+        setView(target);
+        return updated;
+      }
+      setView(fallback);
+      return [fallback];
+    });
+  }, []);
+
+  const ViewContainer: React.FC<{ active: boolean }> = ({ active, children }) => (
+    <div style={{ display: active ? "block" : "none", width: "100%" }}>
+      {children}
+    </div>
+  );
 
   // Se estamos na rota de callback, renderizar AuthCallback
   if (window.location.pathname === "/auth/callback") {
@@ -115,11 +132,27 @@ const AppContent: React.FC = () => {
 
   // Usuário autenticado - mostrar aplicação normal
   return (
-    <NavigationProvider onNavigate={setView}>
-      {view === "landing" && <LandingPage onStart={() => setView("optimizer")} />}
-      {view === "profile" && <ProfilePage />}
-      {view === "optimizer" && <OptimizerPageV2 onBackToLanding={() => setView("landing")} />}
-      {view === "analytics" && <AnalyticsDashboard />}
+    <NavigationProvider
+      navigateTo={navigateTo}
+      navigateBack={navigateBack}
+      currentView={view}
+      lastView={history.length > 1 ? history[history.length - 2] : null}
+    >
+      <ViewContainer active={view === "landing"}>
+        <LandingPage onStart={() => navigateTo("optimizer")} />
+      </ViewContainer>
+
+      <ViewContainer active={view === "profile"}>
+        <ProfilePage />
+      </ViewContainer>
+
+      <ViewContainer active={view === "optimizer"}>
+        <OptimizerPageV2 />
+      </ViewContainer>
+
+      <ViewContainer active={view === "analytics"}>
+        <AnalyticsDashboard />
+      </ViewContainer>
     </NavigationProvider>
   );
 };
