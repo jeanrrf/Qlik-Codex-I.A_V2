@@ -134,4 +134,5 @@ export class DbAdapter {
   }
 }
 
-export default new DbAdapter();
+// Explicit instantiation is avoided here to prevent premature DB initialization
+// before the environment variables are loaded at startup.
