@@ -28,14 +28,16 @@
 .modal-container {
   background: #1a1a1a;
   border-radius: 16px;
-  max-width: 900px;
-  width: 100%;
-  max-height: 90vh;
+  max-width: 960px;
+  width: min(96vw, 1200px);
+  max-height: 88vh;
+  height: clamp(560px, 82vh, 940px);
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.1);
   animation: slideUp 0.3s ease-out;
+  overflow: hidden;
 }
 
 @keyframes slideUp {
@@ -96,13 +98,15 @@
 .result-viewer-modal {
   background: #0d1117;
   border-radius: 16px;
-  max-width: 95vw;
-  width: 1400px;
+  max-width: 1200px;
+  width: min(98vw, 1280px);
   max-height: 90vh;
+  height: clamp(620px, 85vh, 980px);
   display: flex;
   flex-direction: column;
   box-shadow: 0 25px 80px rgba(0, 0, 0, 0.7);
   border: 1px solid rgba(0, 242, 255, 0.2);
+  overflow: hidden;
 }
 
 .result-viewer-modal .modal-header {
@@ -117,10 +121,11 @@
 }
 
 .result-viewer-body {
-  padding: 1.5rem;
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
+  flex: 1;
   overflow-y: auto;
 }
 
@@ -184,7 +189,11 @@
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
   flex: 1;
-  min-height: 400px;
+  min-height: 420px;
+}
+
+.code-comparison.single-column {
+  grid-template-columns: 1fr;
 }
 
 .code-panel {
@@ -194,6 +203,11 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-height: 360px;
+}
+
+.code-panel.full-width {
+  grid-column: 1 / -1;
 }
 
 .code-panel.original {
@@ -261,10 +275,66 @@
 .code-content-wrapper {
   flex: 1;
   display: flex;
-  max-height: 500px;
+  max-height: none;
+  height: clamp(340px, 55vh, 640px);
   background: rgba(0, 0, 0, 0.4);
   position: relative;
   overflow: auto;
+}
+
+/* VS Code-like Table Styles */
+.code-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  background-color: #1e1e1e;
+}
+
+.code-table tr {
+  background: transparent;
+}
+
+.code-table tr:hover {
+  background-color: #2a2d2e;
+}
+
+.code-table td {
+  padding: 0;
+  vertical-align: top;
+}
+
+.line-number-cell {
+  width: 50px;
+  min-width: 50px;
+  text-align: right;
+  padding-right: 15px !important;
+  color: #858585;
+  background-color: #1e1e1e;
+  border-right: 1px solid #333;
+  user-select: none;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.line-number-cell::before {
+  content: attr(data-line-number);
+}
+
+.code-cell {
+  padding-left: 15px !important;
+  color: #d4d4d4;
+  background-color: #1e1e1e;
+  width: 100%;
+  white-space: pre;
+  word-break: keep-all;
+}
+
+.code-line-content {
+  min-height: 1.5em;
+  line-height: 1.6;
 }
 
 /* Coluna fixa de numeração */
@@ -324,29 +394,33 @@
 
 /* --- SYNTAX HIGHLIGHTING --- */
 .syntax-keyword {
-  color: #ff79c6;
+  color: #569cd6;
   font-weight: 600;
 }
 
 .syntax-string {
-  color: #f1fa8c;
+  color: #ce9178;
 }
 
 .syntax-number {
-  color: #bd93f9;
+  color: #b5cea8;
 }
 
 .syntax-comment {
-  color: #6272a4;
+  color: #6a9955;
   font-style: italic;
 }
 
 .syntax-function {
-  color: #50fa7b;
+  color: #dcdcaa;
 }
 
 .syntax-operator {
-  color: #ff5555;
+  color: #d4d4d4;
+}
+
+.syntax-identifier {
+  color: #9cdcfe;
 }
 
 /* --- CUSTOM SCROLLBAR --- */
@@ -477,6 +551,76 @@
   margin: 1rem 0 0 0;
 }
 
+/* --- DIFF STATS (ex-inline) --- */
+.diff-stats-card {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.diff-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid transparent;
+}
+
+.diff-stat.added {
+  border-color: rgba(0, 255, 157, 0.2);
+  background: rgba(0, 255, 157, 0.05);
+}
+
+.diff-stat.removed {
+  border-color: rgba(255, 42, 109, 0.2);
+  background: rgba(255, 42, 109, 0.05);
+}
+
+.diff-stat.modified {
+  border-color: rgba(255, 184, 0, 0.2);
+  background: rgba(255, 184, 0, 0.05);
+}
+
+.diff-icon {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.diff-stat.added .diff-icon {
+  color: var(--success);
+}
+
+.diff-stat.removed .diff-icon {
+  color: var(--danger);
+}
+
+.diff-stat.modified .diff-icon {
+  color: var(--warning);
+}
+
+.diff-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-main);
+}
+
+.diff-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
 /* --- ACTION BUTTONS IN MODALS --- */
 .action-btn {
   display: flex;
@@ -587,7 +731,7 @@
   }
 
   .code-content-wrapper {
-    max-height: 400px;
+    height: clamp(260px, 50vh, 480px);
   }
 }
 
@@ -620,107 +764,29 @@
   }
 
   .code-content-wrapper {
-    max-height: 300px;
+    height: clamp(220px, 45vh, 380px);
   }
 }
 
-/* VS Code-like Table Styles */
-.code-content-wrapper {
-  overflow: auto;
-  background-color: #1e1e1e;
-  border-radius: 0 0 8px 8px;
+.result-summary-card.nvidia-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.code-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: 'JetBrains Mono', 'Consolas', monospace;
-  font-size: 13px;
-  line-height: 1.5;
-  background-color: #1e1e1e;
+.pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.code-table tr {
-  background: transparent;
-}
-
-.code-table tr:hover {
-  background-color: #2a2d2e;
-  /* VS Code hover line */
-}
-
-.code-table td {
-  padding: 0;
-  vertical-align: top;
-}
-
-.line-number-cell {
-  width: 50px;
-  min-width: 50px;
-  text-align: right;
-  padding-right: 15px !important;
-  color: #858585;
-  background-color: #1e1e1e;
-  border-right: 1px solid #333;
-  user-select: none;
-  white-space: nowrap;
-  font-size: 12px;
-  line-height: 1.6;
-  /* Match code line height */
-}
-
-.line-number-cell::before {
-  content: attr(data-line-number);
-}
-
-.code-cell {
-  padding-left: 15px !important;
-  color: #d4d4d4;
-  background-color: #1e1e1e;
-  width: 100%;
-  white-space: pre;
-  word-break: keep-all;
-}
-
-.code-line-content {
-  min-height: 1.5em;
-  line-height: 1.6;
-}
-
-/* VS Code Dark Theme Syntax Colors */
-.code-content.qlik-syntax .syntax-keyword {
-  color: #569cd6 !important;
-  font-weight: bold;
-  text-shadow: none !important;
-  animation: none !important;
-}
-
-.code-content.qlik-syntax .syntax-function {
-  color: #dcdcaa !important;
-  text-shadow: none !important;
-  animation: none !important;
-}
-
-.code-content.qlik-syntax .syntax-string {
-  color: #ce9178 !important;
-  text-shadow: none !important;
-}
-
-.code-content.qlik-syntax .syntax-comment {
-  color: #6a9955 !important;
-  font-style: italic;
-}
-
-.code-content.qlik-syntax .syntax-number {
-  color: #b5cea8 !important;
-  text-shadow: none !important;
-}
-
-.code-content.qlik-syntax .syntax-operator {
-  color: #d4d4d4 !important;
-  text-shadow: none !important;
-}
-
-.code-content.qlik-syntax .syntax-identifier {
-  color: #9cdcfe !important;
+.pill {
+  background: rgba(0, 242, 255, 0.12);
+  color: var(--primary);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid rgba(0, 242, 255, 0.2);
 }

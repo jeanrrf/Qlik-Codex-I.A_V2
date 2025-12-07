@@ -365,15 +365,15 @@ export async function getAnalyticsSummary(limit = 10): Promise<AnalyticsSummary>
 /**
  * Retorna dados detalhados de analytics com filtros
  */
-export function getDetailedAnalytics(options: {
+export async function getDetailedAnalytics(options: {
   startDate?: string;
   endDate?: string;
   isOwner?: boolean;
   userId?: string;
   limit?: number;
-}): DetailedAnalytics {
+}): Promise<DetailedAnalytics> {
   try {
-    const db = getSqliteDb();
+    const db = getDb();
     const { startDate, endDate, isOwner, userId, limit = 100 } = options;
 
     let whereClause = '1=1';
@@ -400,7 +400,7 @@ export function getDetailedAnalytics(options: {
     }
 
     // Page Views
-    const pageViews = db.prepare(`
+    const pageViews = await db.prepare(`
       SELECT id, user_id, session_id, page, referrer, is_owner, timestamp
       FROM analytics_page_views
       WHERE ${whereClause}
@@ -409,7 +409,7 @@ export function getDetailedAnalytics(options: {
     `).all(...params, limit) as any[];
 
     // Events
-    const events = db.prepare(`
+    const events = await db.prepare(`
       SELECT id, user_id, session_id, event_type, event_category, 
              event_label, is_owner, timestamp
       FROM analytics_events
@@ -437,7 +437,7 @@ export function getDetailedAnalytics(options: {
       sessionParams.push(userId);
     }
 
-    const sessions = db.prepare(`
+    const sessions = await db.prepare(`
       SELECT id, session_id, user_id, is_owner, start_time, 
              last_activity, page_count, event_count
       FROM analytics_sessions

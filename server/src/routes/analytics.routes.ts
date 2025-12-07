@@ -31,7 +31,7 @@ router.post('/pageview', optionalAuth, asyncHandler(async (req: AuthRequest, res
   const ip = req.ip;
   const userAgent = req.headers['user-agent'];
 
-  trackPageView({
+  await trackPageView({
     userId: req.user?.id,
     sessionId,
     page: page || 'unknown',
@@ -58,7 +58,7 @@ router.post('/event', optionalAuth, asyncHandler(async (req: AuthRequest, res) =
     return;
   }
 
-  trackEvent({
+  await trackEvent({
     userId: req.user?.id,
     sessionId,
     eventType,
@@ -86,7 +86,7 @@ router.post('/session/start', optionalAuth, asyncHandler(async (req: AuthRequest
     return;
   }
 
-  startSession({
+  await startSession({
     userId: req.user?.id,
     sessionId,
     ip,
@@ -112,7 +112,7 @@ router.get('/summary', requireAuth, asyncHandler(async (req: AuthRequest, res) =
   }
 
   const limit = parseInt(req.query.limit as string) || 10;
-  const summary = getAnalyticsSummary(limit);
+  const summary = await getAnalyticsSummary(limit);
 
   res.json(summary);
 }));
@@ -130,7 +130,7 @@ router.get('/detailed', requireAuth, asyncHandler(async (req: AuthRequest, res) 
 
   const { startDate, endDate, isOwner, userId, limit } = req.query;
 
-  const detailed = getDetailedAnalytics({
+  const detailed = await getDetailedAnalytics({
     startDate: startDate as string,
     endDate: endDate as string,
     isOwner: isOwner === 'true' ? true : isOwner === 'false' ? false : undefined,
