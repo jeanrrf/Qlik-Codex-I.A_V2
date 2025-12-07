@@ -1,17 +1,18 @@
 .owner-kpi-dashboard {
   margin-top: 2rem;
   padding: 1.5rem;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--warning);
-  border-radius: 12px;
-  backdrop-filter: blur(10px);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(15, 23, 42, 0.8));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.25);
 }
 
 .kpi-title {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: var(--warning);
+  color: #e6edf7;
   margin-bottom: 1.5rem;
   font-size: 1.2rem;
   text-transform: uppercase;
@@ -25,33 +26,39 @@
 }
 
 .kpi-card {
-  background: rgba(255, 255, 255, 0.05);
-  padding: 1.5rem;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1.35rem;
+  border-radius: 12px;
   text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: all 0.25s ease;
 }
 
 .kpi-card:hover {
-  border-color: var(--warning);
+  border-color: var(--primary);
   transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(255, 215, 0, 0.1);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.2);
 }
 
 .kpi-value {
   font-size: 2.5rem;
   font-weight: 700;
-  color: #fff;
+  color: #e6edf7;
   margin-bottom: 0.5rem;
   font-family: 'JetBrains Mono', monospace;
 }
 
 .kpi-label {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  color: #c2d3e7;
+  font-size: 0.95rem;
+  letter-spacing: 0.4px;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+
+.kpi-note {
+  color: #a9bad1;
+  font-size: 0.85rem;
 }
 
 .kpi-loading,

@@ -91,6 +91,8 @@ export function useAnalytics(config: AnalyticsConfig = {}) {
       const currentPage = page || loc.pathname;
       const referrer = lastPageRef.current || document.referrer;
 
+      if (currentPage === lastPageRef.current) return; // skip duplicate sequential pageviews
+
       sendToBackend('/pageview', {
         userId: user?.id,
         sessionId: sessionId.current,
