@@ -4,7 +4,7 @@ services:
     env: node
     plan: free
     rootDirectory: server
-    buildCommand: npm install && npm run build && cd ../web && npm install && npm run build
+    buildCommand: npm install && npm run build
     startCommand: npm run start
     autoDeploy: true
     envVars:
@@ -36,3 +36,5 @@ services:
         sync: false
       - key: VITE_OWNER_EMAIL
         sync: false
+      - key: SERVE_STATIC_FRONTEND
+        value: "false"

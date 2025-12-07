@@ -2,19 +2,50 @@
 
 > **Versão**: 2.0 (Clean Architecture)
 > **Stack**: React 18, Vite, TypeScript, CSS Modules (Glassmorphism)
-> **Status**: Production Ready
+> **Status**: Production Ready (Frontend na Vercel, Backend no Render)
 
 ---
 
 ## 🏗️ ARQUITETURA GERAL
 
-O frontend opera como uma **SPA (Single Page Application)** leve e reativa, servida pelo backend Express em produção ou via Vite em desenvolvimento.
+O frontend opera como uma **SPA (Single Page Application)** leve e reativa. Em produção ele roda na **Vercel** (domínio público configurado em `FRONTEND_URL`), enquanto o backend Express permanece no **Render** apenas para as APIs. Em desenvolvimento, use Vite.
 
 ### Principais Características
 - **Roteamento Manual**: Gerenciado via `App.tsx` e `NavigationContext` (sem react-router pesado).
 - **Comunicação Real-time**: SSE (Server-Sent Events) consumido via `useOptimizationProgress`.
 - **Design System**: Glassmorphism nativo (CSS puro + variáveis) sem frameworks de UI pesados.
 - **Autenticação**: JWT via `AuthContext` com persistência local.
+- **Deploy Split**: Frontend em Vercel; backend em Render com `SERVE_STATIC_FRONTEND=false` para evitar servir `web/dist`.
+
+### Deploy (Produção)
+- **Frontend (Vercel)**: publicar `web/` (build via Vercel). Defina:
+    - `VITE_OWNER_EMAIL` = e-mail público de suporte/owner (vai para o bundle, não é secreto).
+    - `VITE_API_BASE_URL` = base para chamadas (`/api` se Vercel fizer rewrite para o backend; ou `https://<seu-backend-render>/api` se quiser apontar direto).
+    - `VITE_OWNER_EMAIL` = e-mail público de suporte/owner (vai para o bundle do frontend e é visível no cliente). Não coloque segredos como chaves/API nestas variáveis.
+- **Backend (Render)**: serviço Node apontando para `server/` com `buildCommand: npm install && npm run build` e `SERVE_STATIC_FRONTEND=false` (Render não compila `web`). Configure `FRONTEND_URL` com o domínio público da Vercel para CORS/cookies.
+
+### Build helper (build_all.py)
+
+Se você usa o script de build raiz `build_all.py`, agora existe uma opção para **pular** o build do frontend quando o frontend está hospedado externamente (Vercel). Opções suportadas:
+
+- `--skip-web`  : flag CLI para pular o build do `web/`.
+- `SKIP_WEB_BUILD` : env var (true/1/yes) para pular o build.
+- `SERVE_STATIC_FRONTEND=false` : se definido, `build_all.py` também escolhe pular o build do frontend.
+
+Exemplo local (pular web build):
+
+```powershell
+python build_all.py --skip-web
+```
+
+Exemplo via env:
+
+```powershell
+$env:SKIP_WEB_BUILD = 'true'; python build_all.py
+```
+
+Esses ajustes tornam o fluxo mais seguro e alinhado ao split Frontend(Vercel) / Backend(Render).
+- **CORS**: usa `CORS_ORIGIN`/`FRONTEND_URL`/`VERCEL_URL`. Informe o domínio da Vercel para evitar bloqueios.
 
 ---
 

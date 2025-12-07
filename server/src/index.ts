@@ -79,7 +79,7 @@ app.use("/api/sessions", sessionRouter);
 app.use("/api/usage", usageRouter);
 app.use("/api/analytics", analyticsRouter);
 
-if (fs.existsSync(webBuildPath)) {
+if (config.serveStaticFrontend && fs.existsSync(webBuildPath)) {
   app.use(express.static(webBuildPath));
   app.get("*", (req, res, next) => {
     if (req.path.startsWith("/api")) {
@@ -93,6 +93,8 @@ if (fs.existsSync(webBuildPath)) {
 
     return res.sendFile(indexHtmlPath);
   });
+} else if (!config.serveStaticFrontend) {
+  logger.info("Servidor configurado para NAO servir o frontend estatico (SERVE_STATIC_FRONTEND=false). Use o frontend hospedado externamente em %s", config.frontendUrl);
 } else {
   logger.warn("Build do frontend nao encontrado em %s. Execute `npm run build` dentro de web/", webBuildPath);
 }

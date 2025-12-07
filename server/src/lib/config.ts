@@ -43,6 +43,10 @@ const normalizeOrigin = (origin: string) => {
 const rawCorsEnv = process.env.CORS_ORIGIN?.trim() ?? "";
 const frontendOrigin = normalizeOrigin(process.env.FRONTEND_URL ?? "");
 const vercelOrigin = normalizeOrigin(process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+const serveStaticFrontend =
+  process.env.SERVE_STATIC_FRONTEND
+    ? process.env.SERVE_STATIC_FRONTEND.toLowerCase() !== "false"
+    : true;
 
 // Keep "*" only when explicitly set
 const allowAllCors = rawCorsEnv === "*";
@@ -68,6 +72,7 @@ export const config = {
   corsOrigin: rawCorsEnv || frontendOrigin || "",
   corsAllowAll: allowAllCors,
   corsOrigins: parsedCorsOrigins,
+  serveStaticFrontend,
   port: Number.isNaN(rawPort) ? 3000 : rawPort,
   geminiApiKey: process.env.GEMINI_API_KEY || "",
   geminiModel: process.env.GEMINI_MODEL_NAME || "gemini-2.5-flash",

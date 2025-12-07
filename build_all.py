@@ -66,7 +66,7 @@ def build_web():
     
     # Install dependencies
     run_command("npm install", cwd=web_dir)
-    
+
     # Build
     run_command("npm run build", cwd=web_dir)
 
@@ -143,6 +143,7 @@ def deploy_sequence(auto=False):
 def main():
     parser = argparse.ArgumentParser(description="Build and Deploy Qlik Codex I.A")
     parser.add_argument("--auto", action="store_true", help="Run in non-interactive mode (auto deploy)")
+    parser.add_argument("--skip-web", action="store_true", help="Skip building the frontend (useful when frontend is deployed separately, e.g. Vercel)")
     args = parser.parse_args()
 
     print("Iniciando build completo do Qlik Codex I.A (Python Script)...")
@@ -155,7 +156,20 @@ def main():
     try:
         clean_dist()
         build_server()
-        build_web()
+
+        # Decide whether to build the frontend
+        # Priority: CLI flag --skip-web > SKIP_WEB_BUILD env var > SERVE_STATIC_FRONTEND env (false -> skip)
+        skip_web_flag = args.skip_web
+        skip_web_env = os.getenv("SKIP_WEB_BUILD", "").lower() in ("1", "true", "yes")
+        serve_static_frontend_env = os.getenv("SERVE_STATIC_FRONTEND", "true").lower() in ("1", "true", "yes")
+
+        should_skip_web = skip_web_flag or skip_web_env or (not serve_static_frontend_env)
+
+        if should_skip_web:
+            print_step("3/4 Skipping WEB (frontend build) by configuration")
+            print("[INFO] Frontend build skipped. Frontend should be hosted independently (eg. Vercel).")
+        else:
+            build_web()
         
         print_step("4/4 Finalizando Build...")
         print("[SUCESSO] Build local completo!")
