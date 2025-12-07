@@ -1,19 +1,8 @@
-import { logger } from "../lib/logger";
-import { sseEmitter } from "../lib/sseEmitter";
-// import { runQlikOptimizeAgent } from "../agents/qlikOptimizeAgent";
 import { CompactAuditReport, calculateDiffStats } from "../agents/qlikConsultancyAgent";
-// import { calculateROI, formatROIExecutiveSummary } from "./roiCalculator";
-import {
-  // analyzeScriptCharacteristics,
-  applySmartTruncation,
-  SmartTruncationResult
-} from "../lib/scriptAnalyzer";
-import type { DeterministicValidationSnapshot, OptimizeMode, OptimizeResult } from "../types/qlik";
-import type { ConsultancyDocument } from "../types/consultancy";
-import type { LLMOptions } from "../types/optimization";
-// import type { GenerateStructuredJsonOptions } from "../lib/llmClient";
-import { stepTimingService } from "./stepTimingService";
-// import { calculateRealMetrics, getCriticalIssuesFromMetrics, formatMetricsCompact } from "./metricsCalculator";
+import { QlikMegaOptimizer } from "../agents/qlikMegaOptimizer";
+import { config } from "../lib/config";
+import { nvidiaProvider } from "../lib/llmProviders/nvidiaProvider";
+import { logger } from "../lib/logger";
 import {
   parseQlikScript,
   // detectSyntheticKeys,
@@ -21,10 +10,24 @@ import {
   type ParsedScript,
   type AntiPattern
 } from "../lib/qlikParser";
-import { QlikMegaOptimizer } from "../agents/qlikMegaOptimizer";
-import { nvidiaProvider } from "../lib/llmProviders/nvidiaProvider";
-import { config } from "../lib/config";
+import {
+  // analyzeScriptCharacteristics,
+  applySmartTruncation,
+  SmartTruncationResult
+} from "../lib/scriptAnalyzer";
+import { sseEmitter } from "../lib/sseEmitter";
+// import { runQlikOptimizeAgent } from "../agents/qlikOptimizeAgent";
+// import { calculateROI, formatROIExecutiveSummary } from "./roiCalculator";
+import type { ConsultancyDocument } from "../types/consultancy";
+import type { LLMOptions } from "../types/optimization";
+import type { DeterministicValidationSnapshot, OptimizeMode, OptimizeResult } from "../types/qlik";
+
+// import type { GenerateStructuredJsonOptions } from "../lib/llmClient";
 import { validateQlikScript } from "../validators/qlikValidator";
+
+import { stepTimingService } from "./stepTimingService";
+
+// import { calculateRealMetrics, getCriticalIssuesFromMetrics, formatMetricsCompact } from "./metricsCalculator";
 
 export interface FullOptimizeResult extends OptimizeResult {
   explanation?: string;

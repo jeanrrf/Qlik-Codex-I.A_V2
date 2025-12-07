@@ -2,10 +2,10 @@
  * Database Factory - Escolhe SQLite (dev), Turso ou PostgreSQL (produção)
  */
 
-import { getSqliteDb, initSqliteDb, closeSqliteDb } from './sqliteDb';
-import { getPostgresDb, initPostgresDb, closePostgresDb } from './postgresDb';
-import { getTursoDb, initTursoDb } from './tursoDb';
 import { logger } from './logger';
+import { getPostgresDb, initPostgresDb, closePostgresDb } from './postgresDb';
+import { getSqliteDb, initSqliteDb, closeSqliteDb } from './sqliteDb';
+import { getTursoDb, initTursoDb } from './tursoDb';
 
 type DbType = 'sqlite' | 'postgres' | 'turso';
 
@@ -85,7 +85,7 @@ export async function closeDb() {
  */
 export class DbAdapter {
   private dbType: DbType;
-  private db: any;
+  private db: unknown;
 
   constructor() {
     this.dbType = getDbType();
@@ -95,7 +95,7 @@ export class DbAdapter {
   /**
    * Executa query e retorna um único resultado
    */
-  async get(sql: string, params: any[] = []): Promise<any> {
+  async get(sql: string, params: unknown[] = []): Promise<unknown> {
     if (this.dbType === 'postgres') {
       const result = await this.db.query(sql, params);
       return result.rows[0] || null;
@@ -107,7 +107,7 @@ export class DbAdapter {
   /**
    * Executa query e retorna todos os resultados
    */
-  async all(sql: string, params: any[] = []): Promise<any[]> {
+  async all(sql: string, params: unknown[] = []): Promise<unknown[]> {
     if (this.dbType === 'postgres') {
       const result = await this.db.query(sql, params);
       return result.rows;
@@ -119,7 +119,7 @@ export class DbAdapter {
   /**
    * Executa query de inserção/update/delete
    */
-  async run(sql: string, params: any[] = []): Promise<void> {
+  async run(sql: string, params: unknown[] = []): Promise<void> {
     if (this.dbType === 'postgres') {
       await this.db.query(sql, params);
     } else {

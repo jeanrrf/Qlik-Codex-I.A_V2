@@ -1,6 +1,7 @@
 import { config } from "../config";
 import { logger } from "../logger";
 import { withTimeout, LLMError } from "../resilience";
+
 import type {
   LLMProvider,
   ProviderCallOptions,
@@ -112,13 +113,13 @@ export function extractContent(content?: NvidiaMessageContent): string | undefin
       continue;
     }
 
-    if (typeof (chunk as any).value === "string" && (chunk as any).value.trim().length > 0) {
-      parts.push((chunk as any).value);
+    if (typeof (chunk as Record<string, unknown>).value === "string" && (chunk as Record<string, unknown>).value!.trim().length > 0) {
+      parts.push((chunk as Record<string, unknown>).value as string);
       continue;
     }
 
     // If the provider returned a structured object under value/json/content, serialize it
-    const objectCandidate = (chunk as any).value ?? (chunk as any).json ?? (chunk as any).content;
+    const objectCandidate = (chunk as Record<string, unknown>).value ?? (chunk as Record<string, unknown>).json ?? (chunk as Record<string, unknown>).content;
     if (objectCandidate && typeof objectCandidate === "object") {
       try {
         parts.push(JSON.stringify(objectCandidate));
@@ -211,7 +212,7 @@ async function callNvidiaWithModel(
 
   if (!rawText) {
     // Check if we have reasoning content but no actual content (common in Thinking models that timeout or fail)
-    const reasoning = (data?.choices?.[0]?.message as any)?.reasoning_content;
+    const reasoning = (data?.choices?.[0]?.message as Record<string, unknown> | undefined)?.reasoning_content as string | undefined;
 
     // Log completo para debug
     logger.error("NVIDIA provider: Conteúdo vazio ou inválido", {

@@ -3,9 +3,10 @@
  * Banco de dados local para armazenar histórico, métricas e logs
  */
 
-import Database from "better-sqlite3";
-import path from "path";
 import fs from "fs";
+import path from "path";
+
+import Database from "better-sqlite3";
 
 import { logger } from "./logger";
 
@@ -46,8 +47,8 @@ function columnExists(tableName: string, columnName: string): boolean {
   if (!db) return false;
 
   try {
-    const result = db.pragma(`table_info(${tableName})`) as any[];
-    return result.some((col: any) => col.name === columnName);
+    const result = db.pragma(`table_info(${tableName})`) as Array<Record<string, unknown>>;
+    return result.some((col) => String((col as Record<string, unknown>).name) === columnName);
   } catch {
     return false;
   }
@@ -109,7 +110,7 @@ function runMigrations() {
               COALESCE(success, 0), created_at, completed_at
             FROM optimization_history;
           `);
-        } catch (copyErr) {
+        } catch (_copyErr) {
           logger.warn("Could not copy old data (incompatible structure), creating fresh table");
         }
 
@@ -177,7 +178,7 @@ function runMigrations() {
               progress_data, status, created_at, updated_at, expires_at
             FROM active_sessions;
           `);
-        } catch (copyErr) {
+        } catch (_copyErr) {
           logger.warn("Could not copy active_sessions data, creating fresh table");
         }
 
@@ -415,7 +416,7 @@ function createTables() {
   `);
 
   // ========== ANALYTICS TABLES (Sistema de Monitoramento Enterprise) ==========
-  
+
   // Tabela de visualizações de página
   db.exec(`
     CREATE TABLE IF NOT EXISTS analytics_page_views (

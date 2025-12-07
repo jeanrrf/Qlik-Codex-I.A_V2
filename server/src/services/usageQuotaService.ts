@@ -3,8 +3,8 @@
  * Controla limites de uso diário (FREE TIER)
  */
 
-import { getSqliteDb } from "../lib/sqliteDb";
 import { logger } from "../lib/logger";
+import { getSqliteDb } from "../lib/sqliteDb";
 import { UserRole, RoleUsageLimits, User } from "../types/auth";
 import type { OptimizeMode } from "../types/qlik";
 

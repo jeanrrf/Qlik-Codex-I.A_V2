@@ -1,16 +1,16 @@
 import { Router } from "express";
 
-import type { OptimizeScriptApiResponse } from "../types/api";
-import type { SubStepExecution } from "../types/optimization";
+import { logger } from "../lib/logger";
+import { sseEmitter } from "../lib/sseEmitter";
 import { asyncHandler } from "../middleware/asyncHandler";
-import { apiLimiter } from "../middleware/rateLimiter";
 import { requireAuth, checkUsageLimits, AuthRequest } from "../middleware/authMiddleware";
-import { optimizeScriptSchema, generateDocSchema } from "../validators/requestSchemas";
+import { apiLimiter } from "../middleware/rateLimiter";
 import { scriptService } from "../services/scriptService";
 import { stepTimingService } from "../services/stepTimingService";
 import { recordUsage } from "../services/usageQuotaService";
-import { sseEmitter } from "../lib/sseEmitter";
-import { logger } from "../lib/logger";
+import type { OptimizeScriptApiResponse } from "../types/api";
+import type { SubStepExecution } from "../types/optimization";
+import { optimizeScriptSchema, generateDocSchema } from "../validators/requestSchemas";
 
 export const router = Router();
 

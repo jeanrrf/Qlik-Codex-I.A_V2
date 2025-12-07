@@ -1,8 +1,9 @@
-import { sseEmitter } from "../lib/sseEmitter";
 import { logger } from "../lib/logger";
 import { ProviderOrchestrator, createOrchestrator } from "../lib/providerOrchestrator";
-import { OptimizationStepId, OPTIMIZATION_STEPS, StepExecutionResult } from "../types/optimization";
 import { parseQlikScript } from "../lib/qlikParser";
+import { sseEmitter } from "../lib/sseEmitter";
+import { OptimizationStepId, OPTIMIZATION_STEPS, StepExecutionResult } from "../types/optimization";
+
 import { buildGranularPrompt, buildParserSummary } from "./promptPlan";
 
 export interface GranularOptimizerOptions {

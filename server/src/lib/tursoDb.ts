@@ -4,6 +4,7 @@
  */
 
 import type { Client } from '@libsql/client';
+
 import { logger } from './logger';
 
 let tursoClient: Client | null = null;
@@ -376,7 +377,7 @@ export class TursoSqliteWrapper {
     const client = this.client;
 
     return {
-      get: async (...params: any[]) => {
+      get: async (...params: unknown[]) => {
         try {
           const result = await client.execute({ sql, args: params });
           return result.rows[0] || null;
@@ -386,7 +387,7 @@ export class TursoSqliteWrapper {
         }
       },
 
-      all: async (...params: any[]) => {
+      all: async (...params: unknown[]) => {
         try {
           const result = await client.execute({ sql, args: params });
           return result.rows;
@@ -396,7 +397,7 @@ export class TursoSqliteWrapper {
         }
       },
 
-      run: async (...params: any[]) => {
+      run: async (...params: unknown[]) => {
         try {
           await client.execute({ sql, args: params });
         } catch (err) {

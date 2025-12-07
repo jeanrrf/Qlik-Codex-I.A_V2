@@ -1,6 +1,7 @@
-import { defaultOrchestrator } from "../lib/providerOrchestrator";
-import { logger } from "../lib/logger";
 import { z } from "zod";
+
+import { logger } from "../lib/logger";
+import { defaultOrchestrator } from "../lib/providerOrchestrator";
 import type { LLMOptions } from "../types/optimization";
 
 const DocSchema = z.object({
@@ -57,7 +58,7 @@ ${script.slice(0, 30000)}
 
 export async function runQlikDocAgent(
   script: string,
-  llmOptions?: LLMOptions
+  _llmOptions?: LLMOptions
 ): Promise<QlikDocResult> {
   const prompt = buildDocPrompt(script);
 

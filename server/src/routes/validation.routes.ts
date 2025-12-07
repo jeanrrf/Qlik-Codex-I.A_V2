@@ -1,5 +1,6 @@
 // server/src/routes/validation.routes.ts
 import { Router } from "express";
+
 import { config } from "../lib/config";
 
 export const validationRouter = Router();

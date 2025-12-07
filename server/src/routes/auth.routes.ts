@@ -5,9 +5,9 @@
 
 import { Router, Request, Response, CookieOptions } from "express";
 
+import { logger } from "../lib/logger";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { requireAuth, optionalAuth, AuthRequest, requireRole } from "../middleware/authMiddleware";
-import { logger } from "../lib/logger";
 import {
   getGoogleAuthUrl,
   exchangeGoogleCode,

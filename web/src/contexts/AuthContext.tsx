@@ -20,6 +20,8 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+const ACCESS_TOKEN_KEY = "qlik-codex-access-token";
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [state, setState] = useState<AuthState>({
     user: null,
@@ -34,16 +36,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
    */
   const revalidate = async () => {
     try {
-      const status = await checkAuthStatus();
+      let storedToken: string | undefined;
+      try {
+        storedToken = localStorage.getItem(ACCESS_TOKEN_KEY) || undefined;
+      } catch {
+        storedToken = undefined;
+      }
+
+      const status = await checkAuthStatus(storedToken);
 
       if (status.authenticated && status.user) {
-        const userData = await getCurrentUser();
+        const userData = await getCurrentUser(storedToken);
         setState({
           user: userData.user as User,
           isAuthenticated: true,
           isLoading: false,
           error: null,
-          accessToken: "cookie"
+          accessToken: storedToken || "cookie"
         });
       } else {
         setState({
@@ -81,6 +90,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       const response = await loginWithToken(token);
+      try {
+        localStorage.setItem(ACCESS_TOKEN_KEY, response.tokens.accessToken);
+      } catch {
+        // ignore storage failures
+      }
       // No need to save token in localStorage for HttpOnly cookies
       // localStorage.setItem(ACCESS_TOKEN_KEY, response.tokens.accessToken);
 
@@ -89,7 +103,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         isAuthenticated: true,
         isLoading: false,
         error: null,
-        accessToken: "cookie"
+        accessToken: response.tokens.accessToken
       });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Login failed";
@@ -111,7 +125,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
-      const authUrl = await getGoogleAuthUrl();
+      const authUrl = await getGoogleAuthUrl(state.accessToken || undefined);
 
       // Redirecionar para URL de autenticação do Google
       window.location.href = authUrl;
@@ -132,6 +146,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logout = async () => {
     try {
       await logoutApi();
+      try {
+        localStorage.removeItem(ACCESS_TOKEN_KEY);
+      } catch {
+        // ignore storage errors
+      }
 
       setState({
         user: null,
@@ -158,14 +177,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
    */
   const refreshUser = async () => {
     try {
-      const userData = await getCurrentUser();
+      const token = state.accessToken || undefined;
+      const userData = await getCurrentUser(token);
       setState((prev) => ({
         ...prev,
         user: userData.user as User,
         isAuthenticated: true,
         isLoading: false,
         error: null,
-        accessToken: "cookie"
+        accessToken: token || "cookie"
       }));
     } catch (err) {
       console.error("Refresh user error:", err);

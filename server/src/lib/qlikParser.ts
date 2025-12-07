@@ -168,7 +168,7 @@ export function parseQlikScript(script: string): ParsedScript {
     const joinMatch = upper.match(/(LEFT\s+JOIN|INNER\s+JOIN|OUTER\s+JOIN|RIGHT\s+JOIN|^\s*JOIN)/);
     if (joinMatch) {
       joinCount++;
-      const joinType = joinMatch[1].trim() as any;
+      const joinType: string = (joinMatch[1] || '').trim();
       joins.push({
         type: joinType,
         targetTable: currentTable?.name || 'Unknown',
@@ -177,7 +177,7 @@ export function parseQlikScript(script: string): ParsedScript {
 
       if (currentTable) {
         currentTable.hasJoin = true;
-        currentTable.joinType = joinType.replace(' JOIN', '') as any;
+        currentTable.joinType = joinType.replace(' JOIN', '');
       }
 
       // Verificar se tem ON clause (se não tiver, pode ser Cartesian Product)

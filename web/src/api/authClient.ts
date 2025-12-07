@@ -3,6 +3,15 @@
  */
 
 const API_BASE = ""; // Use relative path to leverage Vite proxy (dev) and Vercel rewrites (prod)
+const JSON_HEADERS = { "Content-Type": "application/json" };
+
+function buildHeaders(token?: string): HeadersInit {
+  if (!token) return JSON_HEADERS;
+  return {
+    ...JSON_HEADERS,
+    Authorization: `Bearer ${token}`
+  };
+}
 
 export interface GoogleAuthResponse {
   authUrl: string;
@@ -47,9 +56,10 @@ export interface TokenLoginResponse {
 /**
  * Inicia fluxo de autenticação Google
  */
-export async function getGoogleAuthUrl(): Promise<string> {
+export async function getGoogleAuthUrl(token?: string): Promise<string> {
   const response = await fetch(`${API_BASE}/api/auth/google`, {
-    credentials: "include"
+    credentials: "include",
+    headers: buildHeaders(token)
   });
 
   if (!response.ok) {
@@ -63,9 +73,10 @@ export async function getGoogleAuthUrl(): Promise<string> {
 /**
  * Verifica status de autenticação
  */
-export async function checkAuthStatus(): Promise<AuthStatusResponse> {
+export async function checkAuthStatus(token?: string): Promise<AuthStatusResponse> {
   const response = await fetch(`${API_BASE}/api/auth/status`, {
-    credentials: "include"
+    credentials: "include",
+    headers: buildHeaders(token)
   });
 
   if (!response.ok) {
@@ -78,9 +89,10 @@ export async function checkAuthStatus(): Promise<AuthStatusResponse> {
 /**
  * Busca dados do usuário autenticado
  */
-export async function getCurrentUser(): Promise<UserResponse> {
+export async function getCurrentUser(token?: string): Promise<UserResponse> {
   const response = await fetch(`${API_BASE}/api/auth/me`, {
-    credentials: "include"
+    credentials: "include",
+    headers: buildHeaders(token)
   });
 
   if (!response.ok) {
@@ -96,9 +108,7 @@ export async function getCurrentUser(): Promise<UserResponse> {
 export async function loginWithToken(token: string): Promise<TokenLoginResponse> {
   const response = await fetch(`${API_BASE}/api/auth/token`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
+    headers: JSON_HEADERS,
     credentials: "include",
     body: JSON.stringify({ token })
   });

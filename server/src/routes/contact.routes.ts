@@ -1,9 +1,9 @@
 import { Router } from "express";
 
-import type { ContactApiResponse } from "../types/contact";
 import { asyncHandler } from "../middleware/asyncHandler";
-import { contactSchema } from "../validators/requestSchemas";
 import { contactService } from "../services/contactService";
+import type { ContactApiResponse } from "../types/contact";
+import { contactSchema } from "../validators/requestSchemas";
 
 export const contactRouter = Router();
 

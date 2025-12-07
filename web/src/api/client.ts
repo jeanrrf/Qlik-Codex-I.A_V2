@@ -27,6 +27,18 @@ export async function optimizeScript(
 }
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
+const ACCESS_TOKEN_KEY = "qlik-codex-access-token";
+
+function withAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { ...JSON_HEADERS };
+  try {
+    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+  } catch {
+    // ignore storage errors
+  }
+  return headers;
+}
 
 /**
  * Generic API client for script management
@@ -35,7 +47,7 @@ export const apiClient = {
   async get<T>(endpoint: string): Promise<T> {
     const response = await fetch(endpoint, {
       method: 'GET',
-      headers: JSON_HEADERS,
+      headers: withAuthHeaders(),
       credentials: "include"
     });
 
@@ -49,7 +61,7 @@ export const apiClient = {
   async post<T>(endpoint: string, data: unknown): Promise<T> {
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: JSON_HEADERS,
+      headers: withAuthHeaders(),
       credentials: "include",
       body: JSON.stringify(data)
     });
@@ -64,7 +76,7 @@ export const apiClient = {
   async delete<T>(endpoint: string, data?: unknown): Promise<T> {
     const response = await fetch(endpoint, {
       method: 'DELETE',
-      headers: JSON_HEADERS,
+      headers: withAuthHeaders(),
       credentials: "include",
       body: data ? JSON.stringify(data) : undefined
     });

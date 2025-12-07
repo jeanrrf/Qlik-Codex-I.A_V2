@@ -3,8 +3,8 @@
  * Persiste estado de otimizações em andamento no SQLite
  */
 
-import { getSqliteDb } from "../lib/sqliteDb";
 import { logger } from "../lib/logger";
+import { getSqliteDb } from "../lib/sqliteDb";
 import type { OptimizeMode } from "../types/qlik";
 export type LLMProviderName = "ainex" | "google" | "nvidia";
 

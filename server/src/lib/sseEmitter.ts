@@ -1,4 +1,5 @@
 import { Response } from 'express';
+
 import { logger } from './logger';
 
 /**
@@ -7,7 +8,7 @@ import { logger } from './logger';
 export class SSEEmitter {
   private clients: Set<Response> = new Set();
   private currentClient: Response | null = null;
-  private keepAliveInterval: NodeJS.Timeout | null = null;
+  private keepAliveInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     // Keep-alive a cada 15s
@@ -57,7 +58,7 @@ export class SSEEmitter {
     }
 
     // Verifica se a resposta ainda está aberta
-    // @ts-ignore - accessing internal property
+    // @ts-expect-error - accessing internal property (express Response internals)
     const isOpen = !this.currentClient.writableEnded && !this.currentClient.destroyed;
 
     if (!isOpen) {
@@ -72,7 +73,7 @@ export class SSEEmitter {
   /**
    * Envia evento para todos os clientes
    */
-  sendToAll(data: any): void {
+  sendToAll(data: unknown): void {
     const message = `data: ${JSON.stringify(data)}\n\n`;
     this.clients.forEach(client => {
       try {
@@ -87,7 +88,7 @@ export class SSEEmitter {
   /**
    * Envia evento para o cliente da requisição atual (durante otimização)
    */
-  sendToCurrent(data: any): void {
+  sendToCurrent(data: unknown): void {
     if (!this.currentClient) {
       logger.debug('[SSE] No current client set, skipping sendToCurrent');
       return;
@@ -102,7 +103,8 @@ export class SSEEmitter {
     const message = `data: ${JSON.stringify(data)}\n\n`;
     try {
       this.currentClient.write(message);
-      logger.debug('[SSE] Sent to current client', { type: data.type });
+      const typeName = (data as Record<string, unknown>)['type'] as string | undefined;
+      logger.debug('[SSE] Sent to current client', { type: typeName });
     } catch (err) {
       logger.error('[SSE] Failed to send to current client', { err });
       this.currentClient = null;

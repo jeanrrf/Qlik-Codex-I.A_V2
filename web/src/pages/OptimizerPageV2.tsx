@@ -922,7 +922,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
 
             {/* Cards Superiores com Subtasks Integradas */}
             {(() => {
-              const visibleStages = optimization.progress.stages.filter(stage => stage.visible !== false);
+              const visibleStages = (optimization.progress?.stages || []).filter(stage => stage.visible !== false);
               const stageCount = visibleStages.length;
               return (
                 <div className={`stage-cards-row stages-${stageCount}`}>
@@ -1125,8 +1125,8 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
                     <div className="kpi">
                       <span className="kpi-label">Etapas</span>
                       <span className="kpi-value">
-                        {optimization.progress.stages.filter(s => s.visible !== false && s.status === "success").length}/
-                        {optimization.progress.stages.filter(s => s.visible !== false).length}
+                        {(optimization.progress?.stages || []).filter(s => s.visible !== false && s.status === "success").length}/
+                        {(optimization.progress?.stages || []).filter(s => s.visible !== false).length}
                       </span>
                     </div>
                     {result && (

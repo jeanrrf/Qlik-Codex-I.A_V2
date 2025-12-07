@@ -5,8 +5,8 @@
 
 import { randomUUID } from "node:crypto";
 
-import { getSqliteDb, transaction } from "../lib/sqliteDb";
 import { logger } from "../lib/logger";
+import { getSqliteDb, transaction } from "../lib/sqliteDb";
 import type { OptimizeResult } from "../types/qlik";
 
 interface OptimizationRecord {

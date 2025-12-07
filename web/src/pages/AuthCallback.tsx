@@ -6,8 +6,22 @@ export function AuthCallback() {
 
   useEffect(() => {
     const handleAuth = async () => {
-      await revalidate();
-      window.location.href = "/";
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get("token");
+
+        if (token) {
+          try {
+            localStorage.setItem("qlik-codex-access-token", token);
+          } catch {
+            // ignore storage errors
+          }
+        }
+
+        await revalidate();
+      } finally {
+        window.location.href = "/";
+      }
     };
 
     handleAuth();

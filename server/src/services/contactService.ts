@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
-import { getSqliteDb } from "../lib/sqliteDb";
 import { logger } from "../lib/logger";
+import { getSqliteDb } from "../lib/sqliteDb";
 import type { ContactRecord, ContactRequest } from "../types/contact";
 
 class ContactService {

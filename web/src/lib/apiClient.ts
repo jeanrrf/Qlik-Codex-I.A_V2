@@ -8,12 +8,25 @@ import {
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
 
+const ACCESS_TOKEN_KEY = "qlik-codex-access-token";
+
+function withAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { ...JSON_HEADERS };
+  try {
+    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+    if (token) headers.Authorization = `Bearer ${token}`;
+  } catch {
+    // ignore storage errors
+  }
+  return headers;
+}
+
 export async function optimizeScript(
   body: OptimizeScriptRequestBody
 ): Promise<OptimizeScriptApiResponse> {
   const resp = await fetch("/api/scripts/optimize", {
     method: "POST",
-    headers: JSON_HEADERS,
+    headers: withAuthHeaders(),
     credentials: "include",
     body: JSON.stringify(body)
   });
@@ -40,7 +53,7 @@ export async function requestQlikFormatter(
 ): Promise<QlikFormatterResponse> {
   const resp = await fetch("/api/tools/qlik-formatter", {
     method: "POST",
-    headers: JSON_HEADERS,
+    headers: withAuthHeaders(),
     credentials: "include",
     body: JSON.stringify(body)
   });
@@ -67,7 +80,7 @@ export async function requestQlikFormatterStream(
 ): Promise<QlikFormatterResponse> {
   const resp = await fetch("/api/tools/qlik-formatter/stream", {
     method: "POST",
-    headers: JSON_HEADERS,
+    headers: withAuthHeaders(),
     credentials: "include",
     body: JSON.stringify(body)
   });

@@ -1,26 +1,26 @@
 ﻿import fs from "node:fs";
 import path from "node:path";
 
+import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
-import cookieParser from "cookie-parser";
 
 import { config } from "./lib/config";
-import { logger } from "./lib/logger";
 import { initDb, closeDb } from "./lib/dbAdapter";
+import { logger } from "./lib/logger";
 import { errorHandler } from "./middleware/errorHandler";
-import { healthRouter } from "./routes/health.routes";
-import { contactRouter } from "./routes/contact.routes";
-import { router as scriptsRouter } from "./routes/scripts.routes";
-import { validationRouter } from "./routes/validation.routes";
-import { toolsRouter } from "./routes/tools.routes";
-import { historyRouter } from "./routes/history.routes";
-import sessionRouter from "./routes/session.routes";
-import authRouter from "./routes/auth.routes";
-import usageRouter from "./routes/usage.routes";
 import analyticsRouter from "./routes/analytics.routes";
+import authRouter from "./routes/auth.routes";
+import { contactRouter } from "./routes/contact.routes";
+import { healthRouter } from "./routes/health.routes";
+import { historyRouter } from "./routes/history.routes";
+import { router as scriptsRouter } from "./routes/scripts.routes";
+import sessionRouter from "./routes/session.routes";
+import { toolsRouter } from "./routes/tools.routes";
+import usageRouter from "./routes/usage.routes";
+import { validationRouter } from "./routes/validation.routes";
 
 const app = express();
 

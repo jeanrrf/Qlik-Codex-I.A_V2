@@ -1,17 +1,19 @@
-import { sseEmitter } from "../lib/sseEmitter";
+import { createHash } from "crypto";
+
+import { ZodSchema } from "zod";
+
 import { logger } from "../lib/logger";
 import { ProviderOrchestrator, createOrchestrator } from "../lib/providerOrchestrator";
-import { ZodSchema } from "zod";
-import { AnalysisAndPlanSchema, CodeGenSchema, FinalDeliverySchema } from "../validators/megaOptimizerSchemas";
-import { createHash } from "crypto";
-import type { OptimizationStepId } from "../types/optimization";
-import { QlikGranularOptimizer } from "./qlikGranularOptimizer";
 import { parseQlikScript } from "../lib/qlikParser";
-import { buildMegaPrompt, buildParserSummary, MegaTaskId } from "./promptPlan";
+import { sseEmitter } from "../lib/sseEmitter";
+import type { OptimizationStepId } from "../types/optimization";
+import { AnalysisAndPlanSchema, CodeGenSchema, FinalDeliverySchema } from "../validators/megaOptimizerSchemas";
 
+import { buildMegaPrompt, buildParserSummary, MegaTaskId } from "./promptPlan";
+import { QlikGranularOptimizer } from "./qlikGranularOptimizer";
 // Performance constants
 const MAX_HISTORY_TOKENS = 500; // Limite de chars para resumo do histórico
-const ANALYSIS_CACHE = new Map<string, { result: any; timestamp: number }>();
+const ANALYSIS_CACHE = new Map<string, { result: Record<string, unknown>; timestamp: number }>();
 const ANALYSIS_CACHE_TTL = 1800000; // 30 minutos
 const ANALYSIS_CACHE_MAX_SIZE = 50;
 
@@ -41,12 +43,12 @@ function isRetryableTaskError(message: string | undefined): boolean {
 interface MegaOptimizerResult {
   originalScript: string;
   optimizedScript: string;
-  analysis: any;
-  changes?: any[]; // Added for frontend compatibility
-  plan: any;
-  validation: any;
-  documentation: any;
-  report: any;
+  analysis: Record<string, unknown>;
+  changes?: Array<Record<string, unknown>>; // Added for frontend compatibility
+  plan: Record<string, unknown>;
+  validation: Record<string, unknown>;
+  documentation: Record<string, unknown>;
+  report: Record<string, unknown>;
   metrics: {
     totalTime: number;
     taskTimes: Record<string, number>;
@@ -90,14 +92,22 @@ export class QlikMegaOptimizer {
    * Gera resumo compacto de um resultado de task para histórico
    * OTIMIZAÇÃO: Evita acumulação exponencial de tokens
    */
-  private summarizeTaskResult(taskName: string, result: any): string {
+  private summarizeTaskResult(taskName: string, result: unknown): string {
     const maxLen = MAX_HISTORY_TOKENS;
     let summary = `[${taskName}]: `;
 
     if (taskName === "ANALYSIS_AND_PLAN") {
       // Extrai apenas pontos críticos da análise
       const criticalIssues = result.analysis?.issues?.slice(0, 3) || [];
-      const topPriorities = result.plan?.steps?.slice(0, 3).map((s: any) => s.action || s) || [];
+      const planObj = (result as Record<string, unknown> | undefined)?.plan as { steps?: unknown[] } | undefined;
+      const topPriorities = Array.isArray(planObj?.steps)
+        ? (planObj.steps as unknown[]).slice(0, 3).map((s) => {
+          if (typeof s === 'object' && s !== null && 'action' in (s as Record<string, unknown>)) {
+            return String((s as Record<string, unknown>).action);
+          }
+          return String(s);
+        })
+        : [];
       summary += `Issues: ${criticalIssues.join(', ').substring(0, 150)}. Priorities: ${topPriorities.join(', ').substring(0, 150)}`;
     } else if (taskName === "CODE_GEN") {
       // Apenas confirma que script foi gerado, não inclui o script
@@ -113,7 +123,7 @@ export class QlikMegaOptimizer {
   /**
    * Verifica cache de análise por hash do script
    */
-  private getCachedAnalysis(): any | null {
+  private getCachedAnalysis(): Record<string, unknown> | null {
     const cached = ANALYSIS_CACHE.get(this.scriptHash);
     if (!cached) return null;
 
@@ -130,7 +140,7 @@ export class QlikMegaOptimizer {
   /**
    * Armazena análise no cache
    */
-  private setCachedAnalysis(result: any): void {
+  private setCachedAnalysis(result: Record<string, unknown>): void {
     // Limpa cache se muito grande
     if (ANALYSIS_CACHE.size >= ANALYSIS_CACHE_MAX_SIZE) {
       const oldestKey = Array.from(ANALYSIS_CACHE.entries())
@@ -162,7 +172,7 @@ export class QlikMegaOptimizer {
       .replace(/<\/?>/g, '');                 // Remove empty tags
   }
 
-  private async executeTask(taskName: MegaTaskId, schema?: ZodSchema): Promise<any> {
+  private async executeTask(taskName: MegaTaskId, schema?: ZodSchema): Promise<Record<string, unknown>> {
     const totalStart = Date.now();
 
     const fullPrompt = buildMegaPrompt(taskName, this.script, this.parserSummary, this.compactHistory);
@@ -231,7 +241,7 @@ export class QlikMegaOptimizer {
           attempt
         });
 
-        let parsedResult: any;
+        let parsedResult: Record<string, unknown> | unknown = {};
         try {
           const jsonMatch = responseText.match(/\{[\s\S]*\}/);
           const jsonStr = jsonMatch ? jsonMatch[0] : responseText;
@@ -265,7 +275,7 @@ export class QlikMegaOptimizer {
                 id: `${taskName.toLowerCase()}_schema_error_attempt_${attempt}` as OptimizationStepId,
                 name: `Erro de schema em ${taskName}`,
                 description: `Tentativa ${attempt}/${MAX_TASK_RETRIES} falhou na validação de schema. Ver detalhes técnicos nos logs.`,
-                status: attempt < MAX_TASK_RETRIES ? "warning" as any : "error" as any,
+                status: attempt < MAX_TASK_RETRIES ? "warning" : "error",
                 startTime: new Date().toISOString(),
                 endTime: new Date().toISOString()
               }
@@ -464,7 +474,7 @@ export class QlikMegaOptimizer {
   /**
    * Executa otimização granular usando a nova Base de Conhecimento
    */
-  public async runGranularOptimization(stepIds: OptimizationStepId[]): Promise<any> {
+  public async runGranularOptimization(stepIds: OptimizationStepId[]): Promise<{ finalScript: string; results: import("../types/optimization").StepExecutionResult[] }> {
     const granularOptimizer = new QlikGranularOptimizer(this.script, { signal: this.abortSignal });
     return await granularOptimizer.executeSequence(stepIds);
   }

@@ -3,6 +3,8 @@
  */
 
 import { Router } from 'express';
+
+import { logger } from '../lib/logger';
 import { getSqliteDb } from '../lib/sqliteDb';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { optionalAuth, requireAuth } from '../middleware/authMiddleware';
@@ -15,7 +17,6 @@ import {
   getDetailedAnalytics,
   cleanOldAnalytics
 } from '../services/analyticsService';
-import { logger } from '../lib/logger';
 
 const router = Router();
 

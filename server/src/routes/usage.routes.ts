@@ -4,10 +4,11 @@
  */
 
 import { Router } from "express";
+
+import { logger } from "../lib/logger";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { requireAuth, AuthRequest } from "../middleware/authMiddleware";
 import { checkDailyQuota, getUserUsageStats } from "../services/usageQuotaService";
-import { logger } from "../lib/logger";
 
 export const router = Router();
 

@@ -3,8 +3,8 @@
  * Calcula métricas quantitativas precisas do script Qlik
  */
 
-import { RealMetrics } from "../types/qlik";
 import { parseQlikScript, ParsedScript } from "../lib/qlikParser";
+import { RealMetrics } from "../types/qlik";
 
 /**
  * Calcula métricas reais do script

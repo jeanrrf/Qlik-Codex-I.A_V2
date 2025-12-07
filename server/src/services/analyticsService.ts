@@ -3,10 +3,10 @@
  * Sistema avançado de monitoramento de acessos, eventos e comportamento
  */
 
+import { getDbType, closeDb } from '../lib/dbAdapter';
+import { logger } from '../lib/logger';
 import { getSqliteDb } from '../lib/sqliteDb';
 import { getTursoDb, TursoSqliteWrapper } from '../lib/tursoDb';
-import { logger } from '../lib/logger';
-import { getDbType, closeDb } from '../lib/dbAdapter';
 
 /**
  * Obtém instância do banco (SQLite local ou Turso)
@@ -30,7 +30,7 @@ export interface PageViewEvent {
   ip?: string;
   userAgent?: string;
   isOwner: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface CustomEvent {
@@ -41,7 +41,7 @@ export interface CustomEvent {
   eventLabel?: string;
   eventValue?: number;
   isOwner: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface SessionStart {

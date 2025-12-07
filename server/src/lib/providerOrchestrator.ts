@@ -7,17 +7,19 @@
  * 3) NVIDIA (modelo grande ~500B) se disponível
  */
 
-import { logger } from "./logger";
-import { googleProvider } from "./llmProviders/googleProvider";
-import { nvidiaProvider } from "./llmProviders/nvidiaProvider";
-import { config } from "./config";
-import type { LLMProvider } from "./llmProviders/types";
 import {
   OptimizationStepId,
   ProviderAttempt,
   ProviderRotationConfig,
   DEFAULT_ROTATION_CONFIG
 } from "../types/optimization";
+
+import { config } from "./config";
+import { googleProvider } from "./llmProviders/googleProvider";
+import { nvidiaProvider } from "./llmProviders/nvidiaProvider";
+import type { LLMProvider } from "./llmProviders/types";
+import { logger } from "./logger";
+
 
 export interface ProviderAttemptResult {
   success: boolean;
@@ -252,9 +254,9 @@ export class ProviderOrchestrator {
     abortSignal?: AbortSignal
   ): Promise<ProviderAttemptResult> {
     const startTime = Date.now();
-    let warningTimer: NodeJS.Timeout | undefined;
-    let criticalTimer: NodeJS.Timeout | undefined;
-    let timeoutTimer: NodeJS.Timeout | undefined;
+    let warningTimer: ReturnType<typeof setTimeout> | undefined;
+    let criticalTimer: ReturnType<typeof setTimeout> | undefined;
+    let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
     const abortCleanupFns: Array<() => void> = [];
 
     try {

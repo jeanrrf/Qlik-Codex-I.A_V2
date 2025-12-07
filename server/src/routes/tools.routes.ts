@@ -1,8 +1,8 @@
 import { Router } from "express";
 
 import { asyncHandler } from "../middleware/asyncHandler";
-import { qlikFormatterSchema } from "../validators/requestSchemas";
 import { formatQlikScript } from "../services/qlikScriptFormatter";
+import { qlikFormatterSchema } from "../validators/requestSchemas";
 
 export const toolsRouter = Router();
 

@@ -10,7 +10,8 @@
  * ✓ Foco em: Issues Críticos + Métricas Reais + Top Recomendações
  */
 
-import { OptimizeResult } from '../types/qlik';
+import { formatDuration } from '../lib/formatTime';
+import { logger } from '../lib/logger';
 import {
   ConsultancyDocument,
   ConsultancyOptions,
@@ -23,8 +24,7 @@ import {
   Recommendation,
   ExecutiveSummary
 } from '../types/consultancy';
-import { logger } from '../lib/logger';
-import { formatDuration } from '../lib/formatTime';
+import { OptimizeResult } from '../types/qlik';
 
 // Simple UUID generator
 function generateId(): string {
@@ -830,9 +830,23 @@ export interface CompactAuditReport {
 /**
  * Gera relatório compacto - 80% menor, 100% mais útil
  */
+export interface RealMetrics {
+  linesOfCode: number;
+  cyclomaticComplexity: number;
+  loadStatements: number;
+  joinStatements: number;
+  maintainabilityIndex: number;
+  selectStarCount?: number;
+  syntheticKeysRisk?: number;
+  cartesianProductRisk?: number;
+  sqlPushdownOpportunities?: number;
+  residentLoadsCount?: number;
+  commentRatio?: number;
+}
+
 export async function generateCompactAuditReport(
   optimizeResult: OptimizeResult,
-  realMetrics: any // RealMetrics from metricsCalculator
+  realMetrics: RealMetrics // RealMetrics from metricsCalculator
 ): Promise<CompactAuditReport> {
   const startTime = Date.now();
   const docId = generateId();

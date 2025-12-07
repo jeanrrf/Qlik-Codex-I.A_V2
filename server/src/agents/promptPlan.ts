@@ -1,5 +1,5 @@
-import { OptimizationStep } from "../types/optimization";
 import type { ParsedScript } from "../lib/qlikParser";
+import { OptimizationStep } from "../types/optimization";
 
 export type MegaTaskId = "ANALYSIS_AND_PLAN" | "CODE_GEN" | "FINAL_DELIVERY";
 

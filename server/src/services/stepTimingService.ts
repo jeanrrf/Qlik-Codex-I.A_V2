@@ -1,6 +1,6 @@
-import { SubStepExecution } from "../types/optimization";
 import { logger } from "../lib/logger";
 import { sseEmitter } from "../lib/sseEmitter";
+import { SubStepExecution } from "../types/optimization";
 
 /**
  * Serviço para rastrear timing de sub-etapas dentro de cada etapa de otimização

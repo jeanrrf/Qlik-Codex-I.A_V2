@@ -1,9 +1,11 @@
-import type { OptimizeScriptRequestBody } from "../types/api";
-import { optimizeScript } from "./optimizerService";
 import { runQlikDocAgent } from "../agents/qlikDocAgent";
-import { GenerateDocPayload } from "../validators/requestSchemas";
-import { cacheService } from "./cacheService";
 import { logger } from "../lib/logger";
+import type { OptimizeScriptRequestBody } from "../types/api";
+import { GenerateDocPayload } from "../validators/requestSchemas";
+
+import { cacheService } from "./cacheService";
+import { optimizeScript } from "./optimizerService";
+
 
 class ScriptService {
   async optimizeScript(payload: OptimizeScriptRequestBody, abortSignal?: AbortSignal) {

@@ -1,5 +1,6 @@
-import { OptimizeMode, OptimizeResult } from "./qlik";
 import { ProviderName } from "../lib/llmProviders/types";
+
+import { OptimizeMode, OptimizeResult } from "./qlik";
 
 export interface OptimizeScriptRequestBody {
   script: string;

@@ -1,9 +1,9 @@
 import { config } from "./config";
-import { logger } from "./logger";
-import { withRetry } from "./resilience";
-import type { ProviderName, ProviderResult } from "./llmProviders/types";
 import { googleProvider } from "./llmProviders/googleProvider";
 import { nvidiaProvider } from "./llmProviders/nvidiaProvider";
+import type { ProviderName, ProviderResult } from "./llmProviders/types";
+import { logger } from "./logger";
+import { withRetry } from "./resilience";
 
 /**
  * @deprecated Use ProviderOrchestrator instead for better resilience and rotation.

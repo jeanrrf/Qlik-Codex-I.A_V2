@@ -3,13 +3,13 @@
  * Gerencia autenticação Google OAuth, JWT tokens e sessões de usuário
  */
 
+import { OAuth2Client } from "google-auth-library";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
-import { OAuth2Client } from "google-auth-library";
 
-import { getSqliteDb } from "../lib/sqliteDb";
-import { logger } from "../lib/logger";
 import { config } from "../lib/config";
+import { logger } from "../lib/logger";
+import { getSqliteDb } from "../lib/sqliteDb";
 import {
   User,
   AuthSession,

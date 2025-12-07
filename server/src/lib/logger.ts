@@ -3,10 +3,10 @@ type LogLevel = "debug" | "info" | "warn" | "error";
 function log(level: LogLevel, message: string, meta?: unknown): void {
   const prefix = `[qlik-codex-ia:${level}]`;
   if (meta !== undefined) {
-    // eslint-disable-next-line no-console
+     
     console.log(prefix, message, meta);
   } else {
-    // eslint-disable-next-line no-console
+     
     console.log(prefix, message);
   }
 }
