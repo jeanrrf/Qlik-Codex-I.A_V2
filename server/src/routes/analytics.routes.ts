@@ -5,7 +5,7 @@
 import { Router } from 'express';
 
 import { logger } from '../lib/logger';
-import { getSqliteDb } from '../lib/sqliteDb';
+import { getCompatDb } from '../lib/dbCompat';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { optionalAuth, requireAuth } from '../middleware/authMiddleware';
 import type { AuthRequest } from '../middleware/authMiddleware';
@@ -163,14 +163,14 @@ router.get('/realtime', requireAuth, asyncHandler(async (req: AuthRequest, res) 
   res.write('data: {"status":"connected"}\n\n');
 
   // Pooling a cada 2 segundos para novos eventos
-  const db = getSqliteDb();
+  const db = getCompatDb();
   let lastEventId = 0;
   let lastPageViewId = 0;
 
-  const interval = setInterval(() => {
+  const poll = async () => {
     try {
       // Buscar novos eventos
-      const newEvents = db.prepare(`
+      const newEvents = await db.prepare(`
         SELECT id, event_type, event_category, event_label, is_owner, timestamp
         FROM analytics_events
         WHERE id > ?
@@ -188,7 +188,7 @@ router.get('/realtime', requireAuth, asyncHandler(async (req: AuthRequest, res) 
       }
 
       // Buscar novos page views
-      const newPageViews = db.prepare(`
+      const newPageViews = await db.prepare(`
         SELECT id, page, is_owner, timestamp
         FROM analytics_page_views
         WHERE id > ?
@@ -207,6 +207,12 @@ router.get('/realtime', requireAuth, asyncHandler(async (req: AuthRequest, res) 
     } catch (error) {
       logger.error('Erro no realtime analytics', error);
     }
+  };
+
+  // start initial poll and schedule
+  poll().catch(err => logger.error('Erro inicial no realtime analytics', err));
+  const interval = setInterval(() => {
+    poll().catch(err => logger.error('Erro no realtime analytics', err));
   }, 2000);
 
   // Cleanup on close
@@ -243,13 +249,13 @@ router.delete('/cleanup', requireAuth, asyncHandler(async (req: AuthRequest, res
  * Mantido para compatibilidade
  */
 router.post('/visit', asyncHandler(async (req, res) => {
-  const db = getSqliteDb();
+  const db = getCompatDb();
   const { page, referrer } = req.body;
   const ip = req.ip;
   const userAgent = req.headers['user-agent'];
 
   // Criar tabela antiga se não existir (backward compatibility)
-  db.exec(`
+  await db.exec?.(`
     CREATE TABLE IF NOT EXISTS page_visits (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       page TEXT,
@@ -260,7 +266,7 @@ router.post('/visit', asyncHandler(async (req, res) => {
     )
   `);
 
-  db.prepare(`
+  await db.prepare(`
     INSERT INTO page_visits (page, referrer, ip, user_agent)
     VALUES (?, ?, ?, ?)
   `).run(page || 'unknown', referrer || '', ip || '', userAgent || '');
@@ -273,9 +279,9 @@ router.post('/visit', asyncHandler(async (req, res) => {
  * Mantido para compatibilidade
  */
 router.get('/stats', asyncHandler(async (req, res) => {
-  const db = getSqliteDb();
+  const db = getCompatDb();
 
-  db.exec(`
+  await db.exec?.(`
     CREATE TABLE IF NOT EXISTS page_visits (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       page TEXT,
@@ -286,11 +292,11 @@ router.get('/stats', asyncHandler(async (req, res) => {
     )
   `);
 
-  const visits = db.prepare('SELECT COUNT(*) as count FROM page_visits').get() as { count: number };
+  const visits = await db.prepare('SELECT COUNT(*) as count FROM page_visits').get() as { count: number };
 
   let executions = { count: 0 };
   try {
-    executions = db.prepare('SELECT COUNT(*) as count FROM optimization_history').get() as { count: number };
+    executions = await db.prepare('SELECT COUNT(*) as count FROM optimization_history').get() as { count: number };
   } catch {
     // Ignore
   }

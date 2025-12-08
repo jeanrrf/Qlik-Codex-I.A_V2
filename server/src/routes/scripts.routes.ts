@@ -138,7 +138,7 @@ router.post(
       // ✅ Registra uso após sucesso (FREE TIER quota tracking)
       if (req.user?.id) {
         try {
-          recordUsage(req.user.id, payload.mode);
+          await recordUsage(req.user.id, payload.mode);
           logger.info("[QUOTA] Uso registrado com sucesso", {
             userId: req.user.id,
             mode: payload.mode

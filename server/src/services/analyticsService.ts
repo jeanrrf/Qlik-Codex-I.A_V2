@@ -5,21 +5,21 @@
 
 import { getDbType, closeDb } from '../lib/dbAdapter';
 import { logger } from '../lib/logger';
-import { getSqliteDb } from '../lib/sqliteDb';
+import { getCompatDb } from '../lib/dbCompat';
 import { getTursoDb, TursoSqliteWrapper } from '../lib/tursoDb';
 
 /**
  * Obtém instância do banco (SQLite local ou Turso)
  */
 function getDb() {
-  // Se Turso está configurado, usar Turso
+  // Se Turso está configurado, usar Turso; caso contrário, usa PostgreSQL (configurado via DATABASE_URL)
   if (process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN) {
     const tursoClient = getTursoDb();
     return new TursoSqliteWrapper(tursoClient);
   }
 
-  // Caso contrário, usar SQLite local
-  return getSqliteDb();
+  // Fallback: Postgres via compat wrapper (sem SQLite)
+  return getCompatDb();
 }
 
 export interface PageViewEvent {
@@ -492,7 +492,7 @@ export async function getDetailedAnalytics(options: {
  */
 export function cleanOldAnalytics(daysToKeep = 90): void {
   try {
-    const db = getSqliteDb();
+    const db = getCompatDb();
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
     const cutoff = cutoffDate.toISOString();

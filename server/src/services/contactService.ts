@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { logger } from "../lib/logger";
-import { getSqliteDb } from "../lib/sqliteDb";
+import { getCompatDb } from "../lib/dbCompat";
 import type { ContactRecord, ContactRequest } from "../types/contact";
 
 class ContactService {
@@ -23,14 +23,14 @@ class ContactService {
     });
 
     try {
-      const db = getSqliteDb();
+      const db = getCompatDb();
 
       const stmt = db.prepare(`
         INSERT INTO contact_messages (id, name, email, company, message, created_at)
         VALUES (?, ?, ?, ?, ?, ?)
       `);
 
-      stmt.run(
+      await stmt.run(
         record.id,
         record.name,
         record.email,

@@ -11,7 +11,9 @@ import { config } from "../lib/config";
 import { googleProvider } from '../lib/llmProviders/googleProvider';
 import { nvidiaProvider } from '../lib/llmProviders/nvidiaProvider';
 import { logger } from '../lib/logger';
-import { sqliteDb } from '../lib/sqliteDb';
+import { getDbType } from "../lib/dbAdapter";
+import { getPostgresDb } from "../lib/postgresDb";
+import { getTursoDb } from "../lib/tursoDb";
 import { cacheService } from '../services/cacheService';
 
 export const healthRouter = Router();
@@ -25,13 +27,15 @@ interface ServiceHealth {
 async function checkDatabase(): Promise<ServiceHealth> {
   try {
     const start = Date.now();
-    const db = sqliteDb.getDb();
-    if (!db) {
-      return { status: 'down', message: 'Database not initialized' };
-    }
+    const dbType = getDbType();
 
-    // Better-sqlite3 é síncrono
-    db.prepare('SELECT 1').get();
+    if (dbType === "turso") {
+      const client = getTursoDb();
+      await client.execute("SELECT 1");
+    } else {
+      const pool = getPostgresDb();
+      await pool.query("SELECT 1");
+    }
 
     const latency = Date.now() - start;
     return { status: 'up', latency };

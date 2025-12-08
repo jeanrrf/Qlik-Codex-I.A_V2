@@ -37,7 +37,7 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     const data = SaveSessionSchema.parse(req.body);
 
-    saveActiveSession({
+    await saveActiveSession({
       id: data.sessionId,
       userId: data.userId,
       mode: data.mode,
@@ -61,7 +61,7 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const { sessionId } = req.params;
 
-    const session = getActiveSession(sessionId);
+    const session = await getActiveSession(sessionId);
 
     if (!session) {
       return res.status(404).json({ error: "Sessão não encontrada ou expirada" });
@@ -80,7 +80,7 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const { userId } = req.params;
 
-    const sessions = getUserActiveSessions(userId);
+    const sessions = await getUserActiveSessions(userId);
 
     res.json({ sessions });
   })
@@ -96,7 +96,7 @@ router.patch(
     const { sessionId } = req.params;
     const { status } = z.object({ status: z.enum(["running", "paused", "completed", "error"]) }).parse(req.body);
 
-    updateSessionStatus(sessionId, status);
+    await updateSessionStatus(sessionId, status);
 
     res.json({ success: true });
   })
@@ -111,7 +111,7 @@ router.delete(
   asyncHandler(async (req: Request, res: Response) => {
     const { sessionId } = req.params;
 
-    deleteSession(sessionId);
+    await deleteSession(sessionId);
 
     res.json({ success: true });
   })

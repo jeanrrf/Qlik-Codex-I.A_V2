@@ -1,10 +1,10 @@
 /**
  * Serviço de Gerenciamento de Sessões Ativas
- * Persiste estado de otimizações em andamento no SQLite
+ * Persiste estado de otimizações em andamento no Banco de Dados (Turso/Postgres)
  */
 
 import { logger } from "../lib/logger";
-import { getSqliteDb } from "../lib/sqliteDb";
+import { DbAdapter } from "../lib/dbAdapter";
 import type { OptimizeMode } from "../types/qlik";
 export type LLMProviderName = "ainex" | "google" | "nvidia";
 
@@ -23,19 +23,18 @@ export interface ActiveSession {
 }
 
 const SESSION_EXPIRY_HOURS = 24; // Sessões expiram após 24 horas
+const db = new DbAdapter();
 
 /**
  * Cria ou atualiza uma sessão ativa
  */
-export function saveActiveSession(session: Omit<ActiveSession, "createdAt" | "updatedAt" | "expiresAt">): void {
-  const db = getSqliteDb();
-
+export async function saveActiveSession(session: Omit<ActiveSession, "createdAt" | "updatedAt" | "expiresAt">): Promise<void> {
   const now = new Date().toISOString();
   const expiresAt = new Date(Date.now() + SESSION_EXPIRY_HOURS * 60 * 60 * 1000).toISOString();
 
   try {
     // Scripts NÃO são persistidos, apenas metadados da sessão
-    const stmt = db.prepare(`
+    await db.run(`
       INSERT INTO active_sessions (
         id, user_id, mode, llm_provider, llm_model,
         progress_data, status, created_at, updated_at, expires_at
@@ -44,9 +43,7 @@ export function saveActiveSession(session: Omit<ActiveSession, "createdAt" | "up
         progress_data = excluded.progress_data,
         status = excluded.status,
         updated_at = excluded.updated_at
-    `);
-
-    stmt.run(
+    `, [
       session.id,
       session.userId || null,
       session.mode,
@@ -57,7 +54,7 @@ export function saveActiveSession(session: Omit<ActiveSession, "createdAt" | "up
       now,
       now,
       expiresAt
-    );
+    ]);
 
     logger.info(`Sessão ${session.id} salva com sucesso`, { status: session.status });
   } catch (error) {
@@ -69,16 +66,13 @@ export function saveActiveSession(session: Omit<ActiveSession, "createdAt" | "up
 /**
  * Recupera uma sessão ativa por ID
  */
-export function getActiveSession(sessionId: string): ActiveSession | null {
-  const db = getSqliteDb();
-
+export async function getActiveSession(sessionId: string): Promise<ActiveSession | null> {
   try {
-    const stmt = db.prepare(`
+    const now = new Date().toISOString();
+    const row = await db.get(`
       SELECT * FROM active_sessions 
-      WHERE id = ? AND expires_at > datetime('now')
-    `);
-
-    const row = stmt.get(sessionId) as Record<string, unknown> | undefined;
+      WHERE id = ? AND expires_at > ?
+    `, [sessionId, now]) as Record<string, unknown> | undefined;
 
     if (!row) {
       return null;
@@ -106,20 +100,17 @@ export function getActiveSession(sessionId: string): ActiveSession | null {
 /**
  * Lista sessões ativas do usuário (últimas 5)
  */
-export function getUserActiveSessions(userId?: string): ActiveSession[] {
-  const db = getSqliteDb();
-
+export async function getUserActiveSessions(userId?: string): Promise<ActiveSession[]> {
   try {
-    const stmt = db.prepare(`
+    const now = new Date().toISOString();
+    const rows = await db.all(`
       SELECT * FROM active_sessions 
       WHERE (user_id = ? OR user_id IS NULL)
-        AND expires_at > datetime('now')
+        AND expires_at > ?
         AND status IN ('running', 'paused')
       ORDER BY updated_at DESC
       LIMIT 5
-    `);
-
-    const rows = stmt.all(userId || null) as Array<Record<string, unknown>>;
+    `, [userId || null, now]) as Array<Record<string, unknown>>;
 
     return rows.map(row => ({
       id: String(row.id),
@@ -142,17 +133,13 @@ export function getUserActiveSessions(userId?: string): ActiveSession[] {
 /**
  * Atualiza o status de uma sessão
  */
-export function updateSessionStatus(sessionId: string, status: ActiveSession["status"]): void {
-  const db = getSqliteDb();
-
+export async function updateSessionStatus(sessionId: string, status: ActiveSession["status"]): Promise<void> {
   try {
-    const stmt = db.prepare(`
+    await db.run(`
       UPDATE active_sessions 
       SET status = ?, updated_at = ?
       WHERE id = ?
-    `);
-
-    stmt.run(status, new Date().toISOString(), sessionId);
+    `, [status, new Date().toISOString(), sessionId]);
     logger.info(`Status da sessão ${sessionId} atualizado para ${status}`);
   } catch (error) {
     logger.error(`Erro ao atualizar status da sessão ${sessionId}`, error);
@@ -162,12 +149,9 @@ export function updateSessionStatus(sessionId: string, status: ActiveSession["st
 /**
  * Remove uma sessão (quando completada ou cancelada)
  */
-export function deleteSession(sessionId: string): void {
-  const db = getSqliteDb();
-
+export async function deleteSession(sessionId: string): Promise<void> {
   try {
-    const stmt = db.prepare("DELETE FROM active_sessions WHERE id = ?");
-    stmt.run(sessionId);
+    await db.run("DELETE FROM active_sessions WHERE id = ?", [sessionId]);
     logger.info(`Sessão ${sessionId} removida`);
   } catch (error) {
     logger.error(`Erro ao remover sessão ${sessionId}`, error);
@@ -177,20 +161,17 @@ export function deleteSession(sessionId: string): void {
 /**
  * Limpa sessões expiradas (chamado periodicamente)
  */
-export function cleanExpiredSessions(): void {
-  const db = getSqliteDb();
-
+export async function cleanExpiredSessions(): Promise<void> {
   try {
-    const stmt = db.prepare("DELETE FROM active_sessions WHERE expires_at < datetime('now')");
-    const result = stmt.run();
-
-    if (result.changes > 0) {
-      logger.info(`${result.changes} sessões expiradas removidas`);
-    }
+    const now = new Date().toISOString();
+    await db.run("DELETE FROM active_sessions WHERE expires_at < ?", [now]);
+    logger.info(`Limpeza de sessões expiradas executada`);
   } catch (error) {
     logger.error("Erro ao limpar sessões expiradas", error);
   }
 }
 
 // Limpa sessões expiradas a cada hora
-setInterval(cleanExpiredSessions, 60 * 60 * 1000);
+setInterval(() => {
+  cleanExpiredSessions().catch(err => logger.error("Erro no job de limpeza de sessões", err));
+}, 60 * 60 * 1000);

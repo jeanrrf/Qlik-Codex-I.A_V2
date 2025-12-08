@@ -17,6 +17,7 @@ import {
 import { checkDailyQuota } from "../services/usageQuotaService";
 import { User, UserRole, RolePermissions, RoleUsageLimits } from "../types/auth";
 import type { OptimizeMode } from "../types/qlik";
+import { asyncHandler } from "./asyncHandler";
 
 /**
  * Request estendido com informações de autenticação
@@ -266,21 +267,22 @@ export function requirePermission(permission: string) {
 /**
  * Middleware para verificar limites de uso
  */
-export function checkUsageLimits(req: AuthRequest, res: Response, next: NextFunction): void {
-  if (!req.user) {
+export const checkUsageLimits = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
     res.status(401).json({ error: "Authentication required" });
     return;
   }
 
-  const limits = RoleUsageLimits[req.user.role];
+  const limits = RoleUsageLimits[authReq.user.role];
 
   logger.debug("[FREE TIER] checkUsageLimits iniciado", {
-    userId: req.user.id,
-    userRole: req.user.role,
+    userId: authReq.user.id,
+    userRole: authReq.user.role,
     limits
   });
 
-  if (req.user.role === UserRole.OWNER) {
+  if (authReq.user.role === UserRole.OWNER) {
     logger.debug("[FREE TIER] Owner detectado - bypass de limites");
     next();
     return;
@@ -308,7 +310,7 @@ export function checkUsageLimits(req: AuthRequest, res: Response, next: NextFunc
 
     if (scriptLines > limits.maxScriptLines) {
       logger.warn(`FREE TIER: Script excede ${limits.maxScriptLines} linhas (${scriptLines} linhas). Aplicando truncamento inteligente.`, {
-        userId: req.user.id,
+        userId: authReq.user.id,
         scriptLines,
         limit: limits.maxScriptLines
       });
@@ -337,11 +339,11 @@ export function checkUsageLimits(req: AuthRequest, res: Response, next: NextFunc
   }
 
   const mode: OptimizeMode = requestedMode ?? "ultra-expert";
-  const quotaCheck = checkDailyQuota(req.user, mode);
+  const quotaCheck = await checkDailyQuota(authReq.user, mode);
 
   if (!quotaCheck.allowed) {
     logger.warn("[FREE TIER] Quota di?ria excedida", {
-      userId: req.user.id,
+      userId: authReq.user.id,
       mode,
       usedToday: quotaCheck.usedToday,
       limit: quotaCheck.limit
@@ -361,14 +363,14 @@ export function checkUsageLimits(req: AuthRequest, res: Response, next: NextFunc
   }
 
   logger.debug("[FREE TIER] Quota OK", {
-    userId: req.user.id,
+    userId: authReq.user.id,
     mode,
     remaining: quotaCheck.remaining,
     limit: quotaCheck.limit
   });
 
   next();
-}
+});
 
 /**
  * Middleware para verificar acesso a recurso próprio

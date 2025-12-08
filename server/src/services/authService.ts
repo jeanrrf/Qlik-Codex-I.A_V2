@@ -11,7 +11,8 @@ import { v4 as uuidv4 } from "uuid";
 import { config } from "../lib/config";
 import { getDbType } from "../lib/dbAdapter";
 import { logger } from "../lib/logger";
-import { initSqliteDb, getSqliteDb } from "../lib/sqliteDb";
+import { PostgresCompatWrapper } from "../lib/dbCompat";
+import { getPostgresDb, initPostgresDb } from "../lib/postgresDb";
 import { initTursoDb, getTursoDb, TursoSqliteWrapper } from "../lib/tursoDb";
 import {
   User,
@@ -43,13 +44,8 @@ async function getAuthDb(): Promise<AuthDb> {
     return new TursoSqliteWrapper(getTursoDb());
   }
 
-  if (dbType === "sqlite") {
-    initSqliteDb();
-    // Cast as unknown first to avoid type mismatch with InValue from libsql
-    return getSqliteDb() as unknown as AuthDb;
-  }
-
-  throw new Error(`Auth database not supported for type: ${dbType}. Only Turso and SQLite are currently supported.`);
+  await initPostgresDb();
+  return new PostgresCompatWrapper(getPostgresDb()) as unknown as AuthDb;
 }
 
 function getGoogleClient(): OAuth2Client {

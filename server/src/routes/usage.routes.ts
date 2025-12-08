@@ -26,8 +26,8 @@ router.get(
     }
 
     // Quotas por modo
-    const ultraExpertQuota = checkDailyQuota(req.user, "ultra-expert");
-    const nvidiaFastQuota = checkDailyQuota(req.user, "nvidia-fast");
+    const ultraExpertQuota = await checkDailyQuota(req.user, "ultra-expert");
+    const nvidiaFastQuota = await checkDailyQuota(req.user, "nvidia-fast");
 
     logger.debug("[USAGE API] Quota consultada", {
       userId: req.user.id,
@@ -58,7 +58,7 @@ router.get(
       return;
     }
 
-    const stats = getUserUsageStats(req.user.id);
+    const stats = await getUserUsageStats(req.user.id);
 
     logger.debug("[USAGE API] Estatísticas consultadas", {
       userId: req.user.id,

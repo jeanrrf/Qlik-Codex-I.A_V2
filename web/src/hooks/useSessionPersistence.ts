@@ -11,6 +11,13 @@ import type { OptimizationProgress } from "./useOptimizationProgress";
 import type { OptimizeMode, LLMProviderName } from "../types/api";
 
 const SESSION_ID_STORAGE_KEY = "qlik-codex-active-session-id";
+const SESSION_META_STORAGE_KEY = "qlik-codex-session-meta";
+
+interface SessionMeta {
+  sessionId: string;
+  savedInBackend: boolean;
+  updatedAt: string;
+}
 
 interface SessionPersistenceOptions {
   sessionId?: string;
@@ -48,12 +55,28 @@ function persistSessionId(sessionId: string): void {
   }
 }
 
+function persistSessionMeta(meta: SessionMeta): void {
+  try {
+    localStorage.setItem(SESSION_META_STORAGE_KEY, JSON.stringify(meta));
+  } catch {
+    // localStorage may be unavailable
+  }
+}
+
 /**
  * Clears persisted sessionId from localStorage
  */
 function clearPersistedSessionId(): void {
   try {
     localStorage.removeItem(SESSION_ID_STORAGE_KEY);
+  } catch {
+    // localStorage may be unavailable
+  }
+}
+
+function clearSessionMeta(): void {
+  try {
+    localStorage.removeItem(SESSION_META_STORAGE_KEY);
   } catch {
     // localStorage may be unavailable
   }
@@ -67,6 +90,18 @@ function hasPersistedSessionId(): boolean {
     return localStorage.getItem(SESSION_ID_STORAGE_KEY) !== null;
   } catch {
     return false;
+  }
+}
+
+function getPersistedSessionMeta(): SessionMeta | null {
+  try {
+    const raw = localStorage.getItem(SESSION_META_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as SessionMeta;
+    if (!parsed.sessionId) return null;
+    return parsed;
+  } catch {
+    return null;
   }
 }
 
@@ -97,6 +132,7 @@ export function useSessionPersistence() {
       await sessionAPI.saveSession(sessionData);
       // Persiste o sessionId após salvar com sucesso
       persistSessionId(sessionId);
+      persistSessionMeta({ sessionId, savedInBackend: true, updatedAt: new Date().toISOString() });
       console.warn("✓ Sessão salva no backend");
     } catch (_error) {
       console.warn("⚠️ Backend indisponível, salvando localmente (IndexedDB):", _error);
@@ -110,6 +146,7 @@ export function useSessionPersistence() {
         });
         // Persiste o sessionId após salvar localmente com sucesso
         persistSessionId(sessionId);
+        persistSessionMeta({ sessionId, savedInBackend: false, updatedAt: new Date().toISOString() });
         console.warn("✓ Sessão salva localmente");
       } catch (localError) {
         console.error("❌ Erro ao salvar sessão localmente:", localError);
@@ -136,6 +173,9 @@ export function useSessionPersistence() {
    */
   const restoreSession = useCallback(async (sessionId?: string): Promise<any | null> => {
     const id = sessionId || sessionIdRef.current;
+    const meta = getPersistedSessionMeta();
+    const savedInBackend = meta?.sessionId === id && meta.savedInBackend;
+    const shouldTryBackend = Boolean(sessionId) || !meta || Boolean(savedInBackend);
 
     // If no explicit sessionId provided and no persisted session exists,
     // don't attempt to fetch from backend (avoids 404 errors for new sessions)
@@ -144,11 +184,18 @@ export function useSessionPersistence() {
     }
 
     try {
-      // Tenta recuperar do backend
-      const session = await sessionAPI.getSession(id);
-      if (session) {
-        console.warn("✓ Sessão recuperada do backend");
-        return session;
+      if (shouldTryBackend) {
+        // Tenta recuperar do backend
+        const session = await sessionAPI.getSession(id);
+        if (session) {
+          console.warn("✓ Sessão recuperada do backend");
+          return session;
+        }
+
+        // Se não encontrou, marque como não disponível no backend para evitar 404 repetidos
+        if (meta) {
+          persistSessionMeta({ ...meta, savedInBackend: false, updatedAt: new Date().toISOString() });
+        }
       }
     } catch (_error) {
       console.warn("⚠️ Backend indisponível, tentando IndexedDB local");
@@ -167,6 +214,7 @@ export function useSessionPersistence() {
 
     // Session not found - clear the persisted ID since it's stale
     clearPersistedSessionId();
+    clearSessionMeta();
 
     return null;
   }, []);
@@ -221,6 +269,7 @@ export function useSessionPersistence() {
     // Clear persisted sessionId if this was the active session
     if (sessionId === sessionIdRef.current) {
       clearPersistedSessionId();
+      clearSessionMeta();
     }
   }, []);
 
@@ -230,6 +279,7 @@ export function useSessionPersistence() {
    */
   const resetSession = useCallback((): string => {
     clearPersistedSessionId();
+    clearSessionMeta();
     const newId = uuidv4();
     sessionIdRef.current = newId;
     return newId;

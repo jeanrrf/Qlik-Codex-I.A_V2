@@ -4,7 +4,7 @@
  */
 
 import { logger } from "../lib/logger";
-import { getSqliteDb } from "../lib/sqliteDb";
+import { DbAdapter } from "../lib/dbAdapter";
 import { UserRole, RoleUsageLimits, User } from "../types/auth";
 import type { OptimizeMode } from "../types/qlik";
 
@@ -16,10 +16,12 @@ export interface UsageQuotaCheck {
   usedToday: number;
 }
 
+const db = new DbAdapter();
+
 /**
  * Verifica se o usuário pode executar uma otimização
  */
-export function checkDailyQuota(user: User, mode: OptimizeMode): UsageQuotaCheck {
+export async function checkDailyQuota(user: User, mode: OptimizeMode): Promise<UsageQuotaCheck> {
   // Owner tem acesso ilimitado
   if (user.role === UserRole.OWNER) {
     return {
@@ -46,7 +48,7 @@ export function checkDailyQuota(user: User, mode: OptimizeMode): UsageQuotaCheck
   }
 
   // Contar usos nas últimas 24 horas
-  const usedToday = countDailyUsage(user.id);
+  const usedToday = await countDailyUsage(user.id);
 
   const remaining = Math.max(0, totalLimit - usedToday);
   const allowed = usedToday < totalLimit;
@@ -72,17 +74,14 @@ export function checkDailyQuota(user: User, mode: OptimizeMode): UsageQuotaCheck
 /**
  * Registra uma execução de otimização
  */
-export function recordUsage(userId: string, mode: OptimizeMode): void {
-  const db = getSqliteDb();
+export async function recordUsage(userId: string, mode: OptimizeMode): Promise<void> {
   const now = new Date().toISOString();
 
   try {
-    const stmt = db.prepare(`
+    await db.run(`
       INSERT INTO user_daily_usage (user_id, mode, executed_at)
       VALUES (?, ?, ?)
-    `);
-
-    stmt.run(userId, mode, now);
+    `, [userId, mode, now]);
 
     logger.info("[QUOTA] Uso registrado", { userId, mode, timestamp: now });
   } catch (err) {
@@ -94,19 +93,17 @@ export function recordUsage(userId: string, mode: OptimizeMode): void {
 /**
  * Conta quantas execuções o usuário fez nas últimas 24 horas
  */
-function countDailyUsage(userId: string): number {
-  const db = getSqliteDb();
+async function countDailyUsage(userId: string): Promise<number> {
   const last24Hours = get24HoursAgo();
 
   try {
-    const stmt = db.prepare(`
+    const result = await db.get(`
       SELECT COUNT(*) as count
       FROM user_daily_usage
       WHERE user_id = ? AND executed_at >= ?
-    `);
+    `, [userId, last24Hours]) as { count: number } | undefined;
 
-    const result = stmt.get(userId, last24Hours) as { count: number };
-    return result.count;
+    return result?.count ?? 0;
   } catch (err) {
     logger.error("[QUOTA] Erro ao contar uso diário", { error: err, userId });
     return 0; // Em caso de erro, permitir uso (fail-open)
@@ -134,26 +131,21 @@ function getNextMidnight(): string {
 /**
  * Limpa registros antigos (mais de 30 dias) - pode ser chamado por cron job
  */
-export function cleanupOldUsageRecords(): number {
-  const db = getSqliteDb();
+export async function cleanupOldUsageRecords(): Promise<number> {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const cutoffDate = thirtyDaysAgo.toISOString();
 
   try {
-    const stmt = db.prepare(`
+    // Note: DbAdapter.run doesn't return changes count easily.
+    // We can assume success if no error.
+    await db.run(`
       DELETE FROM user_daily_usage
       WHERE executed_at < ?
-    `);
+    `, [cutoffDate]);
 
-    const result = stmt.run(cutoffDate);
-    const deleted = result.changes;
-
-    if (deleted > 0) {
-      logger.info("[QUOTA] Limpeza de registros antigos", { deleted, cutoffDate });
-    }
-
-    return deleted;
+    logger.info("[QUOTA] Limpeza de registros antigos executada", { cutoffDate });
+    return 1; // Placeholder
   } catch (err) {
     logger.error("[QUOTA] Erro ao limpar registros antigos", err);
     return 0;
@@ -163,15 +155,13 @@ export function cleanupOldUsageRecords(): number {
 /**
  * Obtém estatísticas de uso de um usuário
  */
-export function getUserUsageStats(userId: string): {
+export async function getUserUsageStats(userId: string): Promise<{
   last24h: number;
   last7days: number;
   last30days: number;
   ultraExpertModeCount: number;
   nvidiaFastModeCount: number;
-} {
-  const db = getSqliteDb();
-
+}> {
   try {
     const now = new Date();
 
@@ -184,42 +174,21 @@ export function getUserUsageStats(userId: string): {
     const last30days = new Date(now);
     last30days.setDate(last30days.getDate() - 30);
 
-    const stmt24h = db.prepare(`
-      SELECT COUNT(*) as count FROM user_daily_usage
-      WHERE user_id = ? AND executed_at >= ?
-    `);
-    const count24h = (stmt24h.get(userId, last24h.toISOString()) as { count: number }).count;
-
-    const stmt7d = db.prepare(`
-      SELECT COUNT(*) as count FROM user_daily_usage
-      WHERE user_id = ? AND executed_at >= ?
-    `);
-    const count7d = (stmt7d.get(userId, last7days.toISOString()) as { count: number }).count;
-
-    const stmt30d = db.prepare(`
-      SELECT COUNT(*) as count FROM user_daily_usage
-      WHERE user_id = ? AND executed_at >= ?
-    `);
-    const count30d = (stmt30d.get(userId, last30days.toISOString()) as { count: number }).count;
-
-    const stmtUltraExpert = db.prepare(`
-      SELECT COUNT(*) as count FROM user_daily_usage
-      WHERE user_id = ? AND mode = 'ultra-expert'
-    `);
-    const ultraExpertCount = (stmtUltraExpert.get(userId) as { count: number }).count;
-
-    const stmtNvidiaFast = db.prepare(`
-      SELECT COUNT(*) as count FROM user_daily_usage
-      WHERE user_id = ? AND mode = 'nvidia-fast'
-    `);
-    const nvidiaFastCount = (stmtNvidiaFast.get(userId) as { count: number }).count;
+    // Parallelize queries for performance
+    const [res24h, res7d, res30d, resUltra, resNvidia] = await Promise.all([
+      db.get(`SELECT COUNT(*) as count FROM user_daily_usage WHERE user_id = ? AND executed_at >= ?`, [userId, last24h.toISOString()]),
+      db.get(`SELECT COUNT(*) as count FROM user_daily_usage WHERE user_id = ? AND executed_at >= ?`, [userId, last7days.toISOString()]),
+      db.get(`SELECT COUNT(*) as count FROM user_daily_usage WHERE user_id = ? AND executed_at >= ?`, [userId, last30days.toISOString()]),
+      db.get(`SELECT COUNT(*) as count FROM user_daily_usage WHERE user_id = ? AND mode = 'ultra-expert'`, [userId]),
+      db.get(`SELECT COUNT(*) as count FROM user_daily_usage WHERE user_id = ? AND mode = 'nvidia-fast'`, [userId])
+    ]);
 
     return {
-      last24h: count24h,
-      last7days: count7d,
-      last30days: count30d,
-      ultraExpertModeCount: ultraExpertCount,
-      nvidiaFastModeCount: nvidiaFastCount
+      last24h: (res24h as any)?.count ?? 0,
+      last7days: (res7d as any)?.count ?? 0,
+      last30days: (res30d as any)?.count ?? 0,
+      ultraExpertModeCount: (resUltra as any)?.count ?? 0,
+      nvidiaFastModeCount: (resNvidia as any)?.count ?? 0
     };
   } catch (err) {
     logger.error("[QUOTA] Erro ao obter estatísticas de uso", { error: err, userId });
