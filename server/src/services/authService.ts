@@ -11,7 +11,6 @@ import { config } from "../lib/config";
 import { logger } from "../lib/logger";
 import { getDbType } from "../lib/dbAdapter";
 import { initTursoDb, getTursoDb, TursoSqliteWrapper } from "../lib/tursoDb";
-import { initSqliteDb } from "../lib/sqliteDb";
 import {
   User,
   AuthSession,
@@ -37,17 +36,12 @@ type AuthDb = {
 async function getAuthDb(): Promise<AuthDb> {
   const dbType = getDbType();
 
-  if (dbType === "turso") {
-    await initTursoDb();
-    return new TursoSqliteWrapper(getTursoDb());
+  if (dbType !== "turso") {
+    throw new Error("Auth database must be Turso. Set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN.");
   }
 
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("Production auth database must be Turso. Set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN.");
-  }
-
-  // Dev fallback only
-  return initSqliteDb();
+  await initTursoDb();
+  return new TursoSqliteWrapper(getTursoDb());
 }
 
 function getGoogleClient(): OAuth2Client {
