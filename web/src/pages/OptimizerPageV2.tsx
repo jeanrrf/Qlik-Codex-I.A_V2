@@ -30,6 +30,8 @@ import HistoryModal from "../components/HistoryModal";
 import { useOptimizationProgress } from "../hooks/useOptimizationProgress";
 import { useSessionPersistence } from "../hooks/useSessionPersistence";
 import { highlightQlikCode } from "../lib/qlikSyntaxHighlighter";
+import QuotaDisplay from "../components/QuotaDisplay/QuotaDisplay";
+import { getQuotas, UsageQuotaCheck } from "../api/usage";
 
 interface OptimizerPageProps {
 }
@@ -257,37 +259,48 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
   // FREE TIER: Controle de visibilidade do banner de aviso
   const [showFreeTierWarning, setShowFreeTierWarning] = useState(true);
 
-  // FREE TIER: Contador de Ultra Expert (4 por DIA para USER) com persistência
-  const MAX_ULTRA_EXPERT_RUNS = isOwner ? -1 : 4; // -1 = ilimitado
+  // FREE TIER: Estado de quotas (do backend)
+  const [quotaData, setQuotaData] = useState<UsageQuotaCheck | null>(null);
+  const [quotaLoading, setQuotaLoading] = useState(true);
 
-  // Carregar contador do localStorage e verificar se é do mesmo dia
-  const getStoredUsageCount = (): number => {
+  // Buscar quotas do backend
+  const fetchQuotas = useCallback(async () => {
+    if (isOwner) {
+      // Owner tem acesso ilimitado
+      setQuotaData({ allowed: true, remaining: -1, limit: -1, resetAt: new Date().toISOString(), usedToday: 0 });
+      setQuotaLoading(false);
+      return;
+    }
+
     try {
-      const stored = localStorage.getItem('qlik_codex_usage');
-      if (!stored) return 0;
-      const { count, date } = JSON.parse(stored);
-      const today = new Date().toISOString().split('T')[0];
-      // Se é um novo dia, resetar contador
-      if (date !== today) {
-        localStorage.setItem('qlik_codex_usage', JSON.stringify({ count: 0, date: today }));
-        return 0;
-      }
-      return count;
-    } catch {
-      return 0;
+      setQuotaLoading(true);
+      const response = await getQuotas();
+      const modeQuota = mode === 'ultra-expert' ? response.data.ultraExpert : response.data.nvidiaFast;
+      setQuotaData(modeQuota);
+    } catch (err) {
+      console.error('[QUOTA] Erro ao buscar quotas:', err);
+      // Fallback: permitir uso em caso de erro (fail-open)
+      setQuotaData({ allowed: true, remaining: 4, limit: 4, resetAt: new Date().toISOString(), usedToday: 0 });
+    } finally {
+      setQuotaLoading(false);
     }
-  };
+  }, [isOwner, mode]);
 
-  const [ultraExpertUsageCount, setUltraExpertUsageCount] = useState(getStoredUsageCount);
-  const hasUltraExpertQuotaLeft = isOwner || ultraExpertUsageCount < MAX_ULTRA_EXPERT_RUNS;
-
-  // Salvar contador no localStorage quando mudar
+  // Buscar quotas na montagem e quando mudar o modo
   useEffect(() => {
-    if (!isOwner) {
-      const today = new Date().toISOString().split('T')[0];
-      localStorage.setItem('qlik_codex_usage', JSON.stringify({ count: ultraExpertUsageCount, date: today }));
-    }
-  }, [ultraExpertUsageCount, isOwner]);
+    fetchQuotas();
+  }, [fetchQuotas]);
+
+  // Atualizar quotas periodicamente (a cada 30 segundos)
+  useEffect(() => {
+    const interval = setInterval(fetchQuotas, 30000);
+    return () => clearInterval(interval);
+  }, [fetchQuotas]);
+
+  // Computed values baseados em quotaData
+  const hasUltraExpertQuotaLeft = quotaData?.allowed ?? true;
+  const ultraExpertUsageCount = quotaData?.usedToday ?? 0;
+  const MAX_ULTRA_EXPERT_RUNS = quotaData?.limit ?? 4;
 
   // Sincroniza mudança de modo com o hook de progresso
   const handleModeChange = (newMode: OptimizeMode) => {
@@ -457,10 +470,8 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
           setConsultancyDoc(consultancyDocument);
         }
 
-        // FREE TIER: Incrementa contador de Ultra Expert após sucesso
-        if (!isOwner && mode === 'ultra-expert') {
-          setUltraExpertUsageCount(prev => prev + 1);
-        }
+        // FREE TIER: Atualiza quotas após sucesso (backend registra uso automaticamente)
+        await fetchQuotas();
 
         // Salva sessão completa após finalização
         await session.saveSession({
@@ -857,6 +868,20 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
               <div className="ctrl-empty">Nenhum script carregado</div>
             )}
           </div>
+
+          {/* Quota Display - FREE TIER */}
+          {!isOwner && quotaData && !quotaLoading && (
+            <div className="ctrl-card quota-card">
+              <QuotaDisplay
+                mode={mode}
+                compact={false}
+                onQuotaUpdate={(quota) => {
+                  // Callback opcional para sincronizar estado
+                  setQuotaData(quota);
+                }}
+              />
+            </div>
+          )}
 
           {/* Análise do Script - Sidebar */}
           {(script?.trim() || uploadMeta) && (

@@ -6,6 +6,7 @@
 import { Pool } from 'pg';
 
 import { logger } from './logger';
+import { config } from './config';
 
 let pool: Pool | null = null;
 
@@ -43,6 +44,11 @@ async function createTables() {
   if (!pool) throw new Error('Database not initialized');
 
   try {
+    if (!config.analyticsEnabled) {
+      logger.info('Analytics tables creation skipped (ANALYTICS_ENABLED not true)');
+      return;
+    }
+
     // Tabela de page views
     await pool.query(`
       CREATE TABLE IF NOT EXISTS analytics_page_views (
@@ -99,6 +105,22 @@ async function createTables() {
       
       CREATE INDEX IF NOT EXISTS idx_analytics_sess_id ON analytics_sessions(session_id);
       CREATE INDEX IF NOT EXISTS idx_analytics_sess_owner ON analytics_sessions(is_owner, start_time DESC);
+    `);
+
+    // Essential metrics table (minimal tracking - sempre ativa)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS essential_metrics (
+        id SERIAL PRIMARY KEY,
+        date TEXT NOT NULL,
+        session_id TEXT NOT NULL,
+        user_id TEXT,
+        event_type TEXT NOT NULL,
+        metadata TEXT,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_essential_date ON essential_metrics(date, event_type);
+      CREATE INDEX IF NOT EXISTS idx_essential_session ON essential_metrics(session_id, date);
     `);
 
     logger.info('PostgreSQL tables created successfully');

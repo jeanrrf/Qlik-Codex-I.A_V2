@@ -3,13 +3,15 @@
  * Gerencia autenticação Google OAuth, JWT tokens e sessões de usuário
  */
 
+import type { InValue } from '@libsql/client';
 import { OAuth2Client } from "google-auth-library";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 
 import { config } from "../lib/config";
-import { logger } from "../lib/logger";
 import { getDbType } from "../lib/dbAdapter";
+import { logger } from "../lib/logger";
+import { initSqliteDb, getSqliteDb } from "../lib/sqliteDb";
 import { initTursoDb, getTursoDb, TursoSqliteWrapper } from "../lib/tursoDb";
 import {
   User,
@@ -27,34 +29,41 @@ let googleClient: OAuth2Client | null = null;
 
 type AuthDb = {
   prepare: (sql: string) => {
-    get: (...params: unknown[]) => Promise<any> | any;
-    all: (...params: unknown[]) => Promise<any[]> | any[];
-    run: (...params: unknown[]) => Promise<any> | any;
+    get: (...params: InValue[]) => Promise<unknown> | unknown;
+    all: (...params: InValue[]) => Promise<unknown[]> | unknown[];
+    run: (...params: InValue[]) => Promise<unknown> | unknown;
   };
 };
 
 async function getAuthDb(): Promise<AuthDb> {
   const dbType = getDbType();
 
-  if (dbType !== "turso") {
-    throw new Error("Auth database must be Turso. Set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN.");
+  if (dbType === "turso") {
+    await initTursoDb();
+    return new TursoSqliteWrapper(getTursoDb());
   }
 
-  await initTursoDb();
-  return new TursoSqliteWrapper(getTursoDb());
+  if (dbType === "sqlite") {
+    initSqliteDb();
+    // Cast as unknown first to avoid type mismatch with InValue from libsql
+    return getSqliteDb() as unknown as AuthDb;
+  }
+
+  throw new Error(`Auth database not supported for type: ${dbType}. Only Turso and SQLite are currently supported.`);
 }
 
 function getGoogleClient(): OAuth2Client {
-  if (!googleClient) {
-    if (!config.googleClientId || !config.googleClientSecret) {
-      throw new Error("Google OAuth credentials not configured");
-    }
-    googleClient = new OAuth2Client(
-      config.googleClientId,
-      config.googleClientSecret,
-      config.googleRedirectUri
-    );
+  // Sempre recriar o cliente para garantir que pegue as credenciais mais recentes
+  if (!config.googleClientId || !config.googleClientSecret) {
+    throw new Error("Google OAuth credentials not configured");
   }
+
+  googleClient = new OAuth2Client(
+    config.googleClientId,
+    config.googleClientSecret,
+    config.googleRedirectUri
+  );
+
   return googleClient;
 }
 
@@ -411,6 +420,11 @@ export function getGoogleAuthUrl(): string {
     "https://www.googleapis.com/auth/userinfo.email",
     "https://www.googleapis.com/auth/userinfo.profile"
   ];
+
+  logger.info("[AUTH] Gerando URL de autenticação Google", {
+    clientId: config.googleClientId,
+    redirectUri: config.googleRedirectUri
+  });
 
   return client.generateAuthUrl({
     access_type: "offline",

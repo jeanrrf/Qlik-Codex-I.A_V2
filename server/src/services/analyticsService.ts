@@ -410,7 +410,7 @@ export async function getDetailedAnalytics(options: {
       WHERE ${whereClause}
       ORDER BY timestamp DESC
       LIMIT ?
-    `).all(...params, limit) as Array<Record<string, unknown>>;
+    `).all(...(params as Array<string | number>), limit) as Array<Record<string, unknown>>;
 
     // Events
     const events = await db.prepare(`
@@ -420,7 +420,7 @@ export async function getDetailedAnalytics(options: {
       WHERE ${whereClause}
       ORDER BY timestamp DESC
       LIMIT ?
-    `).all(...params, limit) as Array<Record<string, unknown>>;
+    `).all(...(params as Array<string | number>), limit) as Array<Record<string, unknown>>;
 
     // Sessions
     let sessionWhereClause = '1=1';
@@ -448,7 +448,7 @@ export async function getDetailedAnalytics(options: {
       WHERE ${sessionWhereClause}
       ORDER BY start_time DESC
       LIMIT ?
-    `).all(...sessionParams, limit) as Array<Record<string, unknown>>;
+    `).all(...(sessionParams as Array<string | number>), limit) as Array<Record<string, unknown>>;
 
     return {
       pageViews: pageViews.map((pv: Record<string, unknown>) => ({

@@ -114,6 +114,10 @@ export const config = {
   // Frontend URL (para redirects)
   frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173",
 
+  // Analytics runtime toggle
+  // Use ANALYTICS_ENABLED=true in env to explicitly enable analytics
+  analyticsEnabled: (process.env.ANALYTICS_ENABLED || 'false').toLowerCase() === 'true',
+
   // Optimization thresholds for LLM prompts
   optimizationThresholds: {
     highComplexityLOC: 500,

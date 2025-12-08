@@ -19,8 +19,8 @@ import { googleProvider } from "./llmProviders/googleProvider";
 import { nvidiaProvider } from "./llmProviders/nvidiaProvider";
 import type { LLMProvider } from "./llmProviders/types";
 import { logger } from "./logger";
-import { sseEmitter } from "./sseEmitter";
 import { LLMError } from "./resilience";
+import { sseEmitter } from "./sseEmitter";
 
 
 export interface ProviderAttemptResult {

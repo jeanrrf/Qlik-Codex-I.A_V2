@@ -56,6 +56,9 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     try {
       const authUrl = getGoogleAuthUrl();
+      logger.info("[AUTH] Google OAuth URL gerada", {
+        redirectUri: process.env.GOOGLE_REDIRECT_URI || "http://localhost:3000/api/auth/google/callback"
+      });
       res.json({ authUrl });
     } catch (err) {
       logger.error("Error generating Google auth URL", err);

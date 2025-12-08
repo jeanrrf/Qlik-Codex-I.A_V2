@@ -2,6 +2,7 @@
   "name": "qlik-codex-ia-server",
   "version": "0.2.1",
   "description": "Backend do QLIK CODEX I.A - Otimizador inteligente de scripts Qlik com AINEX.",
+  "type": "commonjs",
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",

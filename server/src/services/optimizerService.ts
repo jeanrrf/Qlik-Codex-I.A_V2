@@ -377,7 +377,7 @@ ${script}
           changes: changes.map((c) => {
             const item = c as Record<string, unknown>;
             const rawCategory = String(item.category ?? 'performance');
-            const category = ['performance', 'readability', 'structure', 'cleanup'].includes(rawCategory) ? (rawCategory as any) : 'performance';
+            const category = ['performance', 'readability', 'structure', 'cleanup'].includes(rawCategory) ? (rawCategory as 'performance' | 'readability' | 'structure' | 'cleanup') : 'performance';
             return {
               category,
               area: String(item.area ?? 'Geral'),

@@ -3,9 +3,10 @@
  * Alternativa simples ao Supabase/PostgreSQL
  */
 
-import type { Client } from '@libsql/client';
+import type { Client, InValue } from '@libsql/client';
 
 import { logger } from './logger';
+import { config } from './config';
 
 let tursoClient: Client | null = null;
 
@@ -49,8 +50,11 @@ async function createTables() {
   if (!tursoClient) return;
 
   try {
-    // Tabela de page views
-    await tursoClient.execute(`
+    if (!config.analyticsEnabled) {
+      logger.info('Skipping creation of Turso analytics tables (ANALYTICS_ENABLED not true)');
+    } else {
+      // Tabela de page views
+      await tursoClient.execute(`
       CREATE TABLE IF NOT EXISTS analytics_page_views (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id TEXT,
@@ -65,13 +69,13 @@ async function createTables() {
       );
     `);
 
-    await tursoClient.execute(`
+      await tursoClient.execute(`
       CREATE INDEX IF NOT EXISTS idx_analytics_pv_page 
       ON analytics_page_views(page, timestamp DESC);
     `);
 
-    // Tabela de events
-    await tursoClient.execute(`
+      // Tabela de events
+      await tursoClient.execute(`
       CREATE TABLE IF NOT EXISTS analytics_events (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id TEXT,
@@ -86,13 +90,13 @@ async function createTables() {
       );
     `);
 
-    await tursoClient.execute(`
+      await tursoClient.execute(`
       CREATE INDEX IF NOT EXISTS idx_analytics_ev_type 
       ON analytics_events(event_type, timestamp DESC);
     `);
 
-    // Tabela de sessions
-    await tursoClient.execute(`
+      // Tabela de sessions
+      await tursoClient.execute(`
       CREATE TABLE IF NOT EXISTS analytics_sessions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         session_id TEXT UNIQUE NOT NULL,
@@ -108,10 +112,12 @@ async function createTables() {
       );
     `);
 
-    await tursoClient.execute(`
+      await tursoClient.execute(`
       CREATE INDEX IF NOT EXISTS idx_analytics_sess_id 
       ON analytics_sessions(session_id);
     `);
+
+    }
 
     // We'll create all tables used by the app (mirror of sqlite schema)
     // Contact messages
@@ -344,6 +350,29 @@ async function createTables() {
       ON user_daily_usage(mode, executed_at DESC);
     `);
 
+    // Essential metrics table (minimal tracking - sempre ativa)
+    await tursoClient.execute(`
+      CREATE TABLE IF NOT EXISTS essential_metrics (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL,
+        session_id TEXT NOT NULL,
+        user_id TEXT,
+        event_type TEXT NOT NULL,
+        metadata TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await tursoClient.execute(`
+      CREATE INDEX IF NOT EXISTS idx_essential_date 
+      ON essential_metrics(date, event_type);
+    `);
+
+    await tursoClient.execute(`
+      CREATE INDEX IF NOT EXISTS idx_essential_session 
+      ON essential_metrics(session_id, date);
+    `);
+
     logger.info('Turso tables created successfully');
   } catch (err) {
     logger.error('Error creating Turso tables', err);
@@ -377,7 +406,7 @@ export class TursoSqliteWrapper {
     const client = this.client;
 
     return {
-      get: async (...params: any[]) => {
+      get: async (...params: InValue[]) => {
         try {
           const result = await client.execute({ sql, args: params });
           return result.rows[0] || null;
@@ -387,7 +416,7 @@ export class TursoSqliteWrapper {
         }
       },
 
-      all: async (...params: any[]) => {
+      all: async (...params: InValue[]) => {
         try {
           const result = await client.execute({ sql, args: params });
           return result.rows;
@@ -397,7 +426,7 @@ export class TursoSqliteWrapper {
         }
       },
 
-      run: async (...params: any[]) => {
+      run: async (...params: InValue[]) => {
         try {
           await client.execute({ sql, args: params });
         } catch (err) {

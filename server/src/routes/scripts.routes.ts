@@ -6,6 +6,7 @@ import { asyncHandler } from "../middleware/asyncHandler";
 import { requireAuth, checkUsageLimits, AuthRequest } from "../middleware/authMiddleware";
 import { apiLimiter } from "../middleware/rateLimiter";
 import { scriptService } from "../services/scriptService";
+import { trackOptimization } from "../services/essentialMetrics";
 import { stepTimingService } from "../services/stepTimingService";
 import { recordUsage } from "../services/usageQuotaService";
 import type { OptimizeScriptApiResponse } from "../types/api";
@@ -150,6 +151,12 @@ router.post(
           });
         }
       }
+
+      // Track optimization (essential metrics)
+      const sessionIdForTracking = req.body.sessionId || 'unknown';
+      trackOptimization(sessionIdForTracking, req.user?.id, payload.mode).catch(err => {
+        logger.error("[METRICS] Failed to track optimization", err);
+      });
 
       // Limpa o cliente atual
       sseEmitter.setCurrentClient(null);

@@ -125,7 +125,7 @@ export class DbAdapter {
    */
   async run(sql: string, params: unknown[] = []): Promise<void> {
     if (this.dbType === 'postgres') {
-      const pg = this.db as { query: (sql: string, params?: unknown[]) => Promise<any> };
+      const pg = this.db as { query: (sql: string, params?: unknown[]) => Promise<unknown> };
       await pg.query(sql, params);
     } else {
       const sqlite = this.db as { prepare: (sql: string) => { run: (...args: unknown[]) => unknown } };
@@ -138,7 +138,7 @@ export class DbAdapter {
    */
   async exec(sql: string): Promise<void> {
     if (this.dbType === 'postgres') {
-      const pg = this.db as { query: (sql: string) => Promise<any> };
+      const pg = this.db as { query: (sql: string) => Promise<unknown> };
       await pg.query(sql);
     } else {
       const sqlite = this.db as { exec: (sql: string) => void };

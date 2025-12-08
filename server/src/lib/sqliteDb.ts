@@ -9,6 +9,7 @@ import path from "path";
 import Database from "better-sqlite3";
 
 import { logger } from "./logger";
+import { config } from './config';
 
 let db: Database.Database | null = null;
 
@@ -429,8 +430,10 @@ function createTables() {
 
   // ========== ANALYTICS TABLES (Sistema de Monitoramento Enterprise) ==========
 
-  // Tabela de visualizações de página
-  db.exec(`
+  // Só criamos as tabelas de analytics quando o sistema estiver habilitado
+  if (config.analyticsEnabled) {
+    // Tabela de visualizações de página
+    db.exec(`
     CREATE TABLE IF NOT EXISTS analytics_page_views (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id TEXT,
@@ -461,8 +464,8 @@ function createTables() {
     ON analytics_page_views(timestamp DESC);
   `);
 
-  // Tabela de eventos customizados
-  db.exec(`
+    // Tabela de eventos customizados
+    db.exec(`
     CREATE TABLE IF NOT EXISTS analytics_events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id TEXT,
@@ -496,9 +499,9 @@ function createTables() {
     ON analytics_events(timestamp DESC);
   `);
 
-  // Tabela de sessões de navegação
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS analytics_sessions (
+    // Tabela de sessões de navegação
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS analytics_sessions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       session_id TEXT UNIQUE NOT NULL,
       user_id TEXT,
@@ -527,6 +530,27 @@ function createTables() {
     
     CREATE INDEX IF NOT EXISTS idx_analytics_sess_activity 
     ON analytics_sessions(last_activity DESC);
+    `);
+
+  } // fim analyticsEnabled
+
+  // Tabela minimalista de métricas essenciais (sempre ativa)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS essential_metrics (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT NOT NULL,
+      session_id TEXT NOT NULL,
+      user_id TEXT,
+      event_type TEXT NOT NULL,
+      metadata TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_essential_date 
+    ON essential_metrics(date, event_type);
+    
+    CREATE INDEX IF NOT EXISTS idx_essential_session 
+    ON essential_metrics(session_id, date);
   `);
 
   // Reduz ruído no console: não logar criação/validação de tabelas a cada boot

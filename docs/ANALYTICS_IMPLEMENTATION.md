@@ -142,6 +142,20 @@ const DEFAULT_CONFIG: AnalyticsConfig = {
 };
 ```
 
+### **Opt-out / Desabilitar analytics por padrão**
+
+As operações de analytics podem ser totalmente desabilitadas no servidor e no frontend.
+
+- No servidor: defina a variável de ambiente ANALYTICS_ENABLED=true para habilitar. Por padrão o sistema está DESABILITADO (ANALYTICS_ENABLED não definido ou diferente de 'true').
+- No frontend (Vite): defina VITE_ENABLE_ANALYTICS=true para ativar tracking no cliente (por padrão desativado).
+
+Exemplo (.env):
+
+```
+ANALYTICS_ENABLED=false
+VITE_ENABLE_ANALYTICS=false
+```
+
 ---
 
 ## 📊 Endpoints da API

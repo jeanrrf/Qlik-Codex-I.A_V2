@@ -9,7 +9,7 @@ import OptimizerPageV2 from "./pages/OptimizerPageV2";
 import { ProfilePage } from "./pages/ProfilePage";
 import AnalyticsDashboard from "./pages/Analytics/AnalyticsDashboard";
 import { apiClient } from "./api/client";
-import { useAnalytics } from "./hooks/useAnalytics";
+import { useEssentialMetrics } from "./hooks/useEssentialMetrics";
 
 type View = "landing" | "optimizer" | "profile" | "analytics";
 
@@ -32,13 +32,8 @@ const AppContent: React.FC = () => {
   const [history, setHistory] = useState<View[]>(() => [getInitialView()]);
   const { isAuthenticated, isLoading } = useAuth();
 
-  // Hook de Analytics com tracking automático
-  const { trackPageView } = useAnalytics();
-
-  // Rastrear mudanças de view
-  useEffect(() => {
-    trackPageView(`/${view}`);
-  }, [view, trackPageView]);
+  // Hook de Métricas Essenciais (minimalista)
+  useEssentialMetrics();
 
   // Verificar se estamos na rota de callback
   useEffect(() => {

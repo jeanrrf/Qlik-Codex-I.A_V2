@@ -1,13 +1,13 @@
-﻿import path from "node:path";
-import js from "@eslint/js";
-import globals from "globals";
-import tsParser from "@typescript-eslint/parser";
-import tsPlugin from "@typescript-eslint/eslint-plugin";
-import importPlugin from "eslint-plugin-import";
+﻿const path = require("node:path");
+const js = require("@eslint/js");
+const globals = require("globals");
+const tsParser = require("@typescript-eslint/parser");
+const tsPlugin = require("@typescript-eslint/eslint-plugin");
+const importPlugin = require("eslint-plugin-import");
 
 const tsconfigPath = path.resolve("./tsconfig.json");
 
-export default [
+module.exports = [
   {
     ignores: ["dist/**", "node_modules/**", "src/**/*.d.ts"]
   },

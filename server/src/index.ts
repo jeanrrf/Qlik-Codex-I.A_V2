@@ -16,6 +16,7 @@ import authRouter from "./routes/auth.routes";
 import { contactRouter } from "./routes/contact.routes";
 import { healthRouter } from "./routes/health.routes";
 import { historyRouter } from "./routes/history.routes";
+import metricsRouter from "./routes/metrics.routes";
 import { router as scriptsRouter } from "./routes/scripts.routes";
 import sessionRouter from "./routes/session.routes";
 import { toolsRouter } from "./routes/tools.routes";
@@ -77,6 +78,7 @@ app.use("/api/tools", toolsRouter);
 app.use("/api/history", historyRouter);
 app.use("/api/sessions", sessionRouter);
 app.use("/api/usage", usageRouter);
+app.use("/api/metrics", metricsRouter);
 app.use("/api/analytics", analyticsRouter);
 
 if (config.serveStaticFrontend && fs.existsSync(webBuildPath)) {
@@ -109,8 +111,15 @@ async function startServer() {
       tursoConfigured: Boolean(process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN),
       postgresConfigured: Boolean(process.env.DATABASE_URL),
       ownerEmailSet: Boolean(process.env.OWNER_EMAIL),
-      viteOwnerEmailSet: Boolean(process.env.VITE_OWNER_EMAIL)
+      viteOwnerEmailSet: Boolean(process.env.VITE_OWNER_EMAIL),
+      analyticsEnabled: config.analyticsEnabled
     });
+    // Analytics endpoints: mount only when explicitly enabled via env ANALYTICS_ENABLED=true
+    if (config.analyticsEnabled) {
+      app.use("/api/analytics", analyticsRouter);
+    } else {
+      logger.info('Analytics endpoints are DISABLED (ANALYTICS_ENABLED not set to true)');
+    }
 
     // Quick validations / hints
     if (config.jwtSecret === 'qlik-codex-ia-secret-change-in-production' && config.nodeEnv === 'production') {

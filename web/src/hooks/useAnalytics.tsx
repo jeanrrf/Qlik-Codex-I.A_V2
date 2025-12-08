@@ -21,11 +21,13 @@ interface TrackEventOptions {
   metadata?: Record<string, unknown>;
 }
 
+const envEnable = (import.meta.env.VITE_ENABLE_ANALYTICS || '').toString().toLowerCase() === 'true';
 const DEFAULT_CONFIG: AnalyticsConfig = {
   apiUrl: '/api/analytics',
-  enablePageTracking: true,
-  enableEventTracking: true,
-  debug: false
+  // Disabled by default — set VITE_ENABLE_ANALYTICS=true to re-enable
+  enablePageTracking: envEnable,
+  enableEventTracking: envEnable,
+  debug: (import.meta.env.VITE_ENABLE_ANALYTICS_DEBUG || '').toString().toLowerCase() === 'true'
 };
 
 // Session ID persistente no sessionStorage

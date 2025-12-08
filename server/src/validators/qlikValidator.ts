@@ -273,7 +273,7 @@ export function validateQlikScript(script: string): ValidationResult {
   if (warnings.length > 0) {
     // Debug output to help CI while fixing validator behaviour
     // (will be removed once tests are green)
-    // eslint-disable-next-line no-console
+     
     console.warn('validateQlikScript warnings:', warnings.slice(0, 5), '...');
   }
 
