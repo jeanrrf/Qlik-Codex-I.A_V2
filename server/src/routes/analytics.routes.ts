@@ -179,13 +179,12 @@ router.get('/realtime', requireAuth, asyncHandler(async (req: AuthRequest, res) 
       `).all(lastEventId);
 
       if (newEvents.length > 0) {
-        newEvents.forEach((event: any) => {
-          res.write(`data: ${JSON.stringify({
-            type: 'event',
-            data: event
-          })}\n\n`);
-          lastEventId = event.id;
-        });
+        for (const rawEvent of newEvents as unknown[]) {
+          const event = rawEvent as Record<string, unknown>;
+          const id = Number(event.id ?? 0);
+          res.write(`data: ${JSON.stringify({ type: 'event', data: event })}\n\n`);
+          if (id > lastEventId) lastEventId = id;
+        }
       }
 
       // Buscar novos page views
@@ -198,13 +197,12 @@ router.get('/realtime', requireAuth, asyncHandler(async (req: AuthRequest, res) 
       `).all(lastPageViewId);
 
       if (newPageViews.length > 0) {
-        newPageViews.forEach((pv: any) => {
-          res.write(`data: ${JSON.stringify({
-            type: 'pageview',
-            data: pv
-          })}\n\n`);
-          lastPageViewId = pv.id;
-        });
+        for (const rawPv of newPageViews as unknown[]) {
+          const pv = rawPv as Record<string, unknown>;
+          const id = Number(pv.id ?? 0);
+          res.write(`data: ${JSON.stringify({ type: 'pageview', data: pv })}\n\n`);
+          if (id > lastPageViewId) lastPageViewId = id;
+        }
       }
     } catch (error) {
       logger.error('Erro no realtime analytics', error);

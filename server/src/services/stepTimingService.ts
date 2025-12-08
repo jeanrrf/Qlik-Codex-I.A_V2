@@ -46,7 +46,7 @@ export class StepTimingService {
   completeSubStep(
     stepId: string,
     subStepId: string,
-    result?: any
+    _result?: unknown
   ): SubStepExecution {
     const key = `${stepId}:${subStepId}`;
     const subStep = this.activeSubSteps.get(key);
@@ -126,7 +126,7 @@ export class StepTimingService {
       error,
       duration: `${subStep.duration}ms`
     });
-    
+
     // Envia via SSE
     sseEmitter.sendSubStepProgress(stepId, subStepId, subStep.name, 'error', `${subStep.duration}ms`, error);
 

@@ -1,6 +1,7 @@
 import js from '@eslint/js';
 import globals from 'globals';
 import reactHooks from 'eslint-plugin-react-hooks';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
 import tseslint from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
 
@@ -27,7 +28,8 @@ export default [
     },
     plugins: {
       '@typescript-eslint': tseslint,
-      'react-hooks': reactHooks
+      'react-hooks': reactHooks,
+      'jsx-a11y': jsxA11y
     },
     rules: {
       ...tseslint.configs.recommended.rules,
@@ -37,6 +39,20 @@ export default [
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn'
+      ,
+      // Accessibility (jsx-a11y) rules: prefer warnings so they are visible
+      // but don't block builds by default. They help catch missing labels/ids.
+      'jsx-a11y/label-has-associated-control': ['warn', {
+        labelComponents: [],
+        labelAttributes: [],
+        controlComponents: [],
+        depth: 2,
+        assert: 'either'
+      }],
+      'jsx-a11y/control-has-associated-label': ['warn', {
+        controlComponents: ['input', 'select', 'textarea'],
+        depth: 2
+      }]
     }
   }
 ];

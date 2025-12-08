@@ -1,5 +1,6 @@
 import { Router } from "express";
 
+import { logger } from "../lib/logger";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { formatQlikScript } from "../services/qlikScriptFormatter";
 import { qlikFormatterSchema } from "../validators/requestSchemas";
@@ -32,29 +33,29 @@ toolsRouter.post(
     res.setHeader("Connection", "keep-alive");
 
     // Garante envio imediato dos headers em proxies como Nginx/Heroku
-    if (typeof (res as any).flushHeaders === "function") {
-      (res as any).flushHeaders();
-    }
+    const flushHeaders = (res as unknown as { flushHeaders?: () => void }).flushHeaders;
+    if (typeof flushHeaders === "function") flushHeaders();
 
     const send = (event: string, data: unknown) => {
       try {
         res.write(`event: ${event}\n`);
         res.write(`data: ${JSON.stringify(data)}\n\n`);
       } catch (err) {
-        // ignore write errors — connection may be closed by client
+        // Log and ignore write errors — connection may be closed by client
+        logger.debug('SSE write error during tools stream', { err });
       }
     };
 
     const keepAliveTimer = setInterval(() => {
       try {
         res.write(`: keep-alive\n\n`);
-      } catch { }
+      } catch (err) { logger.debug('SSE keep-alive write error', { err }); }
     }, 15000);
 
     // Encerrar de forma limpa se o cliente fechar a conexão
     req.on("close", () => {
       clearInterval(keepAliveTimer);
-      try { res.end(); } catch { }
+      try { res.end(); } catch (err) { logger.debug('SSE res.end error on close', { err }); }
     });
 
     try {
@@ -75,7 +76,7 @@ toolsRouter.post(
       send("error", { error: error instanceof Error ? error.message : String(error) });
       try {
         res.end();
-      } catch { }
+      } catch (err) { logger.debug('Error ending SSE response after failure', { err }); }
     } finally {
       clearInterval(keepAliveTimer);
     }

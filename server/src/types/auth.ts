@@ -54,7 +54,9 @@ export interface AuthTokens {
   expiresIn: number;
 }
 
-export interface AuthenticatedRequest extends Express.Request {
+import type { Request } from 'express';
+
+export interface AuthenticatedRequest extends Request {
   user?: User;
   session?: AuthSession;
 }

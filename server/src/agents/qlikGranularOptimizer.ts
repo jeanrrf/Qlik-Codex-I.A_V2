@@ -35,7 +35,7 @@ export class QlikGranularOptimizer {
   /**
    * Executa uma sequência de passos de otimização
    */
-  public async executeSequence(stepIds: OptimizationStepId[]): Promise<{ finalScript: string, results: StepExecutionResult[] }> {
+  public async executeSequence(stepIds: OptimizationStepId[]): Promise<{ finalScript: string; results: StepExecutionResult[] }> {
     const results: StepExecutionResult[] = [];
     let currentScript = this.script;
 
@@ -49,23 +49,26 @@ export class QlikGranularOptimizer {
         const result = await this.executeStep(stepId, currentScript);
         results.push(result);
 
-        if (result.status === "success" && result.result?.optimizedScript) {
-          currentScript = result.result.optimizedScript;
+        if (result.status === 'success' && typeof result.result === 'object' && result.result !== null && 'optimizedScript' in result.result) {
+          const r = result.result as Record<string, unknown>;
+          if (typeof r.optimizedScript === 'string') {
+            currentScript = r.optimizedScript;
+          }
         }
       } catch (error) {
         logger.error(`[GranularOptimizer] Erro fatal no passo ${stepId}`, error);
         results.push({
           stepId,
-          status: "error",
+          status: 'error',
           error: error instanceof Error ? error.message : String(error),
           startTime: new Date(),
           endTime: new Date()
         });
+
         // Dependendo da criticidade, poderíamos parar ou continuar
-        // Por enquanto, continuamos se não for crítico (mas a lógica de critical está no step definition)
         const stepDef = OPTIMIZATION_STEPS.find(s => s.id === stepId);
         if (stepDef?.critical) {
-          logger.error(`[GranularOptimizer] Passo crítico falhou. Interrompendo sequência.`);
+          logger.error('[GranularOptimizer] Passo crítico falhou. Interrompendo sequência.');
           break;
         }
       }

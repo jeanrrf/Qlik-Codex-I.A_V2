@@ -21,7 +21,6 @@ import { sseEmitter } from "../lib/sseEmitter";
 import type { ConsultancyDocument } from "../types/consultancy";
 import type { LLMOptions } from "../types/optimization";
 import type { DeterministicValidationSnapshot, OptimizeMode, OptimizeResult } from "../types/qlik";
-
 // import type { GenerateStructuredJsonOptions } from "../lib/llmClient";
 import { validateQlikScript } from "../validators/qlikValidator";
 
@@ -148,13 +147,14 @@ async function runUltraExpertMode(
   return {
     originalScript: script,
     optimizedScript: megaResult.optimizedScript,
-    summary: megaResult.report.executiveSummary || "Optimization completed successfully.",
+    // summary may include a truncation warning when free-tier truncation occurred
+    summary: (isTruncated ? `⚠️ SCRIPT TRUNCADO DURANTE A ANÁLISE — resposta parcial\n\n` : '') + String(megaResult.report.executiveSummary || "Optimization completed successfully."),
     diffStats, // Add diffStats to top level result
-    explanation: megaResult.report.technicalDetails || "See technical details.",
-    documentationMarkdown: megaResult.report.technicalDetails || "",
+    explanation: typeof megaResult.report.technicalDetails === 'string' ? megaResult.report.technicalDetails : "See technical details.",
+    documentationMarkdown: String(megaResult.report.technicalDetails || ""),
     analysis: {
       changes: [],
-      breakingRisk: megaResult.plan.riskLevel as any,
+      breakingRisk: (typeof megaResult.plan?.riskLevel === 'string' ? (megaResult.plan?.riskLevel as unknown as import('../types/qlik').BreakingRisk) : 'none'),
       safeToApply: true,
       mode: 'ultra-expert',
       metricsEstimate: {
@@ -179,8 +179,8 @@ async function runUltraExpertMode(
       allAntiPatterns: parsed.antiPatterns
     },
 
-    // Map consultancy document
-    consultancyDocument: {
+    // Map consultancy document (conditional)
+    consultancyDocument: generateConsultancy ? {
       id: Date.now().toString(),
       version: "1.0",
       generatedAt: new Date().toISOString(),
@@ -192,10 +192,17 @@ async function runUltraExpertMode(
         title: "Optimization Report",
         analyst: "Qlik Codex AI",
         date: new Date().toISOString(),
-        overview: megaResult.report.executiveSummary,
-        keyFindings: megaResult.analysis.optimizationOpportunities || [],
-        criticalAlerts: megaResult.analysis.bottlenecks?.filter((b: any) => b.severity === 'Critical' || b.severity === 'High').map((b: any) => `${b.severity}: ${b.description}`) || [],
-        overallRisk: megaResult.plan.riskLevel as any,
+        overview: String(megaResult.report.executiveSummary || ''),
+        keyFindings: Array.isArray((megaResult.analysis as Record<string, unknown> | undefined)?.optimizationOpportunities) ? ((megaResult.analysis as Record<string, unknown>).optimizationOpportunities as unknown[]).map(k => String(k)) : [],
+        criticalAlerts: (megaResult.analysis.bottlenecks as Array<Record<string, unknown>> | undefined)
+          ? (megaResult.analysis.bottlenecks as Array<Record<string, unknown>>)
+            .filter((b) => String(b.severity) === 'Critical' || String(b.severity) === 'High')
+            .map((b) => `${String(b.severity)}: ${String(b.description)}`)
+          : [],
+        overallRisk: ((): 'none' | 'low' | 'medium' | 'high' => {
+          const r = String(megaResult.plan?.riskLevel ?? 'none');
+          return ['none', 'low', 'medium', 'high'].includes(r) ? r as 'none' | 'low' | 'medium' | 'high' : 'none';
+        })(),
         overallHealth: 'good',
         recommendedAction: 'review'
       },
@@ -206,26 +213,34 @@ async function runUltraExpertMode(
         diffStats: diffStats // Use calculated stats
       },
       qualitativeGains: [],
-      recommendations: megaResult.plan.planSteps.map((s: any) => ({
-        id: s.step.toString(),
-        title: s.title,
-        description: s.details,
-        impact: 'high',
-        effort: s.estimatedEffort ? s.estimatedEffort.toLowerCase() : 'medium',
-        category: 'performance',
-        actionItems: s.details ? s.details.split('. ').map((d: string) => d.trim()).filter((d: string) => d.length > 0) : []
-      })),
+      recommendations: (megaResult.plan.planSteps as Array<Record<string, unknown>> || []).map((s) => {
+        const rawPriority = String(s.priority ?? megaResult.plan?.riskLevel ?? 'medium');
+        const priority = ['critical', 'high', 'medium', 'low'].includes(rawPriority) ? rawPriority as 'critical' | 'high' | 'medium' | 'low' : 'medium';
+        const effortRaw = String((s.estimatedEffort as string | undefined) ?? 'medium').toLowerCase();
+        const effort = ['minimal', 'low', 'medium', 'high'].includes(effortRaw) ? (effortRaw as 'minimal' | 'low' | 'medium' | 'high') : 'medium';
+
+        return {
+          id: String(s.step ?? ''),
+          title: String(s.title ?? ''),
+          description: String(s.details ?? ''),
+          priority,
+          impact: 'high' as 'minimal' | 'low' | 'medium' | 'high',
+          effort,
+          category: 'performance',
+          actionItems: String(s.details ?? '').split('. ').map((d: string) => d.trim()).filter((d: string) => d.length > 0)
+        };
+      }),
       tips: [],
-      fullDocumentation: megaResult.report.technicalDetails,
+      fullDocumentation: String(megaResult.report.technicalDetails || ''),
       warnings: [],
       notes: []
-    },
+    } : undefined,
 
     // Map compact audit report
     compactAuditReport: {
       id: Date.now().toString(),
       generatedAt: new Date().toISOString(),
-      summary: megaResult.report.executiveSummary,
+      summary: String(megaResult.report.executiveSummary || ''),
       metrics: {
         linesOfCode: originalLines,
         cyclomaticComplexity: 0,
@@ -234,13 +249,16 @@ async function runUltraExpertMode(
         maintainabilityIndex: 0
       },
       criticalIssues: [],
-      topRecommendations: megaResult.plan.planSteps.map((s: any) => ({ title: s.title, impact: 'high' })),
-      overallRisk: megaResult.plan.riskLevel,
+      topRecommendations: (megaResult.plan.planSteps as Array<Record<string, unknown>> || []).map((s) => ({ title: String(s.title ?? ''), impact: 'high', effort: (String(s.estimatedEffort ?? 'medium') as 'low' | 'medium' | 'high'), action: String(s.details ?? '') })),
+      overallRisk: ((): 'none' | 'low' | 'medium' | 'high' => {
+        const r = String(megaResult.plan?.riskLevel ?? 'none');
+        return ['none', 'low', 'medium', 'high'].includes(r) ? r as 'none' | 'low' | 'medium' | 'high' : 'none';
+      })(),
       safeToApply: true,
       processingTimeMs: 0
     },
 
-    roiExecutiveSummary: megaResult.plan.estimatedImprovement
+    roiExecutiveSummary: typeof megaResult.plan?.estimatedImprovement === 'string' ? megaResult.plan.estimatedImprovement : String(megaResult.plan?.estimatedImprovement ?? '')
   };
 }
 
@@ -306,7 +324,7 @@ ${script}
 
       let optimizedScript = rawResponse;
       let summary = `NVIDIA Fast Mode (${model}) concluído`;
-      let changes: any[] = [];
+      let changes: Array<Record<string, unknown>> = [];
 
       try {
         const parsed = JSON.parse(rawResponse);
@@ -327,7 +345,11 @@ ${script}
         // Tentativa de recuperação simples se for um JSON malformado que contem "optimizedScript"
         const match = rawResponse.match(/"optimizedScript"\s*:\s*"(.*?)"/s);
         if (match && match[1]) {
-          try { optimizedScript = JSON.parse(`"${match[1]}"`); } catch { }
+          try {
+            optimizedScript = JSON.parse(`"${match[1]}"`);
+          } catch (e) {
+            logger.warn('[NVIDIA FAST] fallback parse failed', { error: String(e) });
+          }
         }
       }
 
@@ -352,12 +374,17 @@ ${script}
         diffStats,
         documentationMarkdown: "",
         analysis: {
-          changes: changes.map(c => ({
-            category: c.category || "performance",
-            area: c.area || "Geral",
-            impact: c.impact || "Otimização aplicada",
-            riskLevel: "low"
-          })),
+          changes: changes.map((c) => {
+            const item = c as Record<string, unknown>;
+            const rawCategory = String(item.category ?? 'performance');
+            const category = ['performance', 'readability', 'structure', 'cleanup'].includes(rawCategory) ? (rawCategory as any) : 'performance';
+            return {
+              category,
+              area: String(item.area ?? 'Geral'),
+              impact: String(item.impact ?? 'Otimização aplicada'),
+              riskLevel: 'low'
+            };
+          }),
           breakingRisk: "low",
           safeToApply: true,
           mode: "nvidia-fast",
@@ -410,14 +437,6 @@ ${script}
     ? lastError
     : new Error("NVIDIA Fast Mode falhou após múltiplas tentativas");
 }
-
-
-
-
-
-
-
-
 
 
 

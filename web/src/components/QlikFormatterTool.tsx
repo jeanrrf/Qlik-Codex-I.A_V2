@@ -156,6 +156,8 @@ const QlikFormatterTool: React.FC<QlikFormatterToolProps> = ({ isOpen, onClose }
                 </div>
               </div>
               <textarea
+                id="formatter-input"
+                name="formatterInput"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 className="modal-textarea modal-textarea-input"
@@ -240,6 +242,8 @@ END IF;"
                     <span className="diff-lines">{input.split('\n').length} linhas</span>
                   </div>
                   <textarea
+                    id="formatter-before"
+                    name="formatterBefore"
                     ref={beforeScrollRef}
                     readOnly
                     className="modal-textarea"
@@ -255,6 +259,8 @@ END IF;"
                     <span className="diff-lines">{output.split('\n').length} linhas</span>
                   </div>
                   <textarea
+                    id="formatter-after"
+                    name="formatterAfter"
                     ref={afterScrollRef}
                     readOnly
                     className="modal-textarea"

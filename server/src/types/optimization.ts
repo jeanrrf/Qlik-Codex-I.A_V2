@@ -158,9 +158,9 @@ export interface StepExecutionResult {
   duration?: number;
   provider?: "google" | "nvidia";
   model?: string;
-  result?: any;
+  result?: unknown;
   error?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   subSteps?: SubStepExecution[];
 }
 

@@ -377,7 +377,7 @@ export class TursoSqliteWrapper {
     const client = this.client;
 
     return {
-      get: async (...params: unknown[]) => {
+      get: async (...params: any[]) => {
         try {
           const result = await client.execute({ sql, args: params });
           return result.rows[0] || null;
@@ -387,7 +387,7 @@ export class TursoSqliteWrapper {
         }
       },
 
-      all: async (...params: unknown[]) => {
+      all: async (...params: any[]) => {
         try {
           const result = await client.execute({ sql, args: params });
           return result.rows;
@@ -397,7 +397,7 @@ export class TursoSqliteWrapper {
         }
       },
 
-      run: async (...params: unknown[]) => {
+      run: async (...params: any[]) => {
         try {
           await client.execute({ sql, args: params });
         } catch (err) {

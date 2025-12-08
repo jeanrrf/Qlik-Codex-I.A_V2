@@ -58,7 +58,6 @@ export class SSEEmitter {
     }
 
     // Verifica se a resposta ainda está aberta
-    // @ts-expect-error - accessing internal property (express Response internals)
     const isOpen = !this.currentClient.writableEnded && !this.currentClient.destroyed;
 
     if (!isOpen) {

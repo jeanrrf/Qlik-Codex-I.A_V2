@@ -719,31 +719,42 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                   <form className="contact-form" onSubmit={handleContactSubmit}>
                     <div className="form-row">
                       <input
+                        id="contact-name"
+                        name="name"
                         type="text"
                         className="contact-input"
                         placeholder="Nome"
                         required
                         value={formState.name}
                         onChange={e => setFormState({ ...formState, name: e.target.value })}
+                        autoComplete="name"
                       />
                       <input
+                        id="contact-email"
+                        name="email"
                         type="email"
                         className="contact-input"
                         placeholder="E-mail Corporativo"
                         required
                         value={formState.email}
                         onChange={e => setFormState({ ...formState, email: e.target.value })}
+                        autoComplete="email"
                       />
                     </div>
                     <input
+                      id="contact-company"
+                      name="company"
                       type="text"
                       className="contact-input"
                       placeholder="Empresa"
                       required
                       value={formState.company}
                       onChange={e => setFormState({ ...formState, company: e.target.value })}
+                      autoComplete="organization"
                     />
                     <textarea
+                      id="contact-message"
+                      name="message"
                       className="contact-input contact-textarea"
                       placeholder="Mensagem (opcional)"
                       rows={3}

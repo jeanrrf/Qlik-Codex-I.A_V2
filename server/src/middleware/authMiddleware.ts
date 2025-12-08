@@ -30,15 +30,18 @@ export interface AuthRequest extends Request {
  * Extrai token do header Authorization ou cookie
  */
 function extractToken(req: Request): string | null {
-  // 1. Bearer token no header
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    return authHeader.substring(7);
-  }
-
-  // 2. Cookie (browser-based auth)
+  // 1. Cookie (browser-based auth) — prioriza HttpOnly quando existe
   if (req.cookies && req.cookies.auth_token) {
     return req.cookies.auth_token;
+  }
+
+  // 2. Bearer token no header (ignora sentinelas comuns de fallback)
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.substring(7).trim();
+    if (token && !["cookie", "undefined", "null"].includes(token.toLowerCase())) {
+      return token;
+    }
   }
 
   // 3. Query parameter (fallback para SSE)
@@ -70,7 +73,7 @@ export async function requireAuth(
 
     // Verificar se é token de proprietário (bypass)
     if (verifyOwnerToken(token)) {
-      const ownerUser = ensureOwnerUser();
+      const ownerUser = await ensureOwnerUser();
       req.user = ownerUser;
       logger.info("Owner authenticated via bypass token", { userId: ownerUser.id });
       next();
@@ -81,7 +84,7 @@ export async function requireAuth(
     let decoded;
     try {
       decoded = verifyToken(token);
-    } catch (err) {
+    } catch (_err) {
       res.status(401).json({
         error: "Invalid token",
         message: "Authentication token is invalid or expired"
@@ -90,7 +93,7 @@ export async function requireAuth(
     }
 
     // Buscar sessão e verificar validade
-    const session = getSessionByToken(token);
+    const session = await getSessionByToken(token);
     if (!session) {
       res.status(401).json({
         error: "Session expired",
@@ -100,7 +103,7 @@ export async function requireAuth(
     }
 
     // Buscar usuário
-    const user = getUserById(decoded.userId);
+    const user = await getUserById(decoded.userId);
     if (!user) {
       res.status(401).json({
         error: "User not found",
@@ -110,7 +113,7 @@ export async function requireAuth(
     }
 
     // Atualizar atividade da sessão
-    updateSessionActivity(session.id);
+    await updateSessionActivity(session.id);
 
     // Anexar informações ao request
     req.user = user;
@@ -146,21 +149,21 @@ export async function optionalAuth(
 
     // Tentar autenticar, mas não bloquear se falhar
     if (verifyOwnerToken(token)) {
-      req.user = ensureOwnerUser();
+      req.user = await ensureOwnerUser();
       next();
       return;
     }
 
     try {
       const decoded = verifyToken(token);
-      const session = getSessionByToken(token);
+      const session = await getSessionByToken(token);
 
       if (session) {
-        const user = getUserById(decoded.userId);
+        const user = await getUserById(decoded.userId);
         if (user) {
           req.user = user;
           req.sessionId = session.id;
-          updateSessionActivity(session.id);
+          await updateSessionActivity(session.id);
         }
       }
     } catch {

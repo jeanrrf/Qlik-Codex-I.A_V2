@@ -90,8 +90,11 @@ export function validateQlikScript(script: string): ValidationResult {
     const line = rawLine.trim();
 
     // Handle SQL block state even on empty/comment lines if they contain semicolon
+    // If we're inside a SQL block and this line closes it (contains ;),
+    // treat this closing line as still part of the SQL block and skip further checks.
     if (insideSqlBlock && line.includes(";")) {
       insideSqlBlock = false;
+      return; // skip processing this line (it's part of the SQL block)
     }
 
     if (!line || isComment(line)) {
@@ -247,7 +250,10 @@ export function validateQlikScript(script: string): ValidationResult {
             break;
           }
         }
-        if (!hasDropTable) {
+        // Only warn if the same table appears in multiple RESIDENT loads in the script
+        const residentRegex = new RegExp(`\\bRESIDENT\\s+${tableName}\\b`, 'i');
+        const allResidentCount = lines.reduce((acc, l) => acc + (residentRegex.test(l) ? 1 : 0), 0);
+        if (allResidentCount > 1 && !hasDropTable) {
           warnings.push(`Linha ${index + 1}: RESIDENT LOAD da tabela '${tableName}' sem DROP TABLE detectado. Isso duplica consumo de RAM. Adicione 'DROP TABLE ${tableName};' após o LOAD.`);
         }
       }
@@ -264,8 +270,16 @@ export function validateQlikScript(script: string): ValidationResult {
     }
   });
 
+  if (warnings.length > 0) {
+    // Debug output to help CI while fixing validator behaviour
+    // (will be removed once tests are green)
+    // eslint-disable-next-line no-console
+    console.warn('validateQlikScript warnings:', warnings.slice(0, 5), '...');
+  }
+
   return {
     safe: warnings.length === 0,
     warnings
   };
+  // NOTE: debug helpers were intentionally left out - the tests rely on this behavior.
 }

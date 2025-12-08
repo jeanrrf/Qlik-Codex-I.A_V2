@@ -66,7 +66,8 @@ export async function formatQlikScript(script: string): Promise<FormatterResult>
 
     // Usando orquestrador para respeitar rotação/timeout
     const response = await defaultOrchestrator.executeWithRotation(
-      "formatter" as any,
+      // We don't have a dedicated 'formatter' step id so reuse a quality step that reflects formatting
+      "quality_067_indentation_fix",
       prompt,
       60000 // 60s
     );

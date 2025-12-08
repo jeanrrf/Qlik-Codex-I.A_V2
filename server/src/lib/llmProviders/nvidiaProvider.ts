@@ -113,8 +113,9 @@ export function extractContent(content?: NvidiaMessageContent): string | undefin
       continue;
     }
 
-    if (typeof (chunk as Record<string, unknown>).value === "string" && (chunk as Record<string, unknown>).value!.trim().length > 0) {
-      parts.push((chunk as Record<string, unknown>).value as string);
+    const maybeValue = (chunk as Record<string, unknown>).value;
+    if (typeof maybeValue === 'string' && maybeValue.trim().length > 0) {
+      parts.push(maybeValue);
       continue;
     }
 
@@ -132,7 +133,7 @@ export function extractContent(content?: NvidiaMessageContent): string | undefin
   // When content is an array (e.g. multimodal or specific model formatting), 
   // parts are usually distinct blocks. Joining with newline is safer than empty string
   // to avoid "jumbled" text (encavalado), especially for models like Llama 3 on NVIDIA NIM.
-  const joined = parts.join("\n").trim();
+  const joined = parts.join('').trim();
 
   // Fix: Se o texto vier "encavalado" com literais \n mas sem quebras reais
   // IMPORTANTE: Não aplicar se parecer JSON, pois quebra a estrutura (ex: "val": "a\nb" vira "val": "a

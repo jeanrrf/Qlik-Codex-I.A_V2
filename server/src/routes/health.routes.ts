@@ -3,6 +3,8 @@
  * Monitora saúde do sistema e disponibilidade dos serviços
  */
 
+import os from 'os';
+
 import { Router } from "express";
 
 import { config } from "../lib/config";
@@ -30,7 +32,7 @@ async function checkDatabase(): Promise<ServiceHealth> {
 
     // Better-sqlite3 é síncrono
     db.prepare('SELECT 1').get();
-    
+
     const latency = Date.now() - start;
     return { status: 'up', latency };
   } catch (error) {
@@ -43,7 +45,7 @@ async function checkDatabase(): Promise<ServiceHealth> {
 
 async function checkAIProvider(
   provider: { isAvailable: () => boolean },
-  name: string
+  _name: string
 ): Promise<ServiceHealth> {
   try {
     const available = provider.isAvailable();
@@ -86,7 +88,7 @@ healthRouter.get("/health", async (_req, res) => {
       services,
       memory: {
         used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-        total: Math.round(require('os').totalmem() / 1024 / 1024)
+        total: Math.round(os.totalmem() / 1024 / 1024)
       }
     });
 

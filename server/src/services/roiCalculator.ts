@@ -8,7 +8,7 @@
  */
 
 import { config } from '../lib/config';
-import { OptimizeResult } from '../types/qlik';
+import { OptimizeResult, MetricsEstimate, OptimizeChange } from '../types/qlik';
 
 export interface ROICalculation {
   // Economias mensais (R$)
@@ -263,24 +263,24 @@ ${roi.notes.map((n, i) => `   ${i + 1}. ${n}`).join('\n')}
 
 // === HELPER FUNCTIONS ===
 
-function getComplexityDelta(metrics: any): number {
-  const before = metrics.loadComplexityBefore || 'medium';
-  const after = metrics.loadComplexityAfter || 'medium';
+function getComplexityDelta(metrics: MetricsEstimate): number {
+  const before = metrics?.loadComplexityBefore || 'medium';
+  const after = metrics?.loadComplexityAfter || 'medium';
   const levels = { low: 1, medium: 5, high: 15 };
   return Math.max(0, (levels[before as keyof typeof levels] || 5) - (levels[after as keyof typeof levels] || 5));
 }
 
-function getMaintainabilityDelta(metrics: any): number {
-  const before = metrics.maintainabilityBefore || 'medium';
-  const after = metrics.maintainabilityAfter || 'medium';
+function getMaintainabilityDelta(metrics: MetricsEstimate): number {
+  const before = metrics?.maintainabilityBefore || 'medium';
+  const after = metrics?.maintainabilityAfter || 'medium';
   const levels = { low: 1, medium: 2, high: 3, excellent: 4, good: 3 };
   return Math.max(0, (levels[after as keyof typeof levels] || 2) - (levels[before as keyof typeof levels] || 2));
 }
 
-function extractLOCDelta(changes: any[]): number {
+function extractLOCDelta(changes: OptimizeChange[]): number {
   let total = 0;
   for (const change of changes) {
-    const match = change.impact?.match(/LOC\s*[-+]?\s*(\d+)/i);
+    const match = String(change.impact || '').match(/LOC\s*[-+]?\s*(\d+)/i);
     if (match) {
       total += parseInt(match[1], 10);
     }

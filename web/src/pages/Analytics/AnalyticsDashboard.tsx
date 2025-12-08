@@ -307,12 +307,15 @@ export default function AnalyticsDashboard() {
             <div className="realtime-actions">
               <label className="toggle">
                 <input
+                  id="realtime-toggle"
+                  name="realtimeEnabled"
                   type="checkbox"
                   checked={realtimeEnabled}
                   onChange={(e) => {
                     setRealtimeEvents([]);
                     setRealtimeEnabled(e.target.checked);
                   }}
+                  aria-label="Ativar eventos em tempo real"
                 />
                 <span className="toggle-slider"></span>
                 <span className="toggle-label">{realtimeEnabled ? 'Ativo' : 'Pausado'}</span>

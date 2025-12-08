@@ -97,10 +97,12 @@ export class DbAdapter {
    */
   async get(sql: string, params: unknown[] = []): Promise<unknown> {
     if (this.dbType === 'postgres') {
-      const result = await this.db.query(sql, params);
+      const pg = this.db as { query: (sql: string, params?: unknown[]) => Promise<{ rows: unknown[] }> };
+      const result = await pg.query(sql, params);
       return result.rows[0] || null;
     } else {
-      return this.db.prepare(sql).get(...params);
+      const sqlite = this.db as { prepare: (sql: string) => { get: (...args: unknown[]) => unknown } };
+      return sqlite.prepare(sql).get(...params);
     }
   }
 
@@ -109,10 +111,12 @@ export class DbAdapter {
    */
   async all(sql: string, params: unknown[] = []): Promise<unknown[]> {
     if (this.dbType === 'postgres') {
-      const result = await this.db.query(sql, params);
+      const pg = this.db as { query: (sql: string, params?: unknown[]) => Promise<{ rows: unknown[] }> };
+      const result = await pg.query(sql, params);
       return result.rows;
     } else {
-      return this.db.prepare(sql).all(...params);
+      const sqlite = this.db as { prepare: (sql: string) => { all: (...args: unknown[]) => unknown[] } };
+      return sqlite.prepare(sql).all(...params);
     }
   }
 
@@ -121,9 +125,11 @@ export class DbAdapter {
    */
   async run(sql: string, params: unknown[] = []): Promise<void> {
     if (this.dbType === 'postgres') {
-      await this.db.query(sql, params);
+      const pg = this.db as { query: (sql: string, params?: unknown[]) => Promise<any> };
+      await pg.query(sql, params);
     } else {
-      this.db.prepare(sql).run(...params);
+      const sqlite = this.db as { prepare: (sql: string) => { run: (...args: unknown[]) => unknown } };
+      sqlite.prepare(sql).run(...params);
     }
   }
 
@@ -132,9 +138,11 @@ export class DbAdapter {
    */
   async exec(sql: string): Promise<void> {
     if (this.dbType === 'postgres') {
-      await this.db.query(sql);
+      const pg = this.db as { query: (sql: string) => Promise<any> };
+      await pg.query(sql);
     } else {
-      this.db.exec(sql);
+      const sqlite = this.db as { exec: (sql: string) => void };
+      sqlite.exec(sql);
     }
   }
 }

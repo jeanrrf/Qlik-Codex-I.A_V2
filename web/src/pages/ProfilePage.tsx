@@ -128,10 +128,13 @@ Aguardo retorno!`;
               <label className="btn btn-secondary">
                 📷 Alterar Foto
                 <input
+                  id="avatar-upload-input"
+                  name="avatar"
                   type="file"
                   accept="image/*"
                   onChange={handleAvatarUpload}
                   style={{ display: 'none' }}
+                  aria-label="Alterar foto de perfil"
                 />
               </label>
               {avatarPreview && avatarPreview !== user.avatarUrl && (

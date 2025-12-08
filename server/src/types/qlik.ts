@@ -115,14 +115,14 @@ export interface OptimizeResult {
         duration?: number;
         error?: string;
       }>;
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
     }>;
   };
   documentationMarkdown: string;
   review?: AgentReviewResult;
   explanation?: string;
-  consultancyDocument?: any; // ConsultancyDocument type
-  analysisOnly?: any; // Para modo analysis
+  consultancyDocument?: unknown; // ConsultancyDocument type
+  analysisOnly?: unknown; // Para modo analysis
   diffStats?: {
     linesAdded: number;
     linesRemoved: number;

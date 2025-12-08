@@ -103,6 +103,8 @@ export function LoginPage() {
           ) : (
             <form className="token-form" onSubmit={handleTokenLogin}>
               <input
+                id="owner-token-input"
+                name="ownerToken"
                 type="password"
                 className="token-input"
                 placeholder="Cole seu token de acesso"
@@ -110,6 +112,8 @@ export function LoginPage() {
                 onChange={(e) => setOwnerToken(e.target.value)}
                 disabled={isLoading}
                 autoFocus
+                autoComplete="one-time-code"
+                aria-label="Token de acesso do proprietário"
               />
               {tokenError && <div className="token-error">{tokenError}</div>}
               <div className="token-actions">

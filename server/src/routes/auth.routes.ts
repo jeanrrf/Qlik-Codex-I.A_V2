@@ -142,7 +142,7 @@ router.post(
     }
 
     try {
-      const ownerUser = ensureOwnerUser();
+      const ownerUser = await ensureOwnerUser();
 
       // Criar sessão para owner
       const { session: _session, tokens } = await createAuthSession(

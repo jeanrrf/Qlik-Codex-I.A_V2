@@ -93,6 +93,14 @@ cd server && npm start  # Servidor serve frontend em http://localhost:3000
 
 ### Web
 - `npm run dev` - Vite dev server (5173)
+### Troubleshooting common dev issues
+
+- ECONNREFUSED / proxy errors when hitting /api from the frontend dev server:
+   - Cause: the frontend dev server proxies `/api` calls to `http://localhost:3000` by default. If the backend is not running, Vite's proxy used to emit many ECONNREFUSED stack traces.
+   - Fix: start both apps together from the repo root: `npm run start:dev`. If you intentionally run only the frontend, the dev server now returns a friendly 502 JSON when the backend is unreachable (see `web/vite.config.ts`).
+
+   CI: The repository contains a GitHub Actions workflow that runs checks for missing form `id/name` and runs the `web` ESLint rules on PRs to `main`/`main_ofc` to reduce regressions.
+
 - `npm run build` - Build produção → dist/
 - `npm run preview` - Preview build local
 - `npm run lint` - ESLint

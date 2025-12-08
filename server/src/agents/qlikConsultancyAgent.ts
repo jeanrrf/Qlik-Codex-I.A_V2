@@ -877,7 +877,7 @@ export async function generateCompactAuditReport(
   const criticalIssues: CompactAuditReport['criticalIssues'] = [];
 
   // Anti-patterns de alta severidade
-  if (realMetrics.selectStarCount > 0) {
+  if ((realMetrics.selectStarCount ?? 0) > 0) {
     criticalIssues.push({
       type: 'SELECT_STAR',
       severity: 'high',
@@ -886,7 +886,7 @@ export async function generateCompactAuditReport(
     });
   }
 
-  if (realMetrics.syntheticKeysRisk >= 7) {
+  if ((realMetrics.syntheticKeysRisk ?? 0) >= 7) {
     criticalIssues.push({
       type: 'SYNTHETIC_KEY_RISK',
       severity: 'critical',
@@ -895,7 +895,7 @@ export async function generateCompactAuditReport(
     });
   }
 
-  if (realMetrics.cartesianProductRisk >= 7) {
+  if ((realMetrics.cartesianProductRisk ?? 0) >= 7) {
     criticalIssues.push({
       type: 'CARTESIAN_PRODUCT',
       severity: 'critical',
@@ -937,25 +937,25 @@ export async function generateCompactAuditReport(
     });
   }
 
-  if (realMetrics.selectStarCount > 0) {
+  if ((realMetrics.selectStarCount ?? 0) > 0) {
     topRecommendations.push({
       title: 'Substituir LOAD * por lista explícita',
       impact: 'high',
       effort: 'medium',
-      action: `Listar apenas campos necessários em ${realMetrics.selectStarCount} local(is) - reduz uso de memória`
+      action: `Listar apenas campos necessários em ${realMetrics.selectStarCount ?? 0} local(is) - reduz uso de memória`
     });
   }
 
-  if (realMetrics.sqlPushdownOpportunities > 0) {
+  if ((realMetrics.sqlPushdownOpportunities ?? 0) > 0) {
     topRecommendations.push({
       title: 'Pushdown de cálculos para SQL',
       impact: 'high',
       effort: 'medium',
-      action: `${realMetrics.sqlPushdownOpportunities} oportunidade(s) de mover lógica para banco - ganha performance`
+      action: `${realMetrics.sqlPushdownOpportunities ?? 0} oportunidade(s) de mover lógica para banco - ganha performance`
     });
   }
 
-  if (realMetrics.residentLoadsCount > 5) {
+  if ((realMetrics.residentLoadsCount ?? 0) > 5) {
     topRecommendations.push({
       title: 'Reduzir uso de LOAD RESIDENT',
       impact: 'medium',
@@ -964,7 +964,7 @@ export async function generateCompactAuditReport(
     });
   }
 
-  if (realMetrics.commentRatio < 5 && realMetrics.linesOfCode > 100) {
+  if ((realMetrics.commentRatio ?? 100) < 5 && realMetrics.linesOfCode > 100) {
     topRecommendations.push({
       title: 'Adicionar documentação',
       impact: 'medium',

@@ -498,11 +498,9 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
   const startOptimization = useCallback(async (options: OptimizationOptions): Promise<OptimizeScriptApiResponse | null> => {
 
-    // Reset retry count if this is a fresh start (not an auto-retry)
-    if (!isRetryingRef.current) {
-      retryCountRef.current = 0;
-    }
-    isRetryingRef.current = false; // Reset flag for next time
+    // Reset retry count on a fresh start
+    retryCountRef.current = 0;
+    isRetryingRef.current = false;
 
     // Atualiza o modo atual e seleciona as stages corretas
 
@@ -528,30 +526,18 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
     abortRef.current = new AbortController();
 
-    // Global Timeout Safeguard (15 min)
+    // Global Timeout Safeguard (15 min) — abort and fail fast, no auto-restarts
     const globalTimeoutId = setTimeout(() => {
       console.warn("[GLOBAL TIMEOUT] Tempo limite global excedido.");
 
-      if (retryCountRef.current < MAX_RETRIES) {
-        console.log(`[AUTO-RESTART] Global timeout. Reiniciando (Tentativa ${retryCountRef.current + 1}/${MAX_RETRIES})...`);
-        retryCountRef.current++;
-        isRetryingRef.current = true;
-
-        if (abortRef.current) abortRef.current.abort();
-        if (intervalRef.current) clearInterval(intervalRef.current);
-
-        setProgress(prev => ({
-          ...prev,
-          status: "running",
-          errorMessage: `Tempo limite global. Reiniciando (Tentativa ${retryCountRef.current}/${MAX_RETRIES})...`
-        }));
-
-        setTimeout(() => startOptimization(options).catch(console.error), 2000);
-      } else {
-        if (abortRef.current) abortRef.current.abort();
-        setError("Tempo limite global excedido (15 min). A operação foi cancelada.");
-        setProgress(prev => ({ ...prev, status: "error" }));
+      if (abortRef.current) abortRef.current.abort();
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
       }
+
+      setError("Tempo limite global excedido (15 min). A operação foi cancelada.");
+      setProgress(prev => ({ ...prev, status: "error", errorMessage: "Tempo limite global excedido (15 min)." }));
+      setIsRunning(false);
     }, 15 * 60 * 1000);
 
     // Inicia com as stages corretas para este modo
@@ -741,6 +727,15 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
               setScriptAnalysis(event.data);
 
+            } else if (event.type === 'provider_disabled') {
+
+              const providerMsg = `Provedor ${event.provider}/${event.model} desativado nesta sessão por limite: ${event.reason || 'cota atingida'}`;
+              setError(providerMsg);
+              setProgress(prev => ({
+                ...prev,
+                errorMessage: providerMsg
+              }));
+
             } else if (event.type === 'substep') {
 
               // Atualiza substep em tempo real
@@ -761,41 +756,19 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
 
 
-                // Configura timeout de 3 minutos para esta tarefa
-
+                // Configura timeout de 3 minutos para esta tarefa (sem auto-restart)
                 const timeoutId = setTimeout(() => {
                   console.warn(`[TIMEOUT] Tarefa ${taskId} excedeu ${TASK_TIMEOUT_MS / 1000}s!`);
 
-                  // Auto-Correction / Auto-Restart Logic
-                  if (retryCountRef.current < MAX_RETRIES) {
-                    console.log(`[AUTO-RESTART] Detectada falha/timeout. Reiniciando operação (Tentativa ${retryCountRef.current + 1}/${MAX_RETRIES})...`);
-
-                    // Increment retry count
-                    retryCountRef.current++;
-                    isRetryingRef.current = true;
-
-                    // Stop current execution
-                    if (abortRef.current) {
-                      abortRef.current.abort();
-                    }
-                    if (intervalRef.current) {
-                      clearInterval(intervalRef.current);
-                    }
-
-                    // Update status to show retrying
-                    setProgress(prev => ({
-                      ...prev,
-                      status: "running", // Keep running
-                      errorMessage: `Timeout detectado. Reiniciando automaticamente (Tentativa ${retryCountRef.current}/${MAX_RETRIES})...`
-                    }));
-
-                    // Restart after a short delay
-                    setTimeout(() => {
-                      startOptimization(options).catch(console.error);
-                    }, 2000);
-
-                    return;
+                  if (abortRef.current) {
+                    abortRef.current.abort();
                   }
+                  if (intervalRef.current) {
+                    clearInterval(intervalRef.current);
+                  }
+                  clearTimeout(globalTimeoutId);
+
+                  setError('Timeout: Tarefa excedeu 3 minutos');
 
                   setProgress(prev => {
 
@@ -839,9 +812,11 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
                     });
 
-                    return { ...prev, stages: newStages };
+                    return { ...prev, stages: newStages, status: 'error' as const, errorMessage: 'Timeout: Tarefa excedeu 3 minutos' };
 
                   });
+
+                  setIsRunning(false);
 
                 }, TASK_TIMEOUT_MS);
 

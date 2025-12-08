@@ -159,6 +159,8 @@ const ScriptCaptureModal: React.FC<ScriptCaptureModalProps> = ({
             <label className="flex-col">
               <span className="text-sm text-secondary">Nome do Arquivo</span>
               <input
+                id="manual-file-name"
+                name="manualFileName"
                 type="text"
                 value={manualName}
                 onChange={(event) => setManualName(event.target.value)}
@@ -168,6 +170,8 @@ const ScriptCaptureModal: React.FC<ScriptCaptureModalProps> = ({
             <label className="flex-col">
               <span className="text-sm text-secondary">Conteúdo do Script</span>
               <textarea
+                id="manual-file-content"
+                name="manualFileContent"
                 value={manualContent}
                 onChange={(event) => setManualContent(event.target.value)}
                 placeholder="LOAD * FROM [lib://...];"

@@ -19,6 +19,8 @@ import { googleProvider } from "./llmProviders/googleProvider";
 import { nvidiaProvider } from "./llmProviders/nvidiaProvider";
 import type { LLMProvider } from "./llmProviders/types";
 import { logger } from "./logger";
+import { sseEmitter } from "./sseEmitter";
+import { LLMError } from "./resilience";
 
 
 export interface ProviderAttemptResult {
@@ -35,6 +37,7 @@ export class ProviderOrchestrator {
   private rotationConfig: ProviderRotationConfig;
   private providers: Map<string, LLMProvider>;
   private attemptHistory: ProviderAttempt[] = [];
+  private disabledProviderModels: Set<string> = new Set();
 
   constructor(configOverride?: Partial<ProviderRotationConfig>) {
     this.rotationConfig = {
@@ -71,6 +74,7 @@ export class ProviderOrchestrator {
 
     const stepAttempts: ProviderAttempt[] = [];
     const usedProviders = new Set<string>();
+    const usedProviderModels = new Set<string>();
     let attemptCount = 0;
 
     // Ajusta timeout pelo tamanho do prompt (heurística).
@@ -84,8 +88,9 @@ export class ProviderOrchestrator {
       adjustedTimeout = Math.min(timeout * 1.5, 240000); // Max 4 min
       logger.info(`Timeout ajustado: ${timeout}ms -> ${adjustedTimeout}ms (prompt medio-grande: ${estimatedTokens.toLocaleString()} tokens)`);
     } else if (estimatedTokens < 10000) {
-      adjustedTimeout = Math.max(timeout * 0.8, 120000); // Min 120s (2 min) para evitar timeouts em scripts complexos
-      logger.info(`Timeout otimizado: ${timeout}ms -> ${adjustedTimeout}ms (prompt compacto: ${estimatedTokens.toLocaleString()} tokens)`);
+      // For small prompts allow a small reduction but do not increase the requested timeout
+      adjustedTimeout = Math.max(Math.round(timeout * 0.8), 50); // don't increase timeout here; keep minimum 50ms
+      logger.info(`Timeout otimizado (small prompt): ${timeout}ms -> ${adjustedTimeout}ms (prompt compacto: ${estimatedTokens.toLocaleString()} tokens)`);
     }
 
     logger.info("Iniciando rotação de provedores", {
@@ -105,9 +110,17 @@ export class ProviderOrchestrator {
     for (const plan of attemptPlan) {
       ensureNotAborted();
 
-      // Se configurado para não repetir o mesmo provider, pule se já usamos esse provider
-      if (this.rotationConfig.neverRetryProvider && usedProviders.has(plan.provider)) {
-        logger.info("Pular provedor repetido devido a neverRetryProvider=true", { stepId, provider: plan.provider, model: plan.model });
+      const attemptKey = `${plan.provider}:${plan.model ?? "default"}`;
+
+      // Se configurado para não repetir, pule somente a combinação exata provider+modelo
+      if (this.rotationConfig.neverRetryProvider && usedProviderModels.has(attemptKey)) {
+        logger.info("Pular provedor/modelo repetido devido a neverRetryProvider=true", { stepId, provider: plan.provider, model: plan.model, attemptKey });
+        continue;
+      }
+
+      // Pula provedores/modelos marcados como desativados por cota nesta sessão
+      if (this.disabledProviderModels.has(attemptKey)) {
+        logger.warn("Pular provedor/modelo desativado por cota nesta sessão", { stepId, attemptKey });
         continue;
       }
 
@@ -134,6 +147,7 @@ export class ProviderOrchestrator {
 
       attemptCount++;
       usedProviders.add(plan.provider);
+      usedProviderModels.add(attemptKey);
 
       logger.info("Tentando provedor", {
         stepId,
@@ -142,7 +156,8 @@ export class ProviderOrchestrator {
         model: plan.model,
         label: plan.label,
         timeout: `${adjustedTimeout}ms (${Math.round(adjustedTimeout / 60000)} minutos)`,
-        previouslyUsed: Array.from(usedProviders)
+        previouslyUsed: Array.from(usedProviders),
+        previouslyTriedCombos: Array.from(usedProviderModels)
       });
 
       try {
@@ -363,6 +378,12 @@ export class ProviderOrchestrator {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const timedOut = errorMessage === "TIMEOUT";
 
+      // Se for erro de cota/limite, desativa o provedor/modelo nesta sessão
+      const quotaReason = this.extractQuotaReason(error);
+      if (quotaReason) {
+        this.disableProviderModel(providerName, modelOverride || "default", quotaReason);
+      }
+
       if (warningTimer) clearTimeout(warningTimer);
       if (criticalTimer) clearTimeout(criticalTimer);
       if (timeoutTimer) clearTimeout(timeoutTimer);
@@ -381,6 +402,44 @@ export class ProviderOrchestrator {
         timedOut
       };
     }
+  }
+
+  private extractQuotaReason(error: unknown): string | null {
+    if (!error) return null;
+
+    const message = error instanceof Error ? error.message : String(error);
+
+    // Casos claros de cota/exaustão
+    const quotaPatterns = /(quota|rate limit|limite|exceeded|exhausted|429)/i;
+    const isQuotaMessage = quotaPatterns.test(message || "");
+
+    if (error instanceof LLMError) {
+      if (error.statusCode === 429 || isQuotaMessage) {
+        return message || "Limite de uso atingido";
+      }
+    }
+
+    if (isQuotaMessage) {
+      return message || "Limite de uso atingido";
+    }
+
+    return null;
+  }
+
+  private disableProviderModel(provider: string, model: string, reason: string): void {
+    const key = `${provider}:${model}`;
+    if (this.disabledProviderModels.has(key)) return;
+
+    this.disabledProviderModels.add(key);
+    logger.warn("Desativando provedor/modelo nesta sessão por cota/limite", { provider, model, reason });
+
+    // Notifica frontend via SSE atual
+    sseEmitter.sendToCurrent({
+      type: "provider_disabled",
+      provider,
+      model,
+      reason
+    });
   }
 
   getAttemptHistory(): ProviderAttempt[] {

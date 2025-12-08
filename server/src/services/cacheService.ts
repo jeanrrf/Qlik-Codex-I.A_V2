@@ -14,7 +14,7 @@ interface CacheEntry<T> {
 }
 
 class CacheService {
-  private cache = new Map<string, CacheEntry<any>>();
+  private cache = new Map<string, CacheEntry<unknown>>();
   private readonly TTL: number;
   private readonly MAX_SIZE: number;
 
@@ -61,7 +61,7 @@ class CacheService {
       age: `${Math.round(age / 1000)}s`
     });
 
-    return entry.result;
+    return entry.result as T;
   }
 
   /**

@@ -15,7 +15,7 @@ export interface ActiveSession {
   // REMOVIDO: script não é mais persistido por segurança
   llmProvider?: LLMProviderName;
   llmModel?: string;
-  progressData?: any; // JSON do progresso completo (opcional até iniciar)
+  progressData?: Record<string, unknown>; // JSON do progresso completo (opcional até iniciar)
   status: "running" | "paused" | "completed" | "error";
   createdAt: Date;
   updatedAt: Date;
@@ -78,24 +78,24 @@ export function getActiveSession(sessionId: string): ActiveSession | null {
       WHERE id = ? AND expires_at > datetime('now')
     `);
 
-    const row = stmt.get(sessionId) as any;
+    const row = stmt.get(sessionId) as Record<string, unknown> | undefined;
 
     if (!row) {
       return null;
     }
 
     return {
-      id: row.id,
-      userId: row.user_id,
-      mode: row.mode,
+      id: String(row.id),
+      userId: row.user_id ? String(row.user_id) : undefined,
+      mode: String(row.mode) as OptimizeMode,
       // script não retornado (não é mais persistido)
-      llmProvider: row.llm_provider,
-      llmModel: row.llm_model,
-      progressData: row.progress_data ? JSON.parse(row.progress_data) : {},
-      status: row.status,
-      createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at),
-      expiresAt: new Date(row.expires_at)
+      llmProvider: row.llm_provider as LLMProviderName | undefined,
+      llmModel: row.llm_model as string | undefined,
+      progressData: row.progress_data ? JSON.parse(String(row.progress_data)) : {},
+      status: String(row.status) as ActiveSession['status'],
+      createdAt: new Date(String(row.created_at)),
+      updatedAt: new Date(String(row.updated_at)),
+      expiresAt: new Date(String(row.expires_at))
     };
   } catch (error) {
     logger.error(`Erro ao recuperar sessão ${sessionId}`, error);
@@ -119,20 +119,19 @@ export function getUserActiveSessions(userId?: string): ActiveSession[] {
       LIMIT 5
     `);
 
-    const rows = stmt.all(userId || null) as any[];
+    const rows = stmt.all(userId || null) as Array<Record<string, unknown>>;
 
     return rows.map(row => ({
-      id: row.id,
-      userId: row.user_id,
-      mode: row.mode as OptimizeMode,
-      script: row.script,
-      llmProvider: row.llm_provider as LLMProviderName,
-      llmModel: row.llm_model,
-      progressData: row.progress_data ? JSON.parse(row.progress_data) : {},
-      status: row.status,
-      createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at),
-      expiresAt: new Date(row.expires_at)
+      id: String(row.id),
+      userId: row.user_id ? String(row.user_id) : undefined,
+      mode: String(row.mode) as OptimizeMode,
+      llmProvider: (row.llm_provider ? String(row.llm_provider) : undefined) as LLMProviderName | undefined,
+      llmModel: row.llm_model ? String(row.llm_model) : undefined,
+      progressData: row.progress_data ? JSON.parse(String(row.progress_data)) : {},
+      status: String(row.status) as ActiveSession['status'],
+      createdAt: new Date(String(row.created_at)),
+      updatedAt: new Date(String(row.updated_at)),
+      expiresAt: new Date(String(row.expires_at))
     }));
   } catch (error) {
     logger.error("Erro ao listar sessões ativas", error);

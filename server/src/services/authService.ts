@@ -9,7 +9,9 @@ import { v4 as uuidv4 } from "uuid";
 
 import { config } from "../lib/config";
 import { logger } from "../lib/logger";
-import { getSqliteDb } from "../lib/sqliteDb";
+import { getDbType } from "../lib/dbAdapter";
+import { initTursoDb, getTursoDb, TursoSqliteWrapper } from "../lib/tursoDb";
+import { initSqliteDb } from "../lib/sqliteDb";
 import {
   User,
   AuthSession,
@@ -23,6 +25,30 @@ import {
  * Cliente OAuth2 do Google
  */
 let googleClient: OAuth2Client | null = null;
+
+type AuthDb = {
+  prepare: (sql: string) => {
+    get: (...params: unknown[]) => Promise<any> | any;
+    all: (...params: unknown[]) => Promise<any[]> | any[];
+    run: (...params: unknown[]) => Promise<any> | any;
+  };
+};
+
+async function getAuthDb(): Promise<AuthDb> {
+  const dbType = getDbType();
+
+  if (dbType === "turso") {
+    await initTursoDb();
+    return new TursoSqliteWrapper(getTursoDb());
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("Production auth database must be Turso. Set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN.");
+  }
+
+  // Dev fallback only
+  return initSqliteDb();
+}
 
 function getGoogleClient(): OAuth2Client {
   if (!googleClient) {
@@ -73,7 +99,7 @@ export function verifyToken(token: string): JWTPayload {
   try {
     const decoded = jwt.verify(token, config.jwtSecret) as JWTPayload;
     return decoded;
-  } catch (err) {
+  } catch (_err) {
     throw new Error("Invalid or expired token");
   }
 }
@@ -84,18 +110,17 @@ export function verifyToken(token: string): JWTPayload {
 export async function createOrUpdateUserFromGoogle(
   profile: GoogleProfile
 ): Promise<User> {
-  const db = getSqliteDb();
+  const db = await getAuthDb();
   const now = new Date().toISOString();
 
   try {
     // Verificar se usuário já existe
-    const existing = db
+    const existing = await db
       .prepare("SELECT * FROM users WHERE google_id = ? OR email = ?")
       .get(profile.id, profile.email) as User | undefined;
 
     if (existing) {
-      // Atualizar last_login e informações do perfil
-      db.prepare(`
+      await db.prepare(`
         UPDATE users 
         SET last_login = ?, name = ?, avatar_url = ?
         WHERE id = ?
@@ -111,15 +136,12 @@ export async function createOrUpdateUserFromGoogle(
       };
     }
 
-    // Criar novo usuário
     const userId = uuidv4();
-
-    // Verificar se é email do owner (auto-promoção)
     const role = profile.email === config.ownerEmail
       ? UserRole.OWNER
       : UserRole.USER;
 
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO users (id, email, name, role, google_id, avatar_url, created_at, last_login, is_active)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
     `).run(userId, profile.email, profile.name, role, profile.id, profile.picture || null, now, now);
@@ -153,17 +175,15 @@ export async function createAuthSession(
   ipAddress?: string,
   userAgent?: string
 ): Promise<{ session: AuthSession; tokens: AuthTokens }> {
-  const db = getSqliteDb();
+  const db = await getAuthDb();
   const now = new Date().toISOString();
   const sessionId = uuidv4();
 
-  // Configurar duração extremamente longa para manter o token persistente
   const sessionDurationDays = Number.isFinite(config.effectiveAuthDurationDays)
     ? config.effectiveAuthDurationDays
     : 400;
   const sessionDurationMs = sessionDurationDays * 24 * 60 * 60 * 1000;
 
-  // Gerar tokens com duração alinhada à sessão
   const accessToken = generateAccessToken(
     {
       userId: user.id,
@@ -175,12 +195,10 @@ export async function createAuthSession(
   );
 
   const refreshToken = generateRefreshToken();
-
-  // Calcular expiração (padrão: ~10 anos para nunca expirar na prática)
   const expiresAt = new Date(Date.now() + sessionDurationMs).toISOString();
 
   try {
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO auth_sessions (id, user_id, token, refresh_token, expires_at, created_at, last_activity, ip_address, user_agent)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
@@ -210,7 +228,7 @@ export async function createAuthSession(
     const tokens: AuthTokens = {
       accessToken,
       refreshToken,
-      expiresIn: Math.floor(sessionDurationMs / 1000) // segundos totais da sessão
+      expiresIn: Math.floor(sessionDurationMs / 1000)
     };
 
     logger.info("Auth session created", { sessionId, userId: user.id });
@@ -225,25 +243,25 @@ export async function createAuthSession(
 /**
  * Busca usuário por ID
  */
-export function getUserById(userId: string): User | null {
-  const db = getSqliteDb();
+export async function getUserById(userId: string): Promise<User | null> {
+  const db = await getAuthDb();
 
   try {
-    const user = db
+    const user = await db
       .prepare("SELECT * FROM users WHERE id = ? AND is_active = 1")
-      .get(userId) as any;
+      .get(userId) as Record<string, unknown> | undefined;
 
     if (!user) return null;
 
     return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
+      id: String(user.id),
+      email: String(user.email),
+      name: user.name as string | null,
       role: user.role as UserRole,
-      googleId: user.google_id,
-      avatarUrl: user.avatar_url,
-      createdAt: user.created_at,
-      lastLogin: user.last_login,
+      googleId: user.google_id as string | null,
+      avatarUrl: user.avatar_url as string | null,
+      createdAt: String(user.created_at),
+      lastLogin: user.last_login as string | null,
       isActive: user.is_active === 1
     };
   } catch (err) {
@@ -255,26 +273,26 @@ export function getUserById(userId: string): User | null {
 /**
  * Busca sessão por token
  */
-export function getSessionByToken(token: string): AuthSession | null {
-  const db = getSqliteDb();
+export async function getSessionByToken(token: string): Promise<AuthSession | null> {
+  const db = await getAuthDb();
 
   try {
-    const session = db
+    const session = await db
       .prepare("SELECT * FROM auth_sessions WHERE token = ? AND expires_at > datetime('now')")
-      .get(token) as any;
+      .get(token) as Record<string, unknown> | undefined;
 
     if (!session) return null;
 
     return {
-      id: session.id,
-      userId: session.user_id,
-      token: session.token,
-      refreshToken: session.refresh_token,
-      expiresAt: session.expires_at,
-      createdAt: session.created_at,
-      lastActivity: session.last_activity,
-      ipAddress: session.ip_address,
-      userAgent: session.user_agent
+      id: String(session.id),
+      userId: String(session.user_id),
+      token: String(session.token),
+      refreshToken: session.refresh_token as string | null,
+      expiresAt: String(session.expires_at),
+      createdAt: String(session.created_at),
+      lastActivity: String(session.last_activity ?? ''),
+      ipAddress: session.ip_address as string | null,
+      userAgent: session.user_agent as string | null
     };
   } catch (err) {
     logger.error("Error fetching session", err);
@@ -285,12 +303,12 @@ export function getSessionByToken(token: string): AuthSession | null {
 /**
  * Atualiza last_activity da sessão
  */
-export function updateSessionActivity(sessionId: string): void {
-  const db = getSqliteDb();
+export async function updateSessionActivity(sessionId: string): Promise<void> {
+  const db = await getAuthDb();
   const now = new Date().toISOString();
 
   try {
-    db.prepare("UPDATE auth_sessions SET last_activity = ? WHERE id = ?").run(now, sessionId);
+    await db.prepare("UPDATE auth_sessions SET last_activity = ? WHERE id = ?").run(now, sessionId);
   } catch (err) {
     logger.error("Error updating session activity", err);
   }
@@ -299,11 +317,11 @@ export function updateSessionActivity(sessionId: string): void {
 /**
  * Revoga sessão (logout)
  */
-export function revokeSession(sessionId: string): void {
-  const db = getSqliteDb();
+export async function revokeSession(sessionId: string): Promise<void> {
+  const db = await getAuthDb();
 
   try {
-    db.prepare("DELETE FROM auth_sessions WHERE id = ?").run(sessionId);
+    await db.prepare("DELETE FROM auth_sessions WHERE id = ?").run(sessionId);
     logger.info("Session revoked", { sessionId });
   } catch (err) {
     logger.error("Error revoking session", err);
@@ -313,11 +331,11 @@ export function revokeSession(sessionId: string): void {
 /**
  * Revoga todas as sessões de um usuário
  */
-export function revokeAllUserSessions(userId: string): void {
-  const db = getSqliteDb();
+export async function revokeAllUserSessions(userId: string): Promise<void> {
+  const db = await getAuthDb();
 
   try {
-    db.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(userId);
+    await db.prepare("DELETE FROM auth_sessions WHERE user_id = ?").run(userId);
     logger.info("All user sessions revoked", { userId });
   } catch (err) {
     logger.error("Error revoking user sessions", err);
@@ -334,41 +352,38 @@ export function verifyOwnerToken(token: string): boolean {
 /**
  * Cria usuário proprietário (se não existir)
  */
-export function ensureOwnerUser(): User {
-  const db = getSqliteDb();
+export async function ensureOwnerUser(): Promise<User> {
+  const db = await getAuthDb();
   const ownerEmail = config.ownerEmail || "owner@qlikcodex.local";
   const now = new Date().toISOString();
 
   try {
-    // Verificar se owner já existe
-    let owner = db
+    let owner = await db
       .prepare("SELECT * FROM users WHERE email = ?")
-      .get(ownerEmail) as any;
+      .get(ownerEmail) as Record<string, unknown> | undefined;
 
     if (owner) {
-      // Garantir que role seja owner
       if (owner.role !== UserRole.OWNER) {
-        db.prepare("UPDATE users SET role = ? WHERE email = ?").run(UserRole.OWNER, ownerEmail);
+        await db.prepare("UPDATE users SET role = ? WHERE email = ?").run(UserRole.OWNER, ownerEmail);
         owner.role = UserRole.OWNER;
       }
 
       return {
-        id: owner.id,
-        email: owner.email,
-        name: owner.name || "Owner",
+        id: String(owner.id),
+        email: String(owner.email),
+        name: (owner.name as string | null) || "Owner",
         role: UserRole.OWNER,
-        googleId: owner.google_id,
-        avatarUrl: owner.avatar_url,
-        createdAt: owner.created_at,
-        lastLogin: owner.last_login,
+        googleId: owner.google_id as string | null,
+        avatarUrl: owner.avatar_url as string | null,
+        createdAt: String(owner.created_at),
+        lastLogin: owner.last_login as string | null,
         isActive: owner.is_active === 1
       };
     }
 
-    // Criar owner
     const ownerId = uuidv4();
 
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO users (id, email, name, role, google_id, avatar_url, created_at, last_login, is_active)
       VALUES (?, ?, ?, ?, NULL, NULL, ?, ?, 1)
     `).run(ownerId, ownerEmail, "Owner", UserRole.OWNER, now, now);
@@ -446,12 +461,12 @@ export async function exchangeGoogleCode(code: string): Promise<GoogleProfile> {
 /**
  * Limpa sessões expiradas (job de limpeza)
  */
-export function cleanupExpiredSessions(): number {
-  const db = getSqliteDb();
+export async function cleanupExpiredSessions(): Promise<number> {
+  const db = await getAuthDb();
 
   try {
-    const result = db.prepare("DELETE FROM auth_sessions WHERE expires_at <= datetime('now')").run();
-    const deletedCount = result.changes;
+    const result = await db.prepare("DELETE FROM auth_sessions WHERE expires_at <= datetime('now')").run();
+    const deletedCount = (result as { changes?: number }).changes ?? 0;
 
     if (deletedCount > 0) {
       logger.info("Expired sessions cleaned up", { count: deletedCount });

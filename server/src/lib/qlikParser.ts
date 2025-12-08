@@ -168,16 +168,26 @@ export function parseQlikScript(script: string): ParsedScript {
     const joinMatch = upper.match(/(LEFT\s+JOIN|INNER\s+JOIN|OUTER\s+JOIN|RIGHT\s+JOIN|^\s*JOIN)/);
     if (joinMatch) {
       joinCount++;
-      const joinType: string = (joinMatch[1] || '').trim();
+      const rawJoin = (joinMatch[1] || '').trim();
+      // Normalize join type to the known union
+      let joinTypeUnion: QlikJoin['type'] = 'JOIN';
+      const upperJoin = rawJoin.toUpperCase();
+      if (upperJoin.startsWith('LEFT')) joinTypeUnion = 'LEFT JOIN';
+      else if (upperJoin.startsWith('INNER')) joinTypeUnion = 'INNER JOIN';
+      else if (upperJoin.startsWith('OUTER')) joinTypeUnion = 'OUTER JOIN';
+      else if (upperJoin.startsWith('RIGHT')) joinTypeUnion = 'RIGHT JOIN';
+
       joins.push({
-        type: joinType,
+        type: joinTypeUnion,
         targetTable: currentTable?.name || 'Unknown',
         line: i + 1
       });
 
       if (currentTable) {
         currentTable.hasJoin = true;
-        currentTable.joinType = joinType.replace(' JOIN', '');
+        // For table joinType we store the short form without ' JOIN'
+        const short = joinTypeUnion.replace(' JOIN', '') as QlikTable['joinType'];
+        currentTable.joinType = short;
       }
 
       // Verificar se tem ON clause (se não tiver, pode ser Cartesian Product)

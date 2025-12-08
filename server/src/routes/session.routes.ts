@@ -24,7 +24,7 @@ const SaveSessionSchema = z.object({
   // script: REMOVIDO - não persistimos scripts no servidor
   llmProvider: z.enum(["ainex", "google", "nvidia"]).optional(),
   llmModel: z.string().optional(),
-  progressData: z.any().optional(),
+  progressData: z.unknown().optional(),
   status: z.enum(["running", "paused", "completed", "error"])
 });
 
@@ -44,7 +44,7 @@ router.post(
       // script: NÃO é mais persistido
       llmProvider: data.llmProvider,
       llmModel: data.llmModel,
-      progressData: data.progressData,
+      progressData: data.progressData as Record<string, unknown> | undefined,
       status: data.status
     });
 

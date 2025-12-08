@@ -139,13 +139,13 @@ class HistoryService {
            ORDER BY COUNT(*) DESC 
            LIMIT 1) as most_used_provider
         FROM optimization_history
-      `).get() as any;
+      `).get() as Record<string, unknown> | undefined;
 
       return {
-        total_optimizations: stats.total_optimizations || 0,
-        total_lines_saved: stats.total_lines_saved || 0,
-        avg_duration_ms: Math.round(stats.avg_duration_ms || 0),
-        most_used_provider: stats.most_used_provider || "gemini"
+        total_optimizations: Number(stats?.total_optimizations) || 0,
+        total_lines_saved: Number(stats?.total_lines_saved) || 0,
+        avg_duration_ms: Math.round(Number(stats?.avg_duration_ms) || 0),
+        most_used_provider: String(stats?.most_used_provider || "gemini")
       };
     } catch (err) {
       logger.error("Failed to get statistics", err);

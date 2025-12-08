@@ -330,6 +330,7 @@ function createTables() {
       id TEXT PRIMARY KEY,
       user_id TEXT,
       mode TEXT NOT NULL,
+      script TEXT,
       llm_provider TEXT,
       llm_model TEXT,
       progress_data TEXT,
@@ -348,6 +349,17 @@ function createTables() {
     CREATE INDEX IF NOT EXISTS idx_session_status
     ON active_sessions(status, updated_at DESC);
   `);
+
+  // Ensure legacy schema compatibility: if 'script' column is missing but expected by tests/tools,
+  // add it as nullable text so direct INSERTs with script=NULL work.
+  if (!columnExists('active_sessions', 'script')) {
+    try {
+      db.exec(`ALTER TABLE active_sessions ADD COLUMN script TEXT;`);
+      logger.info("Migration: added optional 'script' column to active_sessions for compatibility");
+    } catch (err) {
+      logger.warn("Could not add 'script' column to active_sessions (may not be supported)", err);
+    }
+  }
 
   // Tabela de usuários autenticados
   db.exec(`

@@ -22,7 +22,7 @@ export interface ScriptCharacteristics {
  */
 export function analyzeScriptCharacteristics(
   script: string,
-  isTruncated: boolean = false,
+  _isTruncated: boolean = false,
   filename?: string
 ): ScriptCharacteristics {
   const lines = script.split(/\r?\n/);

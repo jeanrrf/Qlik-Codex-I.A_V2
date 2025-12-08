@@ -78,8 +78,8 @@ router.post(
 
       logger.debug("SubSteps collected", { mode: payload.mode, count: completedSubSteps.length });
 
-      // Cast result para ter acesso a todas as propriedades
-      const fullResult = result as any;
+      // Cast result para ter acesso a todas as propriedades (tipo seguro)
+      const fullResult = result as Record<string, unknown> & Partial<OptimizeScriptApiResponse>;
 
       const response: OptimizeScriptApiResponse = {
         status: "done",

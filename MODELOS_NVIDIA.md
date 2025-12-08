@@ -7,15 +7,15 @@ Abaixo estão os IDs de modelos recomendados para uso com a API NVIDIA NIM, base
 - **Descrição:** Melhor modelo aberto atual. Excelente em PT-BR e Código.
 - **Uso:** Geral, Código Complexo, Raciocínio.
 
-## 🥈 Top 2: Llama 3.1 405B
-**ID Sugerido:** `meta/llama-3.1-405b-instruct`
-- **Descrição:** Modelo denso mais robusto. Padrão corporativo.
-- **Uso:** Arquitetura, Instruções Complexas, Estabilidade.
+## 🥈 Top 2: Qwen 3 Coder 480B
+**ID Sugerido:** `qwen/qwen3-coder-480b-a35b-instruct`
+- **Descrição:** Modelo denso otimizado para código e PT-BR, substitui a antiga Llama 3.1 405B.
+- **Uso:** Arquitetura, Instruções Complexas, Estabilidade em código.
 
-## 🥉 Top 3: Qwen 2.5 / Qwen 3
+## 🥉 Top 3: Qwen 2.5 / Qwen 3 (mid-range)
 **ID Sugerido:** `qwen/qwen2.5-72b-instruct` (ou `qwen/qwen3-next-80b-a3b-thinking`)
-- **Descrição:** Melhor custo-benefício e suporte nativo a PT-BR.
-- **Uso:** Alta velocidade, Código Poliglota.
+- **Descrição:** Melhor custo-benefício com suporte nativo a PT-BR.
+- **Uso:** Alta velocidade, Código Poliglota, workloads de custo médio.
 
 ---
 

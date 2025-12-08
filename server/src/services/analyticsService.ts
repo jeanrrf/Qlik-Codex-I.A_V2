@@ -310,7 +310,7 @@ export async function getAnalyticsSummary(limit = 10): Promise<AnalyticsSummary>
       FROM analytics_page_views 
       ORDER BY timestamp DESC 
       LIMIT ?
-    `).all(limit);
+    `).all(limit) as Array<Record<string, unknown>>;
 
     const recentEvents = await db.prepare(`
       SELECT 'event' as type, timestamp, 
@@ -318,7 +318,7 @@ export async function getAnalyticsSummary(limit = 10): Promise<AnalyticsSummary>
       FROM analytics_events 
       ORDER BY timestamp DESC 
       LIMIT ?
-    `).all(limit);
+    `).all(limit) as Array<Record<string, unknown>>;
 
     const recentSessions = await db.prepare(`
       SELECT 'session' as type, start_time as timestamp, 
@@ -326,23 +326,27 @@ export async function getAnalyticsSummary(limit = 10): Promise<AnalyticsSummary>
       FROM analytics_sessions 
       ORDER BY start_time DESC 
       LIMIT ?
-    `).all(Math.floor(limit / 2));
+    `).all(Math.floor(limit / 2)) as Array<Record<string, unknown>>;
 
     const recentActivity = [
       ...recentPageViews,
       ...recentEvents,
       ...recentSessions
     ]
-      .sort((a: any, b: any) =>
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      .sort((a: Record<string, unknown>, b: Record<string, unknown>) =>
+        new Date(String(b.timestamp)).getTime() - new Date(String(a.timestamp)).getTime()
       )
       .slice(0, limit * 2)
-      .map((item: any) => ({
-        type: item.type,
-        timestamp: item.timestamp,
-        details: item.details,
-        isOwner: Boolean(item.is_owner)
-      }));
+      .map((item: Record<string, unknown>) => {
+        const rawType = String(item.type ?? 'event');
+        const type = rawType === 'session' || rawType === 'pageview' || rawType === 'event' ? rawType as 'session' | 'pageview' | 'event' : 'event';
+        return ({
+          type,
+          timestamp: String(item.timestamp),
+          details: String(item.details),
+          isOwner: Boolean(item.is_owner)
+        });
+      });
 
     return {
       totalVisits: visitsResult.count,
@@ -377,7 +381,7 @@ export async function getDetailedAnalytics(options: {
     const { startDate, endDate, isOwner, userId, limit = 100 } = options;
 
     let whereClause = '1=1';
-    const params: any[] = [];
+    const params: unknown[] = [];
 
     if (startDate) {
       whereClause += ' AND timestamp >= ?';
@@ -406,7 +410,7 @@ export async function getDetailedAnalytics(options: {
       WHERE ${whereClause}
       ORDER BY timestamp DESC
       LIMIT ?
-    `).all(...params, limit) as any[];
+    `).all(...params, limit) as Array<Record<string, unknown>>;
 
     // Events
     const events = await db.prepare(`
@@ -416,11 +420,11 @@ export async function getDetailedAnalytics(options: {
       WHERE ${whereClause}
       ORDER BY timestamp DESC
       LIMIT ?
-    `).all(...params, limit) as any[];
+    `).all(...params, limit) as Array<Record<string, unknown>>;
 
     // Sessions
     let sessionWhereClause = '1=1';
-    const sessionParams: any[] = [];
+    const sessionParams: unknown[] = [];
 
     if (startDate) {
       sessionWhereClause += ' AND start_time >= ?';
@@ -444,37 +448,37 @@ export async function getDetailedAnalytics(options: {
       WHERE ${sessionWhereClause}
       ORDER BY start_time DESC
       LIMIT ?
-    `).all(...sessionParams, limit) as any[];
+    `).all(...sessionParams, limit) as Array<Record<string, unknown>>;
 
     return {
-      pageViews: pageViews.map((pv: any) => ({
-        id: pv.id,
-        userId: pv.user_id,
-        sessionId: pv.session_id,
-        page: pv.page,
-        referrer: pv.referrer,
+      pageViews: pageViews.map((pv: Record<string, unknown>) => ({
+        id: Number(pv.id ?? 0),
+        userId: pv.user_id as string | undefined,
+        sessionId: pv.session_id as string | undefined,
+        page: String(pv.page ?? ''),
+        referrer: pv.referrer as string | undefined,
         isOwner: Boolean(pv.is_owner),
-        timestamp: pv.timestamp
+        timestamp: String(pv.timestamp ?? '')
       })),
-      events: events.map((ev: any) => ({
-        id: ev.id,
-        userId: ev.user_id,
-        sessionId: ev.session_id,
-        eventType: ev.event_type,
-        eventCategory: ev.event_category,
-        eventLabel: ev.event_label,
+      events: events.map((ev: Record<string, unknown>) => ({
+        id: Number(ev.id ?? 0),
+        userId: ev.user_id as string | undefined,
+        sessionId: ev.session_id as string | undefined,
+        eventType: String(ev.event_type ?? ''),
+        eventCategory: String(ev.event_category ?? ''),
+        eventLabel: ev.event_label as string | undefined,
         isOwner: Boolean(ev.is_owner),
-        timestamp: ev.timestamp
+        timestamp: String(ev.timestamp ?? '')
       })),
-      sessions: sessions.map((s: any) => ({
-        id: s.id,
-        sessionId: s.session_id,
-        userId: s.user_id,
+      sessions: sessions.map((s: Record<string, unknown>) => ({
+        id: Number(s.id ?? 0),
+        sessionId: String(s.session_id ?? ''),
+        userId: s.user_id as string | undefined,
         isOwner: Boolean(s.is_owner),
-        startTime: s.start_time,
-        lastActivity: s.last_activity,
-        pageCount: s.page_count || 0,
-        eventCount: s.event_count || 0
+        startTime: String(s.start_time ?? ''),
+        lastActivity: String(s.last_activity ?? ''),
+        pageCount: Number(s.page_count ?? 0),
+        eventCount: Number(s.event_count ?? 0)
       }))
     };
   } catch (err) {

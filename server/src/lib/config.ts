@@ -81,8 +81,8 @@ export const config = {
   nvidiaApiKey: process.env.NVIDIA_API_KEY || "",
   // Default NVIDIA model used for optimizations. Switched to DeepSeek R1 per request.
   nvidiaModel: process.env.NVIDIA_MODEL_NAME || "deepseek-ai/deepseek-r1",
-  // Fallback NVIDIA (modelo ~500B, ex: Llama 3.1 405B na NIM)
-  nvidiaFallbackModel: process.env.NVIDIA_FALLBACK_MODEL_NAME || "meta/llama-3.1-405b-instruct",
+  // Fallback NVIDIA (modelo ~500B, agora Qwen 3 Coder 480B na NIM)
+  nvidiaFallbackModel: process.env.NVIDIA_FALLBACK_MODEL_NAME || "qwen/qwen3-coder-480b-a35b-instruct",
   // Modo rápido NVIDIA (modelo >100B por padrão; ajuste via env para variantes mais leves/rápidas)
   // Por padrão usamos o mesmo modelo deepseek-r1 para otimizações rápidas também — pode ser customizado via env
   nvidiaFastModel: process.env.NVIDIA_FAST_MODEL_NAME || "deepseek-ai/deepseek-r1",

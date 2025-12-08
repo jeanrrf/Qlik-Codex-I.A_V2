@@ -98,8 +98,18 @@ export class QlikMegaOptimizer {
 
     if (taskName === "ANALYSIS_AND_PLAN") {
       // Extrai apenas pontos críticos da análise
-      const criticalIssues = result.analysis?.issues?.slice(0, 3) || [];
-      const planObj = (result as Record<string, unknown> | undefined)?.plan as { steps?: unknown[] } | undefined;
+      let criticalIssues: unknown[] = [];
+      let planObj = undefined as { steps?: unknown[] } | undefined;
+      if (typeof result === 'object' && result !== null) {
+        const r = result as Record<string, unknown>;
+        if (r.analysis && typeof r.analysis === 'object') {
+          const analysis = r.analysis as Record<string, unknown>;
+          if (Array.isArray(analysis.issues)) {
+            criticalIssues = (analysis.issues as unknown[]).slice(0, 3);
+          }
+        }
+        planObj = r.plan as { steps?: unknown[] } | undefined;
+      }
       const topPriorities = Array.isArray(planObj?.steps)
         ? (planObj.steps as unknown[]).slice(0, 3).map((s) => {
           if (typeof s === 'object' && s !== null && 'action' in (s as Record<string, unknown>)) {
@@ -111,7 +121,11 @@ export class QlikMegaOptimizer {
       summary += `Issues: ${criticalIssues.join(', ').substring(0, 150)}. Priorities: ${topPriorities.join(', ').substring(0, 150)}`;
     } else if (taskName === "CODE_GEN") {
       // Apenas confirma que script foi gerado, não inclui o script
-      const lineCount = result.optimizedScript?.split('\n').length || 0;
+      let lineCount = 0;
+      if (typeof result === 'object' && result !== null && 'optimizedScript' in (result as Record<string, unknown>)) {
+        const rs = (result as Record<string, unknown>).optimizedScript;
+        if (typeof rs === 'string') lineCount = rs.split('\n').length;
+      }
       summary += `Script gerado (${lineCount} linhas). Mudanças aplicadas com sucesso.`;
     } else {
       summary += "Concluído.";
@@ -241,17 +255,24 @@ export class QlikMegaOptimizer {
           attempt
         });
 
-        let parsedResult: Record<string, unknown> | unknown = {};
+        let parsedResult: Record<string, unknown> = {};
         try {
           const jsonMatch = responseText.match(/\{[\s\S]*\}/);
           const jsonStr = jsonMatch ? jsonMatch[0] : responseText;
-          parsedResult = JSON.parse(jsonStr);
+          const raw = JSON.parse(jsonStr);
+          if (typeof raw === 'object' && raw !== null) {
+            parsedResult = raw as Record<string, unknown>;
+          } else {
+            // Wrap non-object responses (string/script) into a predictable shape
+            parsedResult = { optimizedScript: String(raw) };
+          }
 
           // Fix: Handle cases where NVIDIA/LLM returns double-escaped newlines in scripts
           // This manifests as "1 line" code in frontend because \n is literal, not control char
-          if (parsedResult && typeof parsedResult.optimizedScript === 'string') {
-            if (parsedResult.optimizedScript.includes('\\n') && !parsedResult.optimizedScript.includes('\n')) {
-              parsedResult.optimizedScript = parsedResult.optimizedScript.replace(/\\n/g, '\n');
+          const opt = parsedResult.optimizedScript;
+          if (typeof opt === 'string') {
+            if (opt.includes('\\n') && !opt.includes('\n')) {
+              parsedResult.optimizedScript = opt.replace(/\\n/g, '\n');
             }
           }
         } catch (e) {
@@ -436,8 +457,8 @@ export class QlikMegaOptimizer {
     logger.info(`[MegaOptimizer] Tarefas paralelas concluídas em ${Date.now() - parallelStart}ms`);
 
     // Sanitize optimizedScript using the same method as input
-    if (codeGen.optimizedScript) {
-      codeGen.optimizedScript = QlikMegaOptimizer.sanitizeScript(codeGen.optimizedScript);
+    if (typeof codeGen.optimizedScript === 'string') {
+      codeGen.optimizedScript = QlikMegaOptimizer.sanitizeScript(codeGen.optimizedScript as string);
     }
 
     const totalTime = Date.now() - globalStart;
@@ -446,23 +467,24 @@ export class QlikMegaOptimizer {
     const orchestratorStats = this.orchestrator.getStats();
 
     // Prepare changes list
-    const changes = codeGen.changesApplied || [];
+    const changes = Array.isArray(codeGen.changesApplied) ? (codeGen.changesApplied as unknown[]) : [];
 
     // Inject changes into analysis for frontend compatibility (KPIs)
+    const analysisObj = typeof analysis === 'object' && analysis !== null ? (analysis as Record<string, unknown>) : {};
     const analysisWithChanges = {
-      ...analysis,
+      ...analysisObj,
       changes: changes
     };
 
     return {
       originalScript: this.script,
-      optimizedScript: codeGen.optimizedScript || this.script,
+      optimizedScript: typeof codeGen.optimizedScript === 'string' ? codeGen.optimizedScript : this.script,
       analysis: analysisWithChanges,
-      changes: changes, // Add to root for list view
-      plan,
-      validation: delivery.validation,
-      documentation: delivery.documentation,
-      report: delivery.report,
+      changes: Array.isArray(changes) ? (changes.map((c) => (typeof c === 'object' && c !== null ? (c as Record<string, unknown>) : {})) as Array<Record<string, unknown>>) : [], // Add to root for list view
+      plan: typeof plan === 'object' && plan !== null ? (plan as Record<string, unknown>) : {},
+      validation: typeof delivery.validation === 'object' && delivery.validation !== null ? (delivery.validation as Record<string, unknown>) : {},
+      documentation: typeof delivery.documentation === 'object' && delivery.documentation !== null ? (delivery.documentation as Record<string, unknown>) : {},
+      report: typeof delivery.report === 'object' && delivery.report !== null ? (delivery.report as Record<string, unknown>) : {},
       metrics: {
         totalTime,
         taskTimes: this.taskTimes,

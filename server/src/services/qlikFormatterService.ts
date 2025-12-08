@@ -34,12 +34,15 @@ export function applyLocalAdvancedFormatting(script: string): { formatted: strin
       return fn.toUpperCase() + '(';
     });
 
+    // Also uppercase common Qlik keywords on the left side (LOAD/FROM/WHERE/JOIN/etc.)
+    const leftKeywordsUpper = left.replace(/\b(LOAD|FROM|WHERE|JOIN|RESIDENT|STORE|DROP|IF|CASE)\b/gi, (m) => m.toUpperCase());
+
     // Re-join AS parts preserving original RHS case
     if (parts.length > 1) {
-      return left + ' AS ' + parts.slice(1).join(' AS ');
+      return leftKeywordsUpper + ' AS ' + parts.slice(1).join(' AS ');
     }
 
-    return left;
+    return leftKeywordsUpper;
   });
 
   if (upperFuncApplied) {
@@ -74,19 +77,19 @@ export function applyLocalAdvancedFormatting(script: string): { formatted: strin
   let indentLevel = 0;
   const indentedLines = transformedLines.map((l) => {
     const trim = l.trim();
-    const upper = trim.toUpperCase();
 
     // Decrease indent on END IF
     if (/^END\s+IF/i.test(trim)) {
       indentLevel = Math.max(0, indentLevel - 1);
     }
 
-    const pref = upper.startsWith('LOAD') || upper.startsWith('IF') || upper.startsWith('FOR') || upper.startsWith('LEFT JOIN') || upper.startsWith('JOIN') ? '    '.repeat(indentLevel) : '    '.repeat(indentLevel + (upper.startsWith('LOAD') ? 0 : 0));
+    // Keep a consistent indentation pref for constructs we handle
+    const pref = '    '.repeat(indentLevel);
 
     let out = pref + trim;
 
     // Increase indent after IF or LOAD body lines
-    if (/^IF\b/i.test(trim) || /^LOAD\b/i) {
+    if (/^IF\b/i.test(trim) || /^LOAD\b/i.test(trim)) {
       indentLevel += 1;
     }
 
@@ -98,7 +101,37 @@ export function applyLocalAdvancedFormatting(script: string): { formatted: strin
     actions.push({ id: 'indent', description: 'Applied 4-space indentation', applied: true, risk: 'low' });
   }
 
-  const formatted = indentedLines.join('\n');
+  // 4) Normalize operator spacing (EXTREME rule)
+  const normalizedLines = indentedLines.map(l => {
+    // Basic operator spacing: ensures spaces around comparison and equality operators
+    return l.replace(/\s*([<>]=?|<>|=)\s*/g, ' $1 ').replace(/\s+/g, (m) => m);
+  });
+  actions.push({ id: 'norm-ops', description: 'EXTREME: normalized operator spacing', applied: true, risk: 'low' });
+
+  // 5) Align AS vertically after indentation and normalization so column positions match final output
+  const asLinesIdx2: number[] = [];
+  normalizedLines.forEach((l, idx) => { if (/\b AS \b/i.test(l)) asLinesIdx2.push(idx); });
+
+  let finalLines = [...normalizedLines];
+  let alignedAfterIndent = false;
+  if (asLinesIdx2.length > 1) {
+    const positions = asLinesIdx2.map(i => finalLines[i].toUpperCase().indexOf(' AS '));
+    const maxPos = Math.max(...positions);
+    for (const i of asLinesIdx2) {
+      const line = finalLines[i];
+      const curPos = line.toUpperCase().indexOf(' AS ');
+      if (curPos !== maxPos) {
+        const before = line.slice(0, curPos);
+        const after = line.slice(curPos + 4);
+        finalLines[i] = before.padEnd(maxPos, ' ') + ' AS ' + after;
+        alignedAfterIndent = true;
+      }
+    }
+  }
+
+  if (alignedAfterIndent) actions.push({ id: 'align-as-final', description: 'EXTREME: aligned AS after indentation', applied: true, risk: 'low' });
+
+  const formatted = finalLines.join('\n');
 
   return { formatted, actions };
 }
