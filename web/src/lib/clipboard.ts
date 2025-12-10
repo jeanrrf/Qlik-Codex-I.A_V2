@@ -16,7 +16,7 @@ export async function copyToClipboard(text: string): Promise<boolean> {
       return true;
     }
     throw new Error('Clipboard API unavailable');
-  } catch (err) {
+  } catch {
     // Fallback para método antigo (textarea hack)
     try {
       const textArea = document.createElement("textarea");

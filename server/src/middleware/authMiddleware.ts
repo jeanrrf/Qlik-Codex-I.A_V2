@@ -17,6 +17,7 @@ import {
 import { checkDailyQuota } from "../services/usageQuotaService";
 import { User, UserRole, RolePermissions, RoleUsageLimits } from "../types/auth";
 import type { OptimizeMode } from "../types/qlik";
+
 import { asyncHandler } from "./asyncHandler";
 
 /**
@@ -120,7 +121,7 @@ export async function requireAuth(
     req.user = user;
     req.sessionId = session.id;
 
-    logger.debug("User authenticated", { userId: user.id, email: user.email, role: user.role });
+    // logger.debug("User authenticated", { userId: user.id, email: user.email, role: user.role });
 
     next();
   } catch (err) {

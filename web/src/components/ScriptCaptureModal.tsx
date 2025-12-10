@@ -139,6 +139,7 @@ const ScriptCaptureModal: React.FC<ScriptCaptureModalProps> = ({
               style={{ display: "none" }}
               onChange={handleFileChange}
               id="file-upload-input"
+              aria-label="Selecionar arquivo de script"
             />
             <button
               type="button"
@@ -165,6 +166,7 @@ const ScriptCaptureModal: React.FC<ScriptCaptureModalProps> = ({
                 value={manualName}
                 onChange={(event) => setManualName(event.target.value)}
                 placeholder="ex: extracao_vendas.qvs"
+                aria-label="Nome do arquivo do script"
               />
             </label>
             <label className="flex-col">
@@ -177,6 +179,7 @@ const ScriptCaptureModal: React.FC<ScriptCaptureModalProps> = ({
                 placeholder="LOAD * FROM [lib://...];"
                 rows={12}
                 className="font-mono text-sm"
+                aria-label="Conteúdo do script"
               />
             </label>
             <div className="flex justify-end mt-4">

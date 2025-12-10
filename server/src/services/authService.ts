@@ -3,17 +3,15 @@
  * Gerencia autenticação Google OAuth, JWT tokens e sessões de usuário
  */
 
-import type { InValue } from '@libsql/client';
+// import type { InValue } from '@libsql/client'; // Unused
 import { OAuth2Client } from "google-auth-library";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 
 import { config } from "../lib/config";
-import { getDbType } from "../lib/dbAdapter";
 import { logger } from "../lib/logger";
-import { PostgresCompatWrapper } from "../lib/dbCompat";
-import { getPostgresDb, initPostgresDb } from "../lib/postgresDb";
 import { initTursoDb, getTursoDb, TursoSqliteWrapper } from "../lib/tursoDb";
+// REFACTORED: Turso Only
 import {
   User,
   AuthSession,
@@ -28,24 +26,13 @@ import {
  */
 let googleClient: OAuth2Client | null = null;
 
-type AuthDb = {
-  prepare: (sql: string) => {
-    get: (...params: InValue[]) => Promise<unknown> | unknown;
-    all: (...params: InValue[]) => Promise<unknown[]> | unknown[];
-    run: (...params: InValue[]) => Promise<unknown> | unknown;
-  };
-};
+// Removed local AuthDb type definition in favor of using TursoSqliteWrapper directly or implicit.
+// But standard interface expected by prepare/run suggests we should keep the interface or ensure TursoSqliteWrapper matches.
+// TursoSqliteWrapper matches simplified structure.
 
-async function getAuthDb(): Promise<AuthDb> {
-  const dbType = getDbType();
-
-  if (dbType === "turso") {
-    await initTursoDb();
-    return new TursoSqliteWrapper(getTursoDb());
-  }
-
-  await initPostgresDb();
-  return new PostgresCompatWrapper(getPostgresDb()) as unknown as AuthDb;
+async function getAuthDb() {
+  await initTursoDb();
+  return new TursoSqliteWrapper(getTursoDb());
 }
 
 function getGoogleClient(): OAuth2Client {
@@ -96,7 +83,7 @@ export function generateRefreshToken(): string {
  */
 export function verifyToken(token: string): JWTPayload {
   try {
-    const decoded = jwt.verify(token, config.jwtSecret) as JWTPayload;
+    const decoded = jwt.verify(token, config.jwtSecret) as unknown as JWTPayload;
     return decoded;
   } catch (_err) {
     throw new Error("Invalid or expired token");
@@ -116,7 +103,7 @@ export async function createOrUpdateUserFromGoogle(
     // Verificar se usuário já existe
     const existing = await db
       .prepare("SELECT * FROM users WHERE google_id = ? OR email = ?")
-      .get(profile.id, profile.email) as User | undefined;
+      .get(profile.id, profile.email) as unknown as User | undefined;
 
     if (existing) {
       await db.prepare(`
@@ -470,7 +457,7 @@ export async function cleanupExpiredSessions(): Promise<number> {
 
   try {
     const result = await db.prepare("DELETE FROM auth_sessions WHERE expires_at <= datetime('now')").run();
-    const deletedCount = (result as { changes?: number }).changes ?? 0;
+    const deletedCount = (result as unknown as { changes?: number }).changes ?? 0;
 
     if (deletedCount > 0) {
       logger.info("Expired sessions cleaned up", { count: deletedCount });

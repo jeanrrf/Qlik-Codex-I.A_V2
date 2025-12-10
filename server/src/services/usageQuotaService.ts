@@ -3,8 +3,8 @@
  * Controla limites de uso diário (FREE TIER)
  */
 
-import { logger } from "../lib/logger";
 import { DbAdapter } from "../lib/dbAdapter";
+import { logger } from "../lib/logger";
 import { UserRole, RoleUsageLimits, User } from "../types/auth";
 import type { OptimizeMode } from "../types/qlik";
 
@@ -17,6 +17,38 @@ export interface UsageQuotaCheck {
 }
 
 const db = new DbAdapter();
+
+// Cache em memória para reduzir consultas repetitivas ao verificar quotas.
+// TTL curto para não deixar dados desatualizados após uso real.
+const QUOTA_CACHE_TTL_MS = 25_000; // 25s (frontend consulta ~30s)
+const quotaCache = new Map<string, { data: UsageQuotaCheck; expiresAt: number }>();
+
+function quotaCacheKey(userId: string, mode: OptimizeMode): string {
+  return `${userId}:${mode}`;
+}
+
+function getCachedQuota(userId: string, mode: OptimizeMode): UsageQuotaCheck | null {
+  const key = quotaCacheKey(userId, mode);
+  const cached = quotaCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+  quotaCache.delete(key);
+  return null;
+}
+
+function setCachedQuota(userId: string, mode: OptimizeMode, data: UsageQuotaCheck): void {
+  const key = quotaCacheKey(userId, mode);
+  quotaCache.set(key, { data, expiresAt: Date.now() + QUOTA_CACHE_TTL_MS });
+}
+
+export function invalidateQuotaCacheForUser(userId: string): void {
+  for (const key of quotaCache.keys()) {
+    if (key.startsWith(`${userId}:`)) {
+      quotaCache.delete(key);
+    }
+  }
+}
 
 /**
  * Verifica se o usuário pode executar uma otimização
@@ -48,6 +80,12 @@ export async function checkDailyQuota(user: User, mode: OptimizeMode): Promise<U
   }
 
   // Contar usos nas últimas 24 horas
+  const cached = getCachedQuota(user.id, mode);
+  if (cached) {
+    logger.debug("[QUOTA] Retornando quota do cache", { userId: user.id, mode, remaining: cached.remaining });
+    return cached;
+  }
+
   const usedToday = await countDailyUsage(user.id);
 
   const remaining = Math.max(0, totalLimit - usedToday);
@@ -62,13 +100,16 @@ export async function checkDailyQuota(user: User, mode: OptimizeMode): Promise<U
     allowed
   });
 
-  return {
+  const result: UsageQuotaCheck = {
     allowed,
     remaining,
     limit: totalLimit,
     resetAt: getNextMidnight(),
     usedToday
   };
+
+  setCachedQuota(user.id, mode, result);
+  return result;
 }
 
 /**
@@ -84,6 +125,7 @@ export async function recordUsage(userId: string, mode: OptimizeMode): Promise<v
     `, [userId, mode, now]);
 
     logger.info("[QUOTA] Uso registrado", { userId, mode, timestamp: now });
+    invalidateQuotaCacheForUser(userId);
   } catch (err) {
     logger.error("[QUOTA] Erro ao registrar uso", { error: err, userId, mode });
     throw err;
@@ -175,20 +217,22 @@ export async function getUserUsageStats(userId: string): Promise<{
     last30days.setDate(last30days.getDate() - 30);
 
     // Parallelize queries for performance
-    const [res24h, res7d, res30d, resUltra, resNvidia] = await Promise.all([
+    const results = await Promise.all([
       db.get(`SELECT COUNT(*) as count FROM user_daily_usage WHERE user_id = ? AND executed_at >= ?`, [userId, last24h.toISOString()]),
       db.get(`SELECT COUNT(*) as count FROM user_daily_usage WHERE user_id = ? AND executed_at >= ?`, [userId, last7days.toISOString()]),
       db.get(`SELECT COUNT(*) as count FROM user_daily_usage WHERE user_id = ? AND executed_at >= ?`, [userId, last30days.toISOString()]),
       db.get(`SELECT COUNT(*) as count FROM user_daily_usage WHERE user_id = ? AND mode = 'ultra-expert'`, [userId]),
       db.get(`SELECT COUNT(*) as count FROM user_daily_usage WHERE user_id = ? AND mode = 'nvidia-fast'`, [userId])
-    ]);
+    ]) as Array<{ count: number } | undefined>;
+
+    const [res24h, res7d, res30d, resUltra, resNvidia] = results;
 
     return {
-      last24h: (res24h as any)?.count ?? 0,
-      last7days: (res7d as any)?.count ?? 0,
-      last30days: (res30d as any)?.count ?? 0,
-      ultraExpertModeCount: (resUltra as any)?.count ?? 0,
-      nvidiaFastModeCount: (resNvidia as any)?.count ?? 0
+      last24h: res24h?.count ?? 0,
+      last7days: res7d?.count ?? 0,
+      last30days: res30d?.count ?? 0,
+      ultraExpertModeCount: resUltra?.count ?? 0,
+      nvidiaFastModeCount: resNvidia?.count ?? 0
     };
   } catch (err) {
     logger.error("[QUOTA] Erro ao obter estatísticas de uso", { error: err, userId });

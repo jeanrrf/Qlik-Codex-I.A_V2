@@ -615,6 +615,36 @@
   font-size: 1.5rem;
 }
 
+.analytics-error p {
+  margin-top: 0.75rem;
+  color: #c2d3e7;
+  font-size: 1rem;
+}
+
+.analytics-error-actions {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.analytics-error-actions button {
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  border: none;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #031018;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 10px 30px rgba(0, 242, 255, 0.2);
+}
+
+.analytics-error-actions button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 36px rgba(0, 242, 255, 0.3);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .analytics-dashboard {

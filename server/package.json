@@ -6,9 +6,9 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "test": "vitest",
     "build": "tsc",
     "start": "node dist/index.js",
+    "test": "vitest run",
     "lint": "eslint \"src/**/*.{ts,tsx}\" --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "kill": "npx kill-port 3000"
@@ -35,7 +35,7 @@
     "@types/morgan": "^1.9.9",
     "@types/passport": "^1.0.17",
     "@types/passport-google-oauth20": "^2.0.17",
-    "@types/pg": "^8.15.6",
+    "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "diff": "^8.0.2",
@@ -47,7 +47,6 @@
     "morgan": "^1.10.0",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
-    "pg": "^8.16.3",
     "uuid": "^11.0.3",
     "zod": "^3.24.1"
   },
@@ -55,6 +54,7 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "@types/compression": "^1.8.1",
     "@types/diff": "^7.0.2",
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.5",
@@ -66,8 +66,8 @@
     "eslint-plugin-import": "^2.31.0",
     "globals": "^15.13.0",
     "prettier": "^3.4.2",
+    "vitest": "^2.1.4",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.7.2",
-    "vitest": "^2.1.8"
+    "typescript": "^5.7.2"
   }
 }

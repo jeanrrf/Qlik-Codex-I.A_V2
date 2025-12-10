@@ -6,9 +6,9 @@ import { logger } from "../lib/logger";
 import {
   parseQlikScript,
   // detectSyntheticKeys,
-  calculateQualityMetrics,
-  type ParsedScript,
-  type AntiPattern
+  calculateQualityMetrics
+  // type ParsedScript, // REMOVIDO: não utilizado
+  // type AntiPattern // REMOVIDO: não utilizado
 } from "../lib/qlikParser";
 import {
   // analyzeScriptCharacteristics,
@@ -34,9 +34,38 @@ export interface FullOptimizeResult extends OptimizeResult {
   compactAuditReport?: CompactAuditReport; // NOVO: relatório compacto
   roiExecutiveSummary?: string;  // REVENUE FEATURE: ROI summary em texto
   analysisOnly?: {
-    parsed: ParsedScript;
-    qualityMetrics: ReturnType<typeof calculateQualityMetrics>;
-    allAntiPatterns: AntiPattern[];
+    parsed: {
+      keyFindings: string[];
+      criticalAlerts: string[];
+      overallRisk: 'none' | 'low' | 'medium' | 'high';
+      overallHealth: string;
+      recommendedAction: string;
+    };
+    codeComparison: {
+      originalCode: string;
+      optimizedCode: string;
+      markers: unknown[];
+      diffStats: {
+        linesAdded: number;
+        linesRemoved: number;
+        linesModified: number;
+      };
+    };
+    qualitativeGains: unknown[];
+    recommendations: Array<{
+      id: string;
+      title: string;
+      description: string;
+      priority: 'critical' | 'high' | 'medium' | 'low';
+      impact: 'minimal' | 'low' | 'medium' | 'high';
+      effort: 'minimal' | 'low' | 'medium' | 'high';
+      category: string;
+      actionItems: string[];
+    }>;
+    tips: unknown[];
+    fullDocumentation: string;
+    warnings: unknown[];
+    notes: unknown[];
     roiExecutiveSummary?: string;  // ROI summary também no analysis mode
   };
 }
@@ -122,7 +151,7 @@ function applyDeterministicValidation(result: FullOptimizeResult): FullOptimizeR
 async function runUltraExpertMode(
   script: string,
   llmOptions?: LLMOptions,
-  generateConsultancy = true,
+  _generateConsultancy = true,
   isTruncated = false,
   abortSignal?: AbortSignal
 ): Promise<FullOptimizeResult> {
@@ -135,7 +164,8 @@ async function runUltraExpertMode(
 
   // Run deterministic parser for metadata
   const parsed = parseQlikScript(script);
-  const metrics = calculateQualityMetrics(parsed);
+  // metrics calculated for future use but not currently needed
+  void calculateQualityMetrics(parsed);
 
   // Run the pipeline
   const megaResult = await optimizer.run();
@@ -168,31 +198,6 @@ async function runUltraExpertMode(
     // Map analysis data
     analysisOnly: {
       parsed: {
-        tables: parsed.tables,
-        joins: parsed.joins,
-        variables: parsed.variables,
-        complexity: parsed.complexity,
-        antiPatterns: parsed.antiPatterns,
-        metrics: parsed.metrics
-      },
-      qualityMetrics: metrics,
-      allAntiPatterns: parsed.antiPatterns
-    },
-
-    // Map consultancy document (conditional)
-    consultancyDocument: generateConsultancy ? {
-      id: Date.now().toString(),
-      version: "1.0",
-      generatedAt: new Date().toISOString(),
-      processingTimeMs: megaResult.metrics.totalTime, // Use actual processing time
-      timeline: [],
-      phases: [],
-      cronogram: { totalDuration: megaResult.metrics.totalTime, fastestPhase: 'analysis', slowestPhase: 'analysis' },
-      executiveSummary: {
-        title: "Optimization Report",
-        analyst: "Qlik Codex AI",
-        date: new Date().toISOString(),
-        overview: String(megaResult.report.executiveSummary || ''),
         keyFindings: Array.isArray((megaResult.analysis as Record<string, unknown> | undefined)?.optimizationOpportunities) ? ((megaResult.analysis as Record<string, unknown>).optimizationOpportunities as unknown[]).map(k => String(k)) : [],
         criticalAlerts: (megaResult.analysis.bottlenecks as Array<Record<string, unknown>> | undefined)
           ? (megaResult.analysis.bottlenecks as Array<Record<string, unknown>>)
@@ -234,7 +239,7 @@ async function runUltraExpertMode(
       fullDocumentation: String(megaResult.report.technicalDetails || ''),
       warnings: [],
       notes: []
-    } : undefined,
+    },
 
     // Map compact audit report
     compactAuditReport: {

@@ -171,7 +171,7 @@ export function useSessionPersistence() {
    * Recupera sessão ativa (tenta backend primeiro, depois IndexedDB)
    * Returns null immediately if no session was previously saved (avoids 404 errors)
    */
-  const restoreSession = useCallback(async (sessionId?: string): Promise<any | null> => {
+  const restoreSession = useCallback(async (sessionId?: string): Promise<sessionAPI.ActiveSession | indexedDB.LocalSessionData | null> => {
     const id = sessionId || sessionIdRef.current;
     const meta = getPersistedSessionMeta();
     const savedInBackend = meta?.sessionId === id && meta.savedInBackend;
@@ -197,7 +197,7 @@ export function useSessionPersistence() {
           persistSessionMeta({ ...meta, savedInBackend: false, updatedAt: new Date().toISOString() });
         }
       }
-    } catch (_error) {
+    } catch {
       console.warn("⚠️ Backend indisponível, tentando IndexedDB local");
     }
 
@@ -229,7 +229,7 @@ export function useSessionPersistence() {
       // Tenta listar do backend
       const backendSessions = await sessionAPI.getUserSessions();
       sessions.push(...backendSessions);
-    } catch (_error) {
+    } catch {
       console.warn("⚠️ Não foi possível listar sessões do backend");
     }
 
@@ -241,7 +241,7 @@ export function useSessionPersistence() {
       const backendIds = new Set(sessions.map(s => s.sessionId));
       const uniqueLocalSessions = localSessions.filter(s => !backendIds.has(s.sessionId));
       sessions.push(...uniqueLocalSessions);
-    } catch (_error) {
+    } catch {
       console.warn("⚠️ Não foi possível listar sessões locais");
     }
 
@@ -255,14 +255,14 @@ export function useSessionPersistence() {
     try {
       await sessionAPI.deleteSession(sessionId);
       console.warn("✓ Sessão removida do backend");
-    } catch (_error) {
+    } catch {
       console.warn("⚠️ Não foi possível remover do backend");
     }
 
     try {
       await indexedDB.deleteSessionLocal(sessionId);
       console.warn("✓ Sessão removida localmente");
-    } catch (_error) {
+    } catch {
       console.warn("⚠️ Não foi possível remover localmente");
     }
 

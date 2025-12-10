@@ -1,9 +1,11 @@
 ﻿import fs from "node:fs";
 import path from "node:path";
 
+import compression from "compression";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
+import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import morgan from "morgan";
 
@@ -11,12 +13,10 @@ import { config } from "./lib/config";
 import { initDb, closeDb } from "./lib/dbAdapter";
 import { logger } from "./lib/logger";
 import { errorHandler } from "./middleware/errorHandler";
-import analyticsRouter from "./routes/analytics.routes";
+import { analyticsRouter } from "./routes/analytics.routes";
 import authRouter from "./routes/auth.routes";
-import { contactRouter } from "./routes/contact.routes";
 import { healthRouter } from "./routes/health.routes";
-import { historyRouter } from "./routes/history.routes";
-import metricsRouter from "./routes/metrics.routes";
+import { metricsRouter } from "./routes/metrics.routes";
 import { router as scriptsRouter } from "./routes/scripts.routes";
 import sessionRouter from "./routes/session.routes";
 import { toolsRouter } from "./routes/tools.routes";
@@ -42,8 +42,58 @@ const webBuildPath = path.resolve(__dirname, "..", "..", "web", "dist");
 const indexHtmlPath = path.join(webBuildPath, "index.html");
 
 app.disable("x-powered-by");
-app.use(helmet());
+app.disable("x-powered-by");
+
+// Security Hardening
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"], // Allow inline scripts for now (adjust for stricter security)
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https://api.openai.com", "https://generativelanguage.googleapis.com", "https://api.anthropic.com"], // Allow external APIs
+    },
+  },
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
+
+// Rate Limiting - Basic DDoS protection
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200, // Limit each IP to 200 requests per windowMs
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  message: "Too many requests from this IP, please try again after 15 minutes",
+});
+
+// Apply rate limiting to all API routes
+app.use("/api", apiLimiter);
 app.use(cors(corsOptions));
+
+// Compressão Gzip (gratuita) - reduz tamanho das respostas em 60-80%
+app.use(
+  compression({
+    filter: (req, res) => {
+      // Não comprimir se já estiver comprimido ou for imagem/vídeo
+      if (req.headers['x-no-compression']) {
+        return false;
+      }
+      const contentType = res.getHeader('Content-Type')?.toString() || '';
+      if (
+        contentType.includes('image/') ||
+        contentType.includes('video/') ||
+        contentType.includes('audio/')
+      ) {
+        return false;
+      }
+      return compression.filter(req, res);
+    },
+    threshold: 1024, // Só comprime respostas > 1KB
+    level: 6 // Nível de compressão balanceado (1-9, 6 é o padrão)
+  })
+);
+
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -72,17 +122,28 @@ app.get("/", (_req, res) => {
 app.use("/health", healthRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/scripts", scriptsRouter);
-app.use("/api/contact", contactRouter);
 app.use("/api/validate", validationRouter);
 app.use("/api/tools", toolsRouter);
-app.use("/api/history", historyRouter);
 app.use("/api/sessions", sessionRouter);
 app.use("/api/usage", usageRouter);
-app.use("/api/metrics", metricsRouter);
 app.use("/api/analytics", analyticsRouter);
+app.use("/api/metrics", metricsRouter);
 
 if (config.serveStaticFrontend && fs.existsSync(webBuildPath)) {
-  app.use(express.static(webBuildPath));
+  // Cache de assets estáticos (gratuito) - melhora performance
+  app.use(
+    express.static(webBuildPath, {
+      maxAge: config.isDevelopment ? 0 : '1y', // Cache de 1 ano em produção
+      etag: true,
+      lastModified: true,
+      setHeaders: (res, path) => {
+        // Cache agressivo para assets com hash no nome
+        if (path.match(/\.(js|css|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|webp|ico)$/)) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        }
+      }
+    })
+  );
   app.get("*", (req, res, next) => {
     if (req.path.startsWith("/api")) {
       return next();
@@ -111,15 +172,8 @@ async function startServer() {
       tursoConfigured: Boolean(process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN),
       postgresConfigured: Boolean(process.env.DATABASE_URL),
       ownerEmailSet: Boolean(process.env.OWNER_EMAIL),
-      viteOwnerEmailSet: Boolean(process.env.VITE_OWNER_EMAIL),
-      analyticsEnabled: config.analyticsEnabled
+      viteOwnerEmailSet: Boolean(process.env.VITE_OWNER_EMAIL)
     });
-    // Analytics endpoints: mount only when explicitly enabled via env ANALYTICS_ENABLED=true
-    if (config.analyticsEnabled) {
-      app.use("/api/analytics", analyticsRouter);
-    } else {
-      logger.info('Analytics endpoints are DISABLED (ANALYTICS_ENABLED not set to true)');
-    }
 
     // Quick validations / hints
     if (config.jwtSecret === 'qlik-codex-ia-secret-change-in-production' && config.nodeEnv === 'production') {

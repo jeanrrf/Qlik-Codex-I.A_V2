@@ -10,24 +10,24 @@ import {
   getUserActiveSessions,
   deleteSession
 } from "../../src/services/sessionService";
-import { getSqliteDb } from "../../src/lib/sqliteDb";
+import { DbAdapter } from "../../src/lib/dbAdapter";
 
 describe("sessionService", () => {
   const testSessionId = "test-session-null-progress";
 
-  afterEach(() => {
+  afterEach(async () => {
     // Cleanup test sessions
     try {
-      deleteSession(testSessionId);
+      await deleteSession(testSessionId);
     } catch (e) {
       // Ignore if not exists
     }
   });
 
   describe("saveActiveSession", () => {
-    it("should save session with null progressData without error", () => {
-      expect(() => {
-        saveActiveSession({
+    it("should save session with null progressData without error", async () => {
+      await expect(async () => {
+        await saveActiveSession({
           id: testSessionId,
           mode: "ultra-expert",
           // script: REMOVIDO - não é mais persistido
@@ -37,9 +37,9 @@ describe("sessionService", () => {
       }).not.toThrow();
     });
 
-    it("should save session with undefined progressData without error", () => {
-      expect(() => {
-        saveActiveSession({
+    it("should save session with undefined progressData without error", async () => {
+      await expect(async () => {
+        await saveActiveSession({
           id: testSessionId + "-undefined",
           mode: "ultra-expert",
           // script: REMOVIDO
@@ -49,12 +49,12 @@ describe("sessionService", () => {
       }).not.toThrow();
 
       // Cleanup
-      deleteSession(testSessionId + "-undefined");
+      await deleteSession(testSessionId + "-undefined");
     });
 
-    it("should save session with valid progressData object", () => {
-      expect(() => {
-        saveActiveSession({
+    it("should save session with valid progressData object", async () => {
+      await expect(async () => {
+        await saveActiveSession({
           id: testSessionId + "-valid",
           mode: "ultra-expert",
           // script: REMOVIDO
@@ -64,14 +64,14 @@ describe("sessionService", () => {
       }).not.toThrow();
 
       // Cleanup
-      deleteSession(testSessionId + "-valid");
+      await deleteSession(testSessionId + "-valid");
     });
   });
 
   describe("getActiveSession", () => {
-    it("should return empty object for progressData when null in database", () => {
+    it("should return empty object for progressData when null in database", async () => {
       // Save with null progress
-      saveActiveSession({
+      await saveActiveSession({
         id: testSessionId,
         mode: "ultra-expert",
         // script: REMOVIDO
@@ -79,16 +79,16 @@ describe("sessionService", () => {
         status: "running"
       });
 
-      const session = getActiveSession(testSessionId);
+      const session = await getActiveSession(testSessionId);
 
       expect(session).not.toBeNull();
       expect(session?.progressData).toEqual({});
     });
 
-    it("should return actual progressData when present", () => {
+    it("should return actual progressData when present", async () => {
       const progressData = { step: 2, substep: "opt_001_main", progress: 75 };
 
-      saveActiveSession({
+      await saveActiveSession({
         id: testSessionId + "-with-data",
         mode: "ultra-expert",
         // script: REMOVIDO
@@ -96,19 +96,19 @@ describe("sessionService", () => {
         status: "running"
       });
 
-      const session = getActiveSession(testSessionId + "-with-data");
+      const session = await getActiveSession(testSessionId + "-with-data");
 
       expect(session).not.toBeNull();
       expect(session?.progressData).toEqual(progressData);
 
       // Cleanup
-      deleteSession(testSessionId + "-with-data");
+      await deleteSession(testSessionId + "-with-data");
     });
   });
 
   describe("getUserActiveSessions", () => {
-    it("should handle sessions with null progressData", () => {
-      saveActiveSession({
+    it("should handle sessions with null progressData", async () => {
+      await saveActiveSession({
         id: testSessionId + "-list-1",
         userId: "test-user",
         mode: "ultra-expert",
@@ -117,7 +117,7 @@ describe("sessionService", () => {
         status: "running"
       });
 
-      saveActiveSession({
+      await saveActiveSession({
         id: testSessionId + "-list-2",
         userId: "test-user",
         mode: "ultra-expert",
@@ -126,7 +126,7 @@ describe("sessionService", () => {
         status: "paused"
       });
 
-      const sessions = getUserActiveSessions("test-user");
+      const sessions = await getUserActiveSessions("test-user");
 
       expect(sessions.length).toBeGreaterThanOrEqual(2);
 
@@ -137,24 +137,22 @@ describe("sessionService", () => {
       expect(session2?.progressData).toEqual({ step: 1 });
 
       // Cleanup
-      deleteSession(testSessionId + "-list-1");
-      deleteSession(testSessionId + "-list-2");
+      await deleteSession(testSessionId + "-list-1");
+      await deleteSession(testSessionId + "-list-2");
     });
   });
 
   describe("database constraint", () => {
-    it("should not throw SQLITE_CONSTRAINT_NOTNULL error", () => {
-      const db = getSqliteDb();
+    it("should not throw SQLITE_CONSTRAINT_NOTNULL error", async () => {
+      const db = new DbAdapter();
 
-      expect(() => {
-        const stmt = db.prepare(`
+      await expect(async () => {
+        await db.run(`
           INSERT INTO active_sessions (
             id, user_id, mode, script, llm_provider, llm_model,
             progress_data, status, created_at, updated_at, expires_at
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `);
-
-        stmt.run(
+        `, [
           testSessionId + "-direct",
           null,
           "ultra-expert",
@@ -166,11 +164,11 @@ describe("sessionService", () => {
           new Date().toISOString(),
           new Date().toISOString(),
           new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-        );
+        ]);
       }).not.toThrow();
 
       // Cleanup
-      deleteSession(testSessionId + "-direct");
+      await deleteSession(testSessionId + "-direct");
     });
   });
 });

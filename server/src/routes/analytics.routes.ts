@@ -1,310 +1,136 @@
-/**
- * Analytics Routes - Sistema Enterprise de Monitoramento
- */
+import { Router } from "express";
 
-import { Router } from 'express';
-
-import { logger } from '../lib/logger';
-import { getCompatDb } from '../lib/dbCompat';
-import { asyncHandler } from '../middleware/asyncHandler';
-import { optionalAuth, requireAuth } from '../middleware/authMiddleware';
-import type { AuthRequest } from '../middleware/authMiddleware';
+import { analyticsEmitter } from "../lib/analyticsEmitter";
+import { asyncHandler } from "../middleware/asyncHandler";
 import {
-  trackPageView,
-  trackEvent,
-  startSession,
+  AuthRequest,
+  optionalAuth,
+  requireAuth,
+  requireRole
+} from "../middleware/authMiddleware";
+import {
+  cleanupAnalyticsRecords,
   getAnalyticsSummary,
-  getDetailedAnalytics,
-  cleanOldAnalytics
-} from '../services/analyticsService';
+  logEvent,
+  logPageView,
+  startSession
+} from "../services/analyticsService";
+import { UserRole } from "../types/auth";
 
-const router = Router();
+const analyticsRouter = Router();
 
-// ========== ENDPOINTS PÚBLICOS (tracking) ==========
+const normalizeBoolean = (value: unknown, fallback: boolean): boolean =>
+  value === true || (typeof value === "string" && value.toLowerCase() === "true")
+    ? true
+    : fallback;
 
-/**
- * POST /api/analytics/pageview
- * Rastreia visualização de página
- */
-router.post('/pageview', optionalAuth, asyncHandler(async (req: AuthRequest, res) => {
-  const { page, referrer, metadata } = req.body;
-  const sessionId = req.body.sessionId || req.sessionId;
-  const ip = req.ip;
-  const userAgent = req.headers['user-agent'];
+const asString = (value: unknown): string | undefined =>
+  typeof value === "string" && value.trim() !== "" ? value : undefined;
 
-  await trackPageView({
-    userId: req.user?.id,
-    sessionId,
-    page: page || 'unknown',
-    referrer,
-    ip,
-    userAgent,
-    isOwner: req.user?.role === 'owner',
-    metadata
-  });
+const asMetadata = (
+  value: unknown
+): Record<string, unknown> | undefined =>
+  typeof value === "object" && value !== null ? (value as Record<string, unknown>) : undefined;
 
-  res.json({ success: true });
-}));
+analyticsRouter.post(
+  "/pageview",
+  optionalAuth,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const body = req.body as Record<string, unknown>;
+    await logPageView({
+      sessionId: asString(body.sessionId),
+      userId: asString(body.userId) ?? req.user?.id,
+      page: asString(body.page),
+      referrer: asString(body.referrer),
+      landingPage: asString(body.landingPage),
+      metadata: asMetadata(body.metadata),
+      isOwner: normalizeBoolean(body.isOwner, req.user?.role === UserRole.OWNER)
+    });
+    res.status(201).json({ success: true });
+  })
+);
 
-/**
- * POST /api/analytics/event
- * Rastreia evento customizado
- */
-router.post('/event', optionalAuth, asyncHandler(async (req: AuthRequest, res) => {
-  const { eventType, eventCategory, eventLabel, eventValue, metadata } = req.body;
-  const sessionId = req.body.sessionId || req.sessionId;
-
-  if (!eventType || !eventCategory) {
-    res.status(400).json({ error: 'eventType and eventCategory are required' });
-    return;
-  }
-
-  await trackEvent({
-    userId: req.user?.id,
-    sessionId,
-    eventType,
-    eventCategory,
-    eventLabel,
-    eventValue,
-    isOwner: req.user?.role === 'owner',
-    metadata
-  });
-
-  res.json({ success: true });
-}));
-
-/**
- * POST /api/analytics/session/start
- * Inicia nova sessão de navegação
- */
-router.post('/session/start', optionalAuth, asyncHandler(async (req: AuthRequest, res) => {
-  const { sessionId, landingPage } = req.body;
-  const ip = req.ip;
-  const userAgent = req.headers['user-agent'];
-
-  if (!sessionId) {
-    res.status(400).json({ error: 'sessionId is required' });
-    return;
-  }
-
-  await startSession({
-    userId: req.user?.id,
-    sessionId,
-    ip,
-    userAgent,
-    isOwner: req.user?.role === 'owner',
-    landingPage
-  });
-
-  res.json({ success: true, sessionId });
-}));
-
-// ========== ENDPOINTS PROTEGIDOS (visualização) ==========
-
-/**
- * GET /api/analytics/summary
- * Retorna resumo de analytics (apenas owner)
- */
-router.get('/summary', requireAuth, asyncHandler(async (req: AuthRequest, res) => {
-  // Apenas owner pode ver analytics
-  if (req.user?.role !== 'owner') {
-    res.status(403).json({ error: 'Access denied. Owner only.' });
-    return;
-  }
-
-  const limit = parseInt(req.query.limit as string) || 10;
-  const summary = await getAnalyticsSummary(limit);
-
-  res.json(summary);
-}));
-
-/**
- * GET /api/analytics/detailed
- * Retorna dados detalhados com filtros (apenas owner)
- */
-router.get('/detailed', requireAuth, asyncHandler(async (req: AuthRequest, res) => {
-  // Apenas owner pode ver analytics
-  if (req.user?.role !== 'owner') {
-    res.status(403).json({ error: 'Access denied. Owner only.' });
-    return;
-  }
-
-  const { startDate, endDate, isOwner, userId, limit } = req.query;
-
-  const detailed = await getDetailedAnalytics({
-    startDate: startDate as string,
-    endDate: endDate as string,
-    isOwner: isOwner === 'true' ? true : isOwner === 'false' ? false : undefined,
-    userId: userId as string,
-    limit: limit ? parseInt(limit as string) : undefined
-  });
-
-  res.json(detailed);
-}));
-
-/**
- * GET /api/analytics/realtime
- * Stream de eventos em tempo real via SSE (apenas owner)
- */
-router.get('/realtime', requireAuth, asyncHandler(async (req: AuthRequest, res) => {
-  // Apenas owner
-  if (req.user?.role !== 'owner') {
-    res.status(403).json({ error: 'Access denied. Owner only.' });
-    return;
-  }
-
-  // Setup SSE
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive'
-  });
-
-  res.write('data: {"status":"connected"}\n\n');
-
-  // Pooling a cada 2 segundos para novos eventos
-  const db = getCompatDb();
-  let lastEventId = 0;
-  let lastPageViewId = 0;
-
-  const poll = async () => {
-    try {
-      // Buscar novos eventos
-      const newEvents = await db.prepare(`
-        SELECT id, event_type, event_category, event_label, is_owner, timestamp
-        FROM analytics_events
-        WHERE id > ?
-        ORDER BY id ASC
-        LIMIT 10
-      `).all(lastEventId);
-
-      if (newEvents.length > 0) {
-        for (const rawEvent of newEvents as unknown[]) {
-          const event = rawEvent as Record<string, unknown>;
-          const id = Number(event.id ?? 0);
-          res.write(`data: ${JSON.stringify({ type: 'event', data: event })}\n\n`);
-          if (id > lastEventId) lastEventId = id;
-        }
-      }
-
-      // Buscar novos page views
-      const newPageViews = await db.prepare(`
-        SELECT id, page, is_owner, timestamp
-        FROM analytics_page_views
-        WHERE id > ?
-        ORDER BY id ASC
-        LIMIT 10
-      `).all(lastPageViewId);
-
-      if (newPageViews.length > 0) {
-        for (const rawPv of newPageViews as unknown[]) {
-          const pv = rawPv as Record<string, unknown>;
-          const id = Number(pv.id ?? 0);
-          res.write(`data: ${JSON.stringify({ type: 'pageview', data: pv })}\n\n`);
-          if (id > lastPageViewId) lastPageViewId = id;
-        }
-      }
-    } catch (error) {
-      logger.error('Erro no realtime analytics', error);
+analyticsRouter.post(
+  "/event",
+  optionalAuth,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const body = req.body as Record<string, unknown>;
+    const eventType = asString(body.eventType);
+    if (!eventType) {
+      res.status(400).json({ error: "eventType is required" });
+      return;
     }
-  };
 
-  // start initial poll and schedule
-  poll().catch(err => logger.error('Erro inicial no realtime analytics', err));
-  const interval = setInterval(() => {
-    poll().catch(err => logger.error('Erro no realtime analytics', err));
-  }, 2000);
+    const parsedValue =
+      typeof body.eventValue === "number"
+        ? body.eventValue
+        : Number(body.eventValue ?? NaN);
 
-  // Cleanup on close
-  req.on('close', () => {
-    clearInterval(interval);
-    res.end();
-  });
-}));
+    await logEvent({
+      sessionId: asString(body.sessionId),
+      userId: asString(body.userId) ?? req.user?.id,
+      eventType,
+      eventCategory: asString(body.eventCategory),
+      eventLabel: asString(body.eventLabel),
+      eventValue: Number.isFinite(parsedValue) ? parsedValue : undefined,
+      metadata: asMetadata(body.metadata),
+      isOwner: normalizeBoolean(body.isOwner, req.user?.role === UserRole.OWNER),
+      details: asString(body.details)
+    });
 
-/**
- * DELETE /api/analytics/cleanup
- * Limpa dados antigos (apenas owner)
- */
-router.delete('/cleanup', requireAuth, asyncHandler(async (req: AuthRequest, res) => {
-  // Apenas owner
-  if (req.user?.role !== 'owner') {
-    res.status(403).json({ error: 'Access denied. Owner only.' });
-    return;
+    res.status(201).json({ success: true });
+  })
+);
+
+analyticsRouter.post(
+  "/session/start",
+  optionalAuth,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const body = req.body as Record<string, unknown>;
+    await startSession({
+      sessionId: asString(body.sessionId),
+      userId: asString(body.userId) ?? req.user?.id,
+      landingPage: asString(body.landingPage),
+      isOwner: normalizeBoolean(body.isOwner, req.user?.role === UserRole.OWNER)
+    });
+    res.status(201).json({ success: true });
+  })
+);
+
+analyticsRouter.get(
+  "/summary",
+  requireAuth,
+  requireRole(UserRole.OWNER),
+  asyncHandler(async (_req, res) => {
+    const summary = await getAnalyticsSummary();
+    res.json(summary);
+  })
+);
+
+analyticsRouter.delete(
+  "/cleanup",
+  requireAuth,
+  requireRole(UserRole.OWNER),
+  asyncHandler(async (req, res) => {
+    const daysQuery = req.query.days as string | undefined;
+    const parsedDays = Number(daysQuery);
+    const days = Number.isFinite(parsedDays) && parsedDays > 0 ? parsedDays : 90;
+    const deleted = await cleanupAnalyticsRecords(days);
+    res.json({ success: true, deleted, days });
+  })
+);
+
+analyticsRouter.get(
+  "/realtime",
+  requireAuth,
+  requireRole(UserRole.OWNER),
+  (req, res) => {
+    analyticsEmitter.addClient(res);
+    req.on("close", () => {
+      // No-op here, emitter already removes clients
+    });
   }
+);
 
-  const daysToKeep = parseInt(req.query.days as string) || 90;
-  cleanOldAnalytics(daysToKeep);
-
-  res.json({
-    success: true,
-    message: `Analytics data older than ${daysToKeep} days cleaned`
-  });
-}));
-
-// ========== BACKWARD COMPATIBILITY ==========
-
-/**
- * POST /api/analytics/visit (legacy)
- * Mantido para compatibilidade
- */
-router.post('/visit', asyncHandler(async (req, res) => {
-  const db = getCompatDb();
-  const { page, referrer } = req.body;
-  const ip = req.ip;
-  const userAgent = req.headers['user-agent'];
-
-  // Criar tabela antiga se não existir (backward compatibility)
-  await db.exec?.(`
-    CREATE TABLE IF NOT EXISTS page_visits (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      page TEXT,
-      referrer TEXT,
-      ip TEXT,
-      user_agent TEXT,
-      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  await db.prepare(`
-    INSERT INTO page_visits (page, referrer, ip, user_agent)
-    VALUES (?, ?, ?, ?)
-  `).run(page || 'unknown', referrer || '', ip || '', userAgent || '');
-
-  res.json({ success: true });
-}));
-
-/**
- * GET /api/analytics/stats (legacy)
- * Mantido para compatibilidade
- */
-router.get('/stats', asyncHandler(async (req, res) => {
-  const db = getCompatDb();
-
-  await db.exec?.(`
-    CREATE TABLE IF NOT EXISTS page_visits (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      page TEXT,
-      referrer TEXT,
-      ip TEXT,
-      user_agent TEXT,
-      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  const visits = await db.prepare('SELECT COUNT(*) as count FROM page_visits').get() as { count: number };
-
-  let executions = { count: 0 };
-  try {
-    executions = await db.prepare('SELECT COUNT(*) as count FROM optimization_history').get() as { count: number };
-  } catch {
-    // Ignore
-  }
-
-  res.json({
-    visits: visits.count,
-    executions: executions.count
-  });
-}));
-
-export default router;
+export { analyticsRouter };
+export default analyticsRouter;

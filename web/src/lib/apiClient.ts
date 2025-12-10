@@ -64,7 +64,7 @@ export async function requestQlikFormatter(
       if (errJson?.error) {
         throw new Error(errJson.error);
       }
-    } catch (_parseErr) {
+    } catch {
       // ignore parse error and throw generic message
     }
     throw new Error("Falha ao acionar a AINEX para formatar o script.");
@@ -91,7 +91,7 @@ export async function requestQlikFormatterStream(
       if (errJson?.error) {
         throw new Error(errJson.error);
       }
-    } catch (_parseErr) {
+    } catch {
       // ignore parse error and throw generic message
     }
     throw new Error("Falha ao acionar a AINEX para formatar o script.");
@@ -133,7 +133,7 @@ export async function requestQlikFormatterStream(
         } else if (evt === "error") {
           throw new Error(parsed?.error || "Erro no stream do formatter");
         }
-      } catch (_err) {
+      } catch {
         // ignore transient parse errors
       }
     }

@@ -111,7 +111,10 @@ export class SSEEmitter {
   }
 
   /**
-   * Envia progresso de sub-step
+   * Envia progresso de sub-step apenas para o cliente da requisição atual.
+   * Observação: eventos de progresso não devem ser broadcastados para todos os
+   * clientes porque geram ruído e podem parecer "processamento involuntário"
+   * em outras sessões.
    */
   sendSubStepProgress(stepId: string, subStepId: string, name: string, status: 'running' | 'success' | 'error', duration?: string, error?: string): void {
     const data = {
@@ -129,10 +132,8 @@ export class SSEEmitter {
       timestamp: new Date().toISOString()
     };
 
-    // Envia para o cliente atual (durante request ativa)
+    // Envia apenas para o cliente atual (durante a request ativa)
     this.sendToCurrent(data);
-    // Também envia para todos os clientes conectados via /stream
-    this.sendToAll(data);
   }
 
   /**
@@ -148,8 +149,8 @@ export class SSEEmitter {
       timestamp: new Date().toISOString()
     };
 
+    // Envia apenas para o cliente atual por padrão.
     this.sendToCurrent(data);
-    this.sendToAll(data);
   }
 
   /**

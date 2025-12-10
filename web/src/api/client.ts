@@ -44,10 +44,14 @@ function withAuthHeaders(): Record<string, string> {
  * Generic API client for script management
  */
 export const apiClient = {
-  async get<T>(endpoint: string): Promise<T> {
+  async get<T>(endpoint: string, options?: { bustCache?: boolean }): Promise<T> {
+    const headers = withAuthHeaders();
+    if (options?.bustCache) {
+      headers['Cache-Control'] = 'no-cache';
+    }
     const response = await fetch(endpoint, {
       method: 'GET',
-      headers: withAuthHeaders(),
+      headers,
       credentials: "include"
     });
 

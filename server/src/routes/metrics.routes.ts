@@ -1,73 +1,34 @@
-/**
- * Essential Metrics Routes - Dashboard minimalista
- * Apenas números: acessos, otimizações, retorno de usuários
- */
+import { Router } from "express";
 
-import { Router } from 'express';
-
-import { asyncHandler } from '../middleware/asyncHandler';
-import { requireAuth, optionalAuth, AuthRequest } from '../middleware/authMiddleware';
-import {
-  getEssentialMetrics,
-  cleanOldMetrics,
-  trackVisitor
-} from '../services/essentialMetrics';
+import { asyncHandler } from "../middleware/asyncHandler";
+import { AuthRequest, optionalAuth } from "../middleware/authMiddleware";
+import { recordVisit } from "../services/analyticsService";
+import { UserRole } from "../types/auth";
 
 const router = Router();
 
-/**
- * POST /api/metrics/visit
- * Registra visita única (público, 1x por sessão)
- */
-router.post('/visit', optionalAuth, asyncHandler(async (req: AuthRequest, res) => {
-  const { sessionId } = req.body;
+const asString = (value: unknown): string | undefined =>
+  typeof value === "string" && value.trim() !== "" ? value : undefined;
 
-  if (!sessionId) {
-    res.status(400).json({ error: 'sessionId is required' });
-    return;
-  }
+const asMetadata = (
+  value: unknown
+): Record<string, unknown> | undefined =>
+  typeof value === "object" && value !== null ? (value as Record<string, unknown>) : undefined;
 
-  await trackVisitor(sessionId, req.user?.id);
-  res.json({ success: true });
-}));
+router.post(
+  "/visit",
+  optionalAuth,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const body = req.body as Record<string, unknown>;
+    await recordVisit({
+      sessionId: asString(body.sessionId),
+      userId: asString(body.userId) ?? req.user?.id,
+      metadata: asMetadata(body.metadata),
+      isOwner: req.user?.role === UserRole.OWNER
+    });
+    res.status(201).json({ success: true });
+  })
+);
 
-/**
- * GET /api/metrics/summary
- * Retorna apenas números essenciais (owner only)
- */
-router.get('/summary', requireAuth, asyncHandler(async (req: AuthRequest, res) => {
-  // Apenas owner pode ver métricas
-  if (req.user?.role !== 'owner') {
-    res.status(403).json({ error: 'Access denied. Owner only.' });
-    return;
-  }
-
-  const metrics = await getEssentialMetrics();
-
-  res.json({
-    success: true,
-    metrics
-  });
-}));
-
-/**
- * DELETE /api/metrics/cleanup
- * Limpa métricas antigas (owner only)
- */
-router.delete('/cleanup', requireAuth, asyncHandler(async (req: AuthRequest, res) => {
-  // Apenas owner
-  if (req.user?.role !== 'owner') {
-    res.status(403).json({ error: 'Access denied. Owner only.' });
-    return;
-  }
-
-  const daysToKeep = parseInt(req.query.days as string) || 90;
-  await cleanOldMetrics(daysToKeep);
-
-  res.json({
-    success: true,
-    message: `Metrics data older than ${daysToKeep} days cleaned`
-  });
-}));
-
+export { router as metricsRouter };
 export default router;

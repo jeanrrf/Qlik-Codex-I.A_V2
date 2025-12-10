@@ -28,7 +28,8 @@ interface AnalyticsSummary {
 
 interface RealtimeEvent {
   type: 'event' | 'pageview';
-  data: any;
+  data: Record<string, unknown>;
+  page?: string;
 }
 
 export default function AnalyticsDashboard() {
@@ -97,8 +98,9 @@ export default function AnalyticsDashboard() {
       const data = await response.json();
       setSummary(data);
       setLoading(false);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro ao carregar analytics';
+      setError(message);
       setLoading(false);
     }
   }
@@ -118,7 +120,7 @@ export default function AnalyticsDashboard() {
         alert('Limpeza concluída com sucesso');
         loadSummary();
       }
-    } catch (err) {
+    } catch {
       alert('Erro ao limpar dados');
     }
   }
@@ -138,7 +140,13 @@ export default function AnalyticsDashboard() {
     return (
       <div className="analytics-dashboard">
         <div className="analytics-error">
-          <h3>❌ {error}</h3>
+          <h3>Erro ao carregar analytics</h3>
+          <p>{error}</p>
+          <div className="analytics-error-actions">
+            <button type="button" onClick={() => navigateBack('landing')}>
+              Voltar para a página inicial
+            </button>
+          </div>
         </div>
       </div>
     );

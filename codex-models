@@ -1,0 +1,24 @@
+#!/bin/bash
+
+CONFIG="$HOME/.codex/config.toml"
+PROFILES=$(grep -oP '(?<=^\[profiles\.).*(?=\])' "$CONFIG")
+
+if [ "$1" = "list" ]; then
+    echo "Perfis disponíveis:"
+    echo "$PROFILES"
+    exit 0
+fi
+
+if [ "$1" = "use" ]; then
+    PROFILE="$2"
+    if echo "$PROFILES" | grep -q "^$PROFILE$"; then
+        codex --profile "$PROFILE"
+    else
+        echo "Erro: perfil não encontrado."
+    fi
+    exit 0
+fi
+
+echo "Uso:"
+echo "  codex-models list"
+echo "  codex-models use <perfil>"

@@ -3,10 +3,10 @@
  */
 
 const API_BASE = ""; // Use relative path to leverage Vite proxy (dev) and Vercel rewrites (prod)
-const JSON_HEADERS = { "Content-Type": "application/json" };
+const JSON_HEADERS = { "Content-Type": "application/json" } as const;
 
-function buildHeaders(token?: string): HeadersInit {
-  if (!token) return JSON_HEADERS;
+function buildHeaders(token?: string): Record<string, string> {
+  if (!token) return { ...JSON_HEADERS };
   return {
     ...JSON_HEADERS,
     Authorization: `Bearer ${token}`

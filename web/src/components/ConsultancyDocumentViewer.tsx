@@ -3,7 +3,7 @@
  * Visualização profissional do relatório de consultoria
  */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { copyToClipboard } from "../lib/clipboard";
 import type { ConsultancyDocument } from '../types/consultancy';
 import { highlightQlikCode } from '../lib/qlikSyntaxHighlighter';
@@ -397,12 +397,12 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
     return dp[n][m];
   };
 
-  const lineSimilarity = (a: string, b: string): number => {
+  const lineSimilarity = useCallback((a: string, b: string): number => {
     if (!a && !b) return 1;
     const maxLen = Math.max(a.length, b.length, 1);
     const d = levenshtein(a, b);
     return 1 - (d / maxLen);
-  };
+  }, []);
 
   // Escape HTML helper
   const escapeHtml = (str: string) =>
@@ -464,10 +464,8 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
   // Generate unified diff (simple) for export
   const generateUnifiedDiff = (rows: Array<{ type: string; leftText?: string; rightText?: string }>, fileA = 'original', fileB = 'optimized') => {
     const header = `--- ${fileA}\n+++ ${fileB}\n`;
-    const hunks: string[] = [];
-    let oldStart = 0, oldCount = 0, newStart = 0, newCount = 0;
     const lines: string[] = [];
-    for (const r of rows) {
+    rows.forEach(r => {
       if (r.type === 'unchanged') {
         lines.push(' ' + (r.leftText || r.rightText || ''));
       } else if (r.type === 'removed') {
@@ -478,7 +476,7 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
         lines.push('-' + (r.leftText || ''));
         lines.push('+' + (r.rightText || ''));
       }
-    }
+    });
     return header + lines.join('\n');
   };
 
@@ -586,65 +584,7 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
     }
 
     return merged;
-  }, [originalLines, optimizedLines]);
-
-  const originalHighlights = useMemo(() => {
-    const allowed = new Set(['removed', 'modified', 'warning']);
-    const map = new Map<number, string>();
-    (doc.codeComparison?.markers || []).forEach(marker => {
-      if (!allowed.has(marker.type)) {
-        return;
-      }
-      for (let line = marker.lineStart; line <= marker.lineEnd; line += 1) {
-        map.set(line, marker.type);
-      }
-    });
-    return map;
-  }, [doc.codeComparison]);
-
-  const optimizedHighlights = useMemo(() => {
-    const allowed = new Set(['added', 'modified', 'improvement', 'warning']);
-    const map = new Map<number, string>();
-    (doc.codeComparison?.markers || []).forEach(marker => {
-      if (!allowed.has(marker.type)) {
-        return;
-      }
-      for (let line = marker.lineStart; line <= marker.lineEnd; line += 1) {
-        map.set(line, marker.type);
-      }
-    });
-    return map;
-  }, [doc.codeComparison]);
-
-  const renderCodeLines = (
-    lines: string[],
-    highlights: Map<number, string>,
-    keyPrefix: string
-  ) => (
-    <table className="code-table">
-      <tbody>
-        {lines.map((line, idx) => {
-          const lineNumber = idx + 1;
-          const highlight = highlights.get(lineNumber);
-          const highlightedLine = highlightQlikCode(line);
-          return (
-            <tr
-              key={`${keyPrefix}-${lineNumber}`}
-              className={`cd-code-line ${highlight ? `code-${highlight}` : ''}`}
-            >
-              <td className="line-number-cell" data-line-number={lineNumber}></td>
-              <td className="code-cell">
-                <div
-                  className="code-line-content code-content qlik-syntax"
-                  dangerouslySetInnerHTML={{ __html: highlightedLine || '&nbsp;' }}
-                />
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
-  );
+  }, [lineSimilarity, originalLines, optimizedLines]);
 
   // Format duration with HH:MM:SS - usando função importada
   // Removida duplicata local

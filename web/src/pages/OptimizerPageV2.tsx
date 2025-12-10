@@ -6,15 +6,12 @@ import "./PipelineCard.css";
 import "./ModalStyles.css";
 
 import { copyToClipboard } from "../lib/clipboard";
-import { apiClient } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigation } from "../contexts/NavigationContext";
 import { UserRole } from "../types/auth";
 import { formatDuration } from "../lib/formatTime";
 import { UserMenu } from "../components/UserMenu";
 import ConsultancyDocumentViewer from "../components/ConsultancyDocumentViewer";
-import ROICard from "../components/ROICard";
-import ScriptAnalysisInfo from "../components/ScriptAnalysisInfo";
 import ScriptInfoModal, { ScriptInfo } from "../components/ScriptInfoModal";
 import { BrandMark } from "../components/BrandMark";
 import { getLLMOptionById, LLM_OPTIONS } from "../lib/llmOptions";
@@ -33,8 +30,7 @@ import { highlightQlikCode } from "../lib/qlikSyntaxHighlighter";
 import QuotaDisplay from "../components/QuotaDisplay/QuotaDisplay";
 import { getQuotas, UsageQuotaCheck } from "../api/usage";
 
-interface OptimizerPageProps {
-}
+type OptimizerPageProps = Record<string, never>;
 
 // Icons
 const Icons = {
@@ -193,7 +189,7 @@ const loadHistory = (): RunHistoryItem[] => {
     const parsed = JSON.parse(stored);
     if (Array.isArray(parsed)) return parsed;
     return [];
-  } catch (_err) {
+  } catch {
     return [];
   }
 };
@@ -240,7 +236,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
       const next = [entry, ...prev].slice(0, 5);
       try {
         localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(next));
-      } catch (_err) {
+      } catch {
         // ignore storage errors
       }
       return next;
@@ -264,7 +260,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
   const [quotaLoading, setQuotaLoading] = useState(true);
 
   // Buscar quotas do backend
-  const fetchQuotas = useCallback(async () => {
+  const fetchQuotas = useCallback(async (bustCache = false) => {
     if (isOwner) {
       // Owner tem acesso ilimitado
       setQuotaData({ allowed: true, remaining: -1, limit: -1, resetAt: new Date().toISOString(), usedToday: 0 });
@@ -274,7 +270,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
 
     try {
       setQuotaLoading(true);
-      const response = await getQuotas();
+      const response = await getQuotas(bustCache);
       const modeQuota = mode === 'ultra-expert' ? response.data.ultraExpert : response.data.nvidiaFast;
       setQuotaData(modeQuota);
     } catch (err) {
@@ -289,12 +285,6 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
   // Buscar quotas na montagem e quando mudar o modo
   useEffect(() => {
     fetchQuotas();
-  }, [fetchQuotas]);
-
-  // Atualizar quotas periodicamente (a cada 30 segundos)
-  useEffect(() => {
-    const interval = setInterval(fetchQuotas, 30000);
-    return () => clearInterval(interval);
   }, [fetchQuotas]);
 
   // Computed values baseados em quotaData
@@ -471,7 +461,8 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
         }
 
         // FREE TIER: Atualiza quotas após sucesso (backend registra uso automaticamente)
-        await fetchQuotas();
+        // Força bypass de cache para obter saldo atualizado imediatamente
+        await fetchQuotas(true);
 
         // Salva sessão completa após finalização
         await session.saveSession({
@@ -602,15 +593,6 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
     }
   };
 
-  // NVIDIA Official Logo (Simplified Eye)
-  const NvidiaLogo = () => (
-    <svg className="nvidia-logo-svg" viewBox="0 0 351.5 67.1" fill="currentColor">
-      <path d="M128.5,3.5c-16.2,0.9-30.4,7.7-40.9,19.5c-1.7,1.9-3.2,3.9-4.5,6c-1.3-2.1-2.8-4.1-4.5-6C68.1,11.2,54,4.4,37.7,3.5C17,2.4,0.2,18.5,0.2,39.2v24.4h24.6V39.2c0-8.5,6.3-15.5,14.8-15.5c8.9,0.5,16.1,6.8,17.9,15.5c0.3,1.5,0.5,3,0.5,4.6v19.8h24.6V43.8c0-1.6,0.2-3.1,0.5-4.6c1.8-8.7,9-15,17.9-15.5c8.5,0,14.8,7,14.8,15.5v24.4h24.6V39.2C140.4,18.5,149.2,2.4,128.5,3.5z" />
-      <path d="M176.2,3.5h-24.6v60.1h24.6V3.5z" />
-      <path d="M230.4,3.5h-30.3l-27.6,60.1h26.2l4.3-9.8h24.5l4.3,9.8h26.2L230.4,3.5z M209.3,41.5l6-13.7l6,13.7H209.3z" />
-    </svg>
-  );
-
   // === RENDER ===
   return (
     <div className={`opt-page ${mode === 'nvidia-fast' ? 'nvidia-mode-active' : ''} ${optimization.isOptimizing && mode === 'nvidia-fast' ? 'optimizing-pulse' : ''}`}>
@@ -624,7 +606,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
       <header className="opt-header-minimal unified-header">
         <div className="header-left-section">
           <div className="header-brand-minimal">
-            <button className="back-btn-minimal" onClick={handleBackNavigation} title="Voltar">
+            <button className="back-btn-minimal" onClick={handleBackNavigation} title="Voltar" aria-label="Voltar para a tela anterior">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M19 12H5M12 19l-7-7 7-7" />
               </svg>
@@ -788,7 +770,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
               O script será automaticamente truncado com <strong>corte inteligente</strong> (até +30 linhas extras para completar blocos).
             </p>
           </div>
-          <button className="warning-dismiss" onClick={() => setShowFreeTierWarning(false)} title="Entendi">
+          <button className="warning-dismiss" onClick={() => setShowFreeTierWarning(false)} title="Entendi" aria-label="Dispensar aviso de limite de linhas">
             ✕
           </button>
         </div>
@@ -803,7 +785,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
             <div className="ctrl-header">
               <Icons.File />
               <span>Script</span>
-              <button className="ctrl-btn" onClick={() => setCaptureOpen(true)}>
+              <button className="ctrl-btn" onClick={() => setCaptureOpen(true)} aria-label="Abrir modal de upload de script">
                 {uploadMeta || script?.trim() ? "Trocar" : "Carregar"}
               </button>
             </div>
@@ -874,7 +856,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
             <div className="ctrl-card quota-card">
               <QuotaDisplay
                 mode={mode}
-                compact={false}
+                compact
                 onQuotaUpdate={(quota) => {
                   // Callback opcional para sincronizar estado
                   setQuotaData(quota);
@@ -932,7 +914,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
                 <strong>Erro</strong>
                 <p>{error}</p>
               </div>
-              <button className="error-close" onClick={() => setError(null)}>×</button>
+              <button className="error-close" onClick={() => setError(null)} aria-label="Fechar mensagem de erro">×</button>
             </div>
           )}
 
@@ -1274,7 +1256,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
                       <button className="action-btn secondary small" onClick={() => setDownloadModalOpen(true)}>
                         <Icons.Download /> Baixar ZIP
                       </button>
-                      <button className="close-btn" onClick={() => setShowResultViewer(false)}>×</button>
+                      <button className="close-btn" onClick={() => setShowResultViewer(false)} aria-label="Fechar modal de resultado">×</button>
                     </div>
                   </div>
                   <div className="modal-body result-viewer-body">
@@ -1332,6 +1314,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
                                 className="copy-btn"
                                 onClick={(e) => handleCopy("original", result.originalScript, e.currentTarget)}
                                 title="Copiar código original"
+                                aria-label="Copiar código original"
                               >
                                 {copyState.original}
                               </button>
@@ -1342,6 +1325,8 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
                             ref={originalScrollRef}
                             onScroll={handleSyncScroll("original")}
                           >
+                            {/* Tabelas de código são somente leitura, regra de label não se aplica */}
+                            {/* eslint-disable jsx-a11y/control-has-associated-label */}
                             <table className="code-table">
                               <tbody>
                                 {result.originalScript.split(/\r?\n/).map((line, idx) => (
@@ -1367,6 +1352,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
                               className="copy-btn"
                               onClick={(e) => handleCopy("optimized", result.optimizedScript, e.currentTarget)}
                               title="Copiar código otimizado"
+                              aria-label="Copiar código otimizado"
                             >
                               {copyState.optimized}
                             </button>
@@ -1389,6 +1375,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
                               ))}
                             </tbody>
                           </table>
+                          {/* eslint-enable jsx-a11y/control-has-associated-label */}
                         </div>
                       </div>
                     </div>

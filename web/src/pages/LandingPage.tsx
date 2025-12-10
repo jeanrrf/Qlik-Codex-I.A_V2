@@ -724,6 +724,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                         type="text"
                         className="contact-input"
                         placeholder="Nome"
+                        aria-label="Seu nome"
                         required
                         value={formState.name}
                         onChange={e => setFormState({ ...formState, name: e.target.value })}
@@ -735,6 +736,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                         type="email"
                         className="contact-input"
                         placeholder="E-mail Corporativo"
+                        aria-label="Seu e-mail"
                         required
                         value={formState.email}
                         onChange={e => setFormState({ ...formState, email: e.target.value })}
@@ -747,6 +749,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                       type="text"
                       className="contact-input"
                       placeholder="Empresa"
+                      aria-label="Nome da empresa"
                       required
                       value={formState.company}
                       onChange={e => setFormState({ ...formState, company: e.target.value })}
@@ -757,6 +760,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                       name="message"
                       className="contact-input contact-textarea"
                       placeholder="Mensagem (opcional)"
+                      aria-label="Mensagem"
                       rows={3}
                       value={formState.message}
                       onChange={e => setFormState({ ...formState, message: e.target.value })}

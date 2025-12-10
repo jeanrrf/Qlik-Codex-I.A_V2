@@ -3,7 +3,7 @@
  * Mostra quotas disponíveis para o usuário em tempo real
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { getQuotas, UsageQuotaCheck } from '../../api/usage';
 import './QuotaDisplay.css';
 
@@ -13,27 +13,29 @@ interface QuotaDisplayProps {
   onQuotaUpdate?: (quota: UsageQuotaCheck) => void;
 }
 
-export const QuotaDisplay: React.FC<QuotaDisplayProps> = ({ 
-  mode = 'ultra-expert', 
-  compact = false,
-  onQuotaUpdate 
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // reduce polling noise to 5 minutes
+
+export const QuotaDisplay: React.FC<QuotaDisplayProps> = ({
+  mode = 'ultra-expert',
+  compact = true,
+  onQuotaUpdate
 }) => {
   const [quota, setQuota] = useState<UsageQuotaCheck | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchQuota = async () => {
+  const fetchQuota = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const response = await getQuotas();
-      
-      const quotaData = mode === 'ultra-expert' 
-        ? response.data.ultraExpert 
+
+      const quotaData = mode === 'ultra-expert'
+        ? response.data.ultraExpert
         : response.data.nvidiaFast;
-      
+
       setQuota(quotaData);
-      
+
       if (onQuotaUpdate) {
         onQuotaUpdate(quotaData);
       }
@@ -43,16 +45,16 @@ export const QuotaDisplay: React.FC<QuotaDisplayProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [mode, onQuotaUpdate]);
 
   useEffect(() => {
     fetchQuota();
-    
-    // Atualizar a cada 30 segundos
-    const interval = setInterval(fetchQuota, 30000);
-    
+
+    // Atualizar com intervalo longo para evitar excesso de requisições
+    const interval = setInterval(fetchQuota, REFRESH_INTERVAL_MS);
+
     return () => clearInterval(interval);
-  }, [mode]);
+  }, [mode, fetchQuota]);
 
   if (loading && !quota) {
     return (
@@ -82,19 +84,34 @@ export const QuotaDisplay: React.FC<QuotaDisplayProps> = ({
 
   const resetDate = new Date(quota.resetAt);
   const now = new Date();
-  const hoursUntilReset = Math.ceil((resetDate.getTime() - now.getTime()) / (1000 * 60 * 60));
+  const hoursUntilReset = Math.max(0, Math.ceil((resetDate.getTime() - now.getTime()) / (1000 * 60 * 60)));
+  const resetLabel = resetDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
   if (compact) {
     return (
       <div className={`quota-display quota-display--compact ${isNoQuota ? 'quota-display--depleted' : ''}`}>
-        <span className="quota-display__icon">
-          {isUnlimited ? '∞' : isNoQuota ? '🚫' : '⚡'}
-        </span>
-        <span className="quota-display__text">
-          {isUnlimited 
-            ? 'Ilimitado' 
-            : `${quota.remaining}/${quota.limit} disponíveis`}
-        </span>
+        <div className="quota-compact__left">
+          <span className="quota-display__icon" aria-hidden>
+            {mode === 'nvidia-fast' ? '⚡' : '🚀'}
+          </span>
+          <div className="quota-compact__labels">
+            <span className="quota-compact__title">{mode === 'nvidia-fast' ? 'NVIDIA Fast' : 'Ultra Expert'}</span>
+            <span className="quota-compact__reset">Reset {resetLabel}</span>
+          </div>
+        </div>
+        <div className="quota-compact__numbers">
+          {isUnlimited ? (
+            <span className="quota-compact__value">∞</span>
+          ) : (
+            <>
+              <span className={`quota-compact__value ${isNoQuota ? 'depleted' : ''}`}>
+                {quota.remaining}
+              </span>
+              <span className="quota-compact__slash">/</span>
+              <span className="quota-compact__limit">{quota.limit}</span>
+            </>
+          )}
+        </div>
       </div>
     );
   }
@@ -105,8 +122,8 @@ export const QuotaDisplay: React.FC<QuotaDisplayProps> = ({
         <h3 className="quota-display__title">
           {mode === 'ultra-expert' ? '🚀 Ultra Expert' : '⚡ NVIDIA Fast'}
         </h3>
-        <button 
-          className="quota-display__refresh" 
+        <button
+          className="quota-display__refresh"
           onClick={fetchQuota}
           title="Atualizar quotas"
           disabled={loading}
@@ -141,7 +158,7 @@ export const QuotaDisplay: React.FC<QuotaDisplayProps> = ({
           </div>
 
           <div className="quota-display__progress">
-            <div 
+            <div
               className={`quota-display__progress-bar ${isLowQuota ? 'quota-display__progress-bar--warning' : ''}`}
               style={{ width: `${percentageUsed}%` }}
             />
@@ -162,7 +179,7 @@ export const QuotaDisplay: React.FC<QuotaDisplayProps> = ({
               </div>
             )}
             <div className="quota-display__reset">
-              Reset às {resetDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+              Reset às {resetLabel}
             </div>
           </div>
         </>

@@ -1,57 +1,84 @@
-/**
- * Analytics Service Enterprise
- * Sistema avançado de monitoramento de acessos, eventos e comportamento
- */
+import { v4 as uuidv4 } from "uuid";
 
-import { getDbType, closeDb } from '../lib/dbAdapter';
-import { logger } from '../lib/logger';
-import { getCompatDb } from '../lib/dbCompat';
-import { getTursoDb, TursoSqliteWrapper } from '../lib/tursoDb';
+import { analyticsEmitter } from "../lib/analyticsEmitter";
+import { DbAdapter } from "../lib/dbAdapter";
+import { logger } from "../lib/logger";
 
-/**
- * Obtém instância do banco (SQLite local ou Turso)
- */
-function getDb() {
-  // Se Turso está configurado, usar Turso; caso contrário, usa PostgreSQL (configurado via DATABASE_URL)
-  if (process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN) {
-    const tursoClient = getTursoDb();
-    return new TursoSqliteWrapper(tursoClient);
+// Force restart for schema recreation
+const db = new DbAdapter();
+
+const EVENT_TABLE_INIT = `
+CREATE TABLE IF NOT EXISTS analytics_events (
+  id TEXT PRIMARY KEY,
+  session_id TEXT,
+  user_id TEXT,
+  type TEXT NOT NULL,
+  event_type TEXT,
+  event_category TEXT,
+  event_label TEXT,
+  event_value REAL,
+  page TEXT,
+  referrer TEXT,
+  landing_page TEXT,
+  metadata TEXT,
+  details TEXT,
+  is_owner INTEGER NOT NULL DEFAULT 0,
+  timestamp TEXT NOT NULL
+);
+`;
+
+async function ensureAnalyticsTable(): Promise<void> {
+  try {
+    // 1. Ensure table exists (basic structure)
+    await db.exec(EVENT_TABLE_INIT);
+
+    // 2. Robust migration: Try to add columns if they are missing (idempotent via catch)
+    // This handles cases where the table was created with an older schema
+    const migrations = [
+      "ALTER TABLE analytics_events ADD COLUMN type TEXT",
+      "ALTER TABLE analytics_events ADD COLUMN is_owner INTEGER DEFAULT 0",
+      "ALTER TABLE analytics_events ADD COLUMN session_id TEXT",
+      "ALTER TABLE analytics_events ADD COLUMN details TEXT",
+      "ALTER TABLE analytics_events ADD COLUMN page TEXT",
+      "ALTER TABLE analytics_events ADD COLUMN referrer TEXT",
+      "ALTER TABLE analytics_events ADD COLUMN landing_page TEXT",
+      "ALTER TABLE analytics_events ADD COLUMN event_type TEXT",
+      "ALTER TABLE analytics_events ADD COLUMN event_category TEXT",
+      "ALTER TABLE analytics_events ADD COLUMN event_label TEXT",
+      "ALTER TABLE analytics_events ADD COLUMN event_value REAL",
+      "ALTER TABLE analytics_events ADD COLUMN metadata TEXT"
+    ];
+
+    for (const sql of migrations) {
+      try {
+        await db.exec(sql);
+      } catch (err) {
+        // Ignore "duplicate column name" error (code varies by driver, checking message safe enough)
+        // Libsql/SQLite usually throws "duplicate column name: ..."
+        const message = err instanceof Error ? err.message : String(err);
+        if (!message.includes("duplicate column name")) {
+          // Log only unexpected errors, but don't crash
+          // logger.warn("Migration warning (safe to ignore if column exists):", err.message);
+        }
+      }
+    }
+
+    // 3. Create indices
+    await db.exec("CREATE INDEX IF NOT EXISTS idx_analytics_events_timestamp ON analytics_events(timestamp DESC)");
+    await db.exec("CREATE INDEX IF NOT EXISTS idx_analytics_events_type ON analytics_events(type)");
+    await db.exec("CREATE INDEX IF NOT EXISTS idx_analytics_events_owner ON analytics_events(is_owner)");
+    await db.exec("CREATE INDEX IF NOT EXISTS idx_analytics_events_session ON analytics_events(session_id)");
+  } catch (err) {
+    logger.error("Failed to ensure analytics schema", err);
+    throw err;
   }
-
-  // Fallback: Postgres via compat wrapper (sem SQLite)
-  return getCompatDb();
 }
 
-export interface PageViewEvent {
-  userId?: string;
-  sessionId?: string;
-  page: string;
-  referrer?: string;
-  ip?: string;
-  userAgent?: string;
-  isOwner: boolean;
-  metadata?: Record<string, unknown>;
-}
+ensureAnalyticsTable().catch((err) => {
+  logger.error("Analytics table initialization failure", err);
+});
 
-export interface CustomEvent {
-  userId?: string;
-  sessionId?: string;
-  eventType: string;
-  eventCategory: string;
-  eventLabel?: string;
-  eventValue?: number;
-  isOwner: boolean;
-  metadata?: Record<string, unknown>;
-}
-
-export interface SessionStart {
-  userId?: string;
-  sessionId: string;
-  ip?: string;
-  userAgent?: string;
-  isOwner: boolean;
-  landingPage?: string;
-}
+type AnalyticsEventType = "visit" | "pageview" | "event" | "session";
 
 export interface AnalyticsSummary {
   totalVisits: number;
@@ -63,457 +90,309 @@ export interface AnalyticsSummary {
   ownerEvents: number;
   topPages: Array<{ page: string; count: number }>;
   topEvents: Array<{ eventType: string; count: number }>;
-  recentActivity: Array<{
-    type: 'pageview' | 'event' | 'session';
-    timestamp: string;
-    details: string;
-    isOwner: boolean;
-  }>;
+  recentActivity: RecentActivity[];
 }
 
-export interface DetailedAnalytics {
-  pageViews: Array<{
-    id: number;
-    userId?: string;
-    sessionId?: string;
-    page: string;
-    referrer?: string;
-    isOwner: boolean;
-    timestamp: string;
-  }>;
-  events: Array<{
-    id: number;
-    userId?: string;
-    sessionId?: string;
-    eventType: string;
-    eventCategory: string;
-    eventLabel?: string;
-    isOwner: boolean;
-    timestamp: string;
-  }>;
-  sessions: Array<{
-    id: number;
-    sessionId: string;
-    userId?: string;
-    isOwner: boolean;
-    startTime: string;
-    lastActivity: string;
-    pageCount: number;
-    eventCount: number;
-  }>;
+export interface RecentActivity {
+  type: "pageview" | "event" | "session";
+  timestamp: string;
+  details: string;
+  isOwner: boolean;
 }
 
-/**
- * Registra visualização de página
- */
-export async function trackPageView(event: PageViewEvent): Promise<void> {
-  try {
-    const db = getDb();
-
-    await db.prepare(`
-      INSERT INTO analytics_page_views (
-        user_id, session_id, page, referrer, ip, user_agent, is_owner, metadata
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      event.userId || null,
-      event.sessionId || null,
-      event.page,
-      event.referrer || null,
-      event.ip || null,
-      event.userAgent || null,
-      event.isOwner ? 1 : 0,
-      event.metadata ? JSON.stringify(event.metadata) : null
-    );
-
-    // Atualizar sessão se existir
-    if (event.sessionId) {
-      await updateSessionActivity(event.sessionId);
-    }
-
-    logger.debug('Page view tracked', {
-      page: event.page,
-      isOwner: event.isOwner,
-      sessionId: event.sessionId
-    });
-  } catch (err) {
-    logger.error('Erro ao registrar page view', err);
-  }
+interface AnalyticsEventPayload {
+  type: AnalyticsEventType;
+  sessionId?: string;
+  userId?: string | null;
+  eventType?: string | null;
+  eventCategory?: string | null;
+  eventLabel?: string | null;
+  eventValue?: number | null;
+  page?: string | null;
+  referrer?: string | null;
+  landingPage?: string | null;
+  metadata?: Record<string, unknown> | null;
+  details?: string | null;
+  isOwner?: boolean | null;
+  timestamp?: string;
 }
 
-/**
- * Registra evento customizado
- */
-export async function trackEvent(event: CustomEvent): Promise<void> {
-  try {
-    const db = getDb();
-
-    await db.prepare(`
-      INSERT INTO analytics_events (
-        user_id, session_id, event_type, event_category, event_label, 
-        event_value, is_owner, metadata
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      event.userId || null,
-      event.sessionId || null,
-      event.eventType,
-      event.eventCategory,
-      event.eventLabel || null,
-      event.eventValue || null,
-      event.isOwner ? 1 : 0,
-      event.metadata ? JSON.stringify(event.metadata) : null
-    );
-
-    // Atualizar sessão
-    if (event.sessionId) {
-      await updateSessionActivity(event.sessionId);
-    }
-
-    logger.debug('Event tracked', {
-      type: event.eventType,
-      category: event.eventCategory,
-      isOwner: event.isOwner
-    });
-  } catch (err) {
-    logger.error('Erro ao registrar evento', err);
-  }
+interface InsertedEventInfo {
+  id: string;
+  timestamp: string;
+  isOwner: boolean;
+  page?: string | null;
+  eventType?: string | null;
+  eventCategory?: string | null;
+  referrer?: string | null;
 }
 
-/**
- * Inicia nova sessão
- */
-export async function startSession(session: SessionStart): Promise<void> {
-  try {
-    const db = getDb();
+async function insertEvent(payload: AnalyticsEventPayload): Promise<InsertedEventInfo> {
+  const id = uuidv4();
+  const timestamp = payload.timestamp ?? new Date().toISOString();
+  const metadataJson = payload.metadata ? JSON.stringify(payload.metadata) : null;
+  const isOwnerValue = payload.isOwner ? 1 : 0;
 
-    // Verificar se já existe
-    const existing = await db.prepare(
-      'SELECT id FROM analytics_sessions WHERE session_id = ?'
-    ).get(session.sessionId);
-
-    if (!existing) {
-      await db.prepare(`
-        INSERT INTO analytics_sessions (
-          session_id, user_id, ip, user_agent, is_owner, landing_page
-        ) VALUES (?, ?, ?, ?, ?, ?)
-      `).run(
-        session.sessionId,
-        session.userId || null,
-        session.ip || null,
-        session.userAgent || null,
-        session.isOwner ? 1 : 0,
-        session.landingPage || null
-      );
-
-      logger.debug('Session started', {
-        sessionId: session.sessionId,
-        isOwner: session.isOwner
-      });
-    }
-  } catch (err) {
-    logger.error('Erro ao iniciar sessão', err);
-  }
-}
-
-/**
- * Atualiza última atividade da sessão
- */
-async function updateSessionActivity(sessionId: string): Promise<void> {
-  try {
-    const db = getDb();
-
-    await db.prepare(`
-      UPDATE analytics_sessions 
-      SET last_activity = CURRENT_TIMESTAMP,
-          page_count = (
-            SELECT COUNT(*) FROM analytics_page_views 
-            WHERE session_id = ?
-          ),
-          event_count = (
-            SELECT COUNT(*) FROM analytics_events 
-            WHERE session_id = ?
-          )
-      WHERE session_id = ?
-    `).run(sessionId, sessionId, sessionId);
-  } catch (err) {
-    logger.error('Erro ao atualizar sessão', err);
-  }
-}
-
-/**
- * Retorna resumo de analytics
- */
-export async function getAnalyticsSummary(limit = 10): Promise<AnalyticsSummary> {
-  try {
-    const db = getDb();
-
-    // Total de visitas
-    const visitsResult = await db.prepare(
-      'SELECT COUNT(*) as count FROM analytics_page_views'
-    ).get() as { count: number };
-
-    // Total de eventos
-    const eventsResult = await db.prepare(
-      'SELECT COUNT(*) as count FROM analytics_events'
-    ).get() as { count: number };
-
-    // Total de sessões
-    const sessionsResult = await db.prepare(
-      'SELECT COUNT(*) as count FROM analytics_sessions'
-    ).get() as { count: number };
-
-    // Total de otimizações (do sistema principal)
-    let optimizationsResult = { count: 0 };
-    try {
-      optimizationsResult = await db.prepare(
-        'SELECT COUNT(*) as count FROM optimization_history'
-      ).get() as { count: number };
-    } catch {
-      // Tabela pode não existir ainda
-    }
-
-    // Usuários únicos
-    const uniqueUsersResult = await db.prepare(
-      'SELECT COUNT(DISTINCT user_id) as count FROM analytics_page_views WHERE user_id IS NOT NULL'
-    ).get() as { count: number };
-
-    // Visitas do owner
-    const ownerVisitsResult = await db.prepare(
-      'SELECT COUNT(*) as count FROM analytics_page_views WHERE is_owner = 1'
-    ).get() as { count: number };
-
-    // Eventos do owner
-    const ownerEventsResult = await db.prepare(
-      'SELECT COUNT(*) as count FROM analytics_events WHERE is_owner = 1'
-    ).get() as { count: number };
-
-    // Top páginas
-    const topPages = await db.prepare(`
-      SELECT page, COUNT(*) as count 
-      FROM analytics_page_views 
-      GROUP BY page 
-      ORDER BY count DESC 
-      LIMIT ?
-    `).all(limit) as Array<{ page: string; count: number }>;
-
-    // Top eventos
-    const topEvents = await db.prepare(`
-      SELECT event_type, COUNT(*) as count 
-      FROM analytics_events 
-      GROUP BY event_type 
-      ORDER BY count DESC 
-      LIMIT ?
-    `).all(limit) as Array<{ eventType: string; count: number }>;
-
-    // Atividade recente (combinada)
-    const recentPageViews = await db.prepare(`
-      SELECT 'pageview' as type, timestamp, page as details, is_owner
-      FROM analytics_page_views 
-      ORDER BY timestamp DESC 
-      LIMIT ?
-    `).all(limit) as Array<Record<string, unknown>>;
-
-    const recentEvents = await db.prepare(`
-      SELECT 'event' as type, timestamp, 
-             (event_type || ': ' || event_category) as details, is_owner
-      FROM analytics_events 
-      ORDER BY timestamp DESC 
-      LIMIT ?
-    `).all(limit) as Array<Record<string, unknown>>;
-
-    const recentSessions = await db.prepare(`
-      SELECT 'session' as type, start_time as timestamp, 
-             ('Session: ' || session_id) as details, is_owner
-      FROM analytics_sessions 
-      ORDER BY start_time DESC 
-      LIMIT ?
-    `).all(Math.floor(limit / 2)) as Array<Record<string, unknown>>;
-
-    const recentActivity = [
-      ...recentPageViews,
-      ...recentEvents,
-      ...recentSessions
+  await db.run(
+    `
+    INSERT INTO analytics_events (
+      id,
+      session_id,
+      user_id,
+      type,
+      event_type,
+      event_category,
+      event_label,
+      event_value,
+      page,
+      referrer,
+      landing_page,
+      metadata,
+      details,
+      is_owner,
+      timestamp
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `,
+    [
+      id,
+      payload.sessionId ?? null,
+      payload.userId ?? null,
+      payload.type,
+      payload.eventType ?? null,
+      payload.eventCategory ?? null,
+      payload.eventLabel ?? null,
+      payload.eventValue ?? null,
+      payload.page ?? null,
+      payload.referrer ?? null,
+      payload.landingPage ?? null,
+      metadataJson,
+      payload.details ?? null,
+      isOwnerValue,
+      timestamp
     ]
-      .sort((a: Record<string, unknown>, b: Record<string, unknown>) =>
-        new Date(String(b.timestamp)).getTime() - new Date(String(a.timestamp)).getTime()
-      )
-      .slice(0, limit * 2)
-      .map((item: Record<string, unknown>) => {
-        const rawType = String(item.type ?? 'event');
-        const type = rawType === 'session' || rawType === 'pageview' || rawType === 'event' ? rawType as 'session' | 'pageview' | 'event' : 'event';
-        return ({
-          type,
-          timestamp: String(item.timestamp),
-          details: String(item.details),
-          isOwner: Boolean(item.is_owner)
-        });
-      });
+  );
 
-    return {
-      totalVisits: visitsResult.count,
-      totalEvents: eventsResult.count,
-      totalSessions: sessionsResult.count,
-      totalOptimizations: optimizationsResult.count,
-      uniqueUsers: uniqueUsersResult.count,
-      ownerVisits: ownerVisitsResult.count,
-      ownerEvents: ownerEventsResult.count,
-      topPages,
-      topEvents,
-      recentActivity
-    };
-  } catch (err) {
-    logger.error('Erro ao obter resumo de analytics', err);
-    throw err;
-  }
+  return {
+    id,
+    timestamp,
+    isOwner: Boolean(payload.isOwner),
+    page: payload.page ?? null,
+    eventType: payload.eventType ?? null,
+    eventCategory: payload.eventCategory ?? null,
+    referrer: payload.referrer ?? null
+  };
 }
 
-/**
- * Retorna dados detalhados de analytics com filtros
- */
-export async function getDetailedAnalytics(options: {
-  startDate?: string;
-  endDate?: string;
-  isOwner?: boolean;
+export async function recordVisit(params: {
+  sessionId?: string;
   userId?: string;
-  limit?: number;
-}): Promise<DetailedAnalytics> {
-  try {
-    const db = getDb();
-    const { startDate, endDate, isOwner, userId, limit = 100 } = options;
+  isOwner?: boolean;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  await insertEvent({
+    type: "visit",
+    sessionId: params.sessionId,
+    userId: params.userId ?? null,
+    metadata: params.metadata ?? null,
+    details: "Visita registrada",
+    isOwner: params.isOwner ?? false
+  });
+}
 
-    let whereClause = '1=1';
-    const params: unknown[] = [];
+export async function logPageView(params: {
+  sessionId?: string;
+  userId?: string;
+  page?: string;
+  referrer?: string;
+  landingPage?: string;
+  metadata?: Record<string, unknown>;
+  isOwner?: boolean;
+  details?: string;
+}): Promise<void> {
+  const inserted = await insertEvent({
+    type: "pageview",
+    sessionId: params.sessionId,
+    userId: params.userId ?? null,
+    page: params.page ?? null,
+    referrer: params.referrer ?? null,
+    landingPage: params.landingPage ?? null,
+    metadata: params.metadata ?? null,
+    details: params.details ?? `Pageview: ${params.page ?? "unknown"}`,
+    isOwner: params.isOwner ?? false
+  });
 
-    if (startDate) {
-      whereClause += ' AND timestamp >= ?';
-      params.push(startDate);
+  analyticsEmitter.sendToAll({
+    type: "pageview",
+    page: inserted.page ?? params.page ?? undefined,
+    data: {
+      timestamp: inserted.timestamp,
+      page: inserted.page ?? params.page ?? undefined,
+      referrer: inserted.referrer,
+      sessionId: params.sessionId ?? null,
+      userId: params.userId ?? null,
+      is_owner: inserted.isOwner ? 1 : 0
     }
+  });
+}
 
-    if (endDate) {
-      whereClause += ' AND timestamp <= ?';
-      params.push(endDate);
+export async function logEvent(params: {
+  sessionId?: string;
+  userId?: string;
+  eventType: string;
+  eventCategory?: string;
+  eventLabel?: string;
+  eventValue?: number;
+  metadata?: Record<string, unknown>;
+  isOwner?: boolean;
+  details?: string;
+}): Promise<void> {
+  const inserted = await insertEvent({
+    type: "event",
+    sessionId: params.sessionId,
+    userId: params.userId ?? null,
+    eventType: params.eventType,
+    eventCategory: params.eventCategory ?? null,
+    eventLabel: params.eventLabel ?? null,
+    eventValue: params.eventValue ?? null,
+    metadata: params.metadata ?? null,
+    details: params.details ?? `${params.eventLabel ?? params.eventType}`,
+    isOwner: params.isOwner ?? false
+  });
+
+  analyticsEmitter.sendToAll({
+    type: "event",
+    data: {
+      timestamp: inserted.timestamp,
+      event_type: inserted.eventType ?? params.eventType,
+      event_category: inserted.eventCategory,
+      event_label: params.eventLabel,
+      event_value: params.eventValue ?? null,
+      sessionId: params.sessionId ?? null,
+      userId: params.userId ?? null,
+      is_owner: inserted.isOwner ? 1 : 0
     }
+  });
+}
 
-    if (isOwner !== undefined) {
-      whereClause += ' AND is_owner = ?';
-      params.push(isOwner ? 1 : 0);
+export async function startSession(params: {
+  sessionId?: string;
+  userId?: string;
+  landingPage?: string;
+  isOwner?: boolean;
+}): Promise<void> {
+  await insertEvent({
+    type: "session",
+    sessionId: params.sessionId,
+    userId: params.userId ?? null,
+    landingPage: params.landingPage ?? null,
+    metadata: null,
+    details: `Sessão iniciada em ${params.landingPage ?? "unknown"}`,
+    isOwner: params.isOwner ?? false
+  });
+}
+
+export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
+  const [
+    visitsResultRaw,
+    eventsResultRaw,
+    sessionsResultRaw,
+    uniqueUsersResultRaw,
+    ownerVisitsResultRaw,
+    ownerEventsResultRaw,
+    topPagesRaw,
+    topEventsRaw,
+    recentRecordsRaw,
+    totalOptimizationsResultRaw
+  ] = await Promise.all([
+    db.get("SELECT COUNT(*) as count FROM analytics_events WHERE type = ?", ["visit"]),
+    db.get("SELECT COUNT(*) as count FROM analytics_events WHERE type = ?", ["event"]),
+    db.get("SELECT COUNT(*) as count FROM analytics_events WHERE type = ?", ["session"]),
+    db.get("SELECT COUNT(DISTINCT user_id) as count FROM analytics_events WHERE user_id IS NOT NULL"),
+    db.get("SELECT COUNT(*) as count FROM analytics_events WHERE type = ? AND is_owner = 1", ["visit"]),
+    db.get("SELECT COUNT(*) as count FROM analytics_events WHERE type = ? AND is_owner = 1", ["event"]),
+    db.all("SELECT page, COUNT(*) as count FROM analytics_events WHERE type = ? AND page IS NOT NULL GROUP BY page ORDER BY count DESC LIMIT 5", ["pageview"]),
+    db.all("SELECT COALESCE(event_type, event_label, 'evento') as eventType, COUNT(*) as count FROM analytics_events WHERE type = ? GROUP BY eventType ORDER BY count DESC LIMIT 5", ["event"]),
+    db.all(
+      `SELECT type, page, event_type, event_category, landing_page, timestamp, is_owner, details
+       FROM analytics_events
+       WHERE type IN ('pageview', 'event', 'session')
+       ORDER BY timestamp DESC
+       LIMIT 20`
+    ),
+    db.get("SELECT COUNT(*) as count FROM optimization_history")
+  ]);
+
+  const visitsResult = visitsResultRaw as { count: number } | null;
+  const eventsResult = eventsResultRaw as { count: number } | null;
+  const sessionsResult = sessionsResultRaw as { count: number } | null;
+  const uniqueUsersResult = uniqueUsersResultRaw as { count: number } | null;
+  const ownerVisitsResult = ownerVisitsResultRaw as { count: number } | null;
+  const ownerEventsResult = ownerEventsResultRaw as { count: number } | null;
+  const topPages = (topPagesRaw as Array<{ page: string; count: number }> | null) ?? [];
+  const topEvents = (topEventsRaw as Array<{ eventType: string; count: number }> | null) ?? [];
+  const recentRecords = (recentRecordsRaw as Array<{
+    type: "pageview" | "event" | "session";
+    page: string | null;
+    event_type: string | null;
+    event_category: string | null;
+    landing_page: string | null;
+    timestamp: string;
+    is_owner: number | null;
+    details: string | null;
+  }> | null) ?? [];
+  const totalOptimizationsResult = totalOptimizationsResultRaw as { count: number } | null;
+
+  const recentActivity: RecentActivity[] = recentRecords.map((record) => {
+    const type = record.type;
+    let details = record.details;
+    if (!details) {
+      if (type === "pageview") {
+        details = `Página: ${record.page ?? "sem rota"}`;
+      } else if (type === "event") {
+        details = `Evento: ${record.event_type ?? "custom"}${record.event_category ? ` (${record.event_category})` : ""}`;
+      } else if (type === "session") {
+        details = `Sessão iniciada: ${record.landing_page ?? "sem destino"}`;
+      } else {
+        details = "Atividade registrada";
+      }
     }
-
-    if (userId) {
-      whereClause += ' AND user_id = ?';
-      params.push(userId);
-    }
-
-    // Page Views
-    const pageViews = await db.prepare(`
-      SELECT id, user_id, session_id, page, referrer, is_owner, timestamp
-      FROM analytics_page_views
-      WHERE ${whereClause}
-      ORDER BY timestamp DESC
-      LIMIT ?
-    `).all(...(params as Array<string | number>), limit) as Array<Record<string, unknown>>;
-
-    // Events
-    const events = await db.prepare(`
-      SELECT id, user_id, session_id, event_type, event_category, 
-             event_label, is_owner, timestamp
-      FROM analytics_events
-      WHERE ${whereClause}
-      ORDER BY timestamp DESC
-      LIMIT ?
-    `).all(...(params as Array<string | number>), limit) as Array<Record<string, unknown>>;
-
-    // Sessions
-    let sessionWhereClause = '1=1';
-    const sessionParams: unknown[] = [];
-
-    if (startDate) {
-      sessionWhereClause += ' AND start_time >= ?';
-      sessionParams.push(startDate);
-    }
-
-    if (isOwner !== undefined) {
-      sessionWhereClause += ' AND is_owner = ?';
-      sessionParams.push(isOwner ? 1 : 0);
-    }
-
-    if (userId) {
-      sessionWhereClause += ' AND user_id = ?';
-      sessionParams.push(userId);
-    }
-
-    const sessions = await db.prepare(`
-      SELECT id, session_id, user_id, is_owner, start_time, 
-             last_activity, page_count, event_count
-      FROM analytics_sessions
-      WHERE ${sessionWhereClause}
-      ORDER BY start_time DESC
-      LIMIT ?
-    `).all(...(sessionParams as Array<string | number>), limit) as Array<Record<string, unknown>>;
 
     return {
-      pageViews: pageViews.map((pv: Record<string, unknown>) => ({
-        id: Number(pv.id ?? 0),
-        userId: pv.user_id as string | undefined,
-        sessionId: pv.session_id as string | undefined,
-        page: String(pv.page ?? ''),
-        referrer: pv.referrer as string | undefined,
-        isOwner: Boolean(pv.is_owner),
-        timestamp: String(pv.timestamp ?? '')
-      })),
-      events: events.map((ev: Record<string, unknown>) => ({
-        id: Number(ev.id ?? 0),
-        userId: ev.user_id as string | undefined,
-        sessionId: ev.session_id as string | undefined,
-        eventType: String(ev.event_type ?? ''),
-        eventCategory: String(ev.event_category ?? ''),
-        eventLabel: ev.event_label as string | undefined,
-        isOwner: Boolean(ev.is_owner),
-        timestamp: String(ev.timestamp ?? '')
-      })),
-      sessions: sessions.map((s: Record<string, unknown>) => ({
-        id: Number(s.id ?? 0),
-        sessionId: String(s.session_id ?? ''),
-        userId: s.user_id as string | undefined,
-        isOwner: Boolean(s.is_owner),
-        startTime: String(s.start_time ?? ''),
-        lastActivity: String(s.last_activity ?? ''),
-        pageCount: Number(s.page_count ?? 0),
-        eventCount: Number(s.event_count ?? 0)
-      }))
+      type,
+      timestamp: record.timestamp,
+      details,
+      isOwner: Boolean(record.is_owner)
     };
-  } catch (err) {
-    logger.error('Erro ao obter analytics detalhado', err);
-    throw err;
-  }
+  });
+
+  return {
+    totalVisits: visitsResult?.count ?? 0,
+    totalEvents: eventsResult?.count ?? 0,
+    totalSessions: sessionsResult?.count ?? 0,
+    totalOptimizations: totalOptimizationsResult?.count ?? 0,
+    uniqueUsers: uniqueUsersResult?.count ?? 0,
+    ownerVisits: ownerVisitsResult?.count ?? 0,
+    ownerEvents: ownerEventsResult?.count ?? 0,
+    topPages: topPages.map((row) => ({ page: row.page, count: row.count })),
+    topEvents: topEvents.map((row) => ({ eventType: row.eventType, count: row.count })),
+    recentActivity
+  };
 }
 
-/**
- * Limpa dados antigos de analytics (GDPR compliance)
- */
-export function cleanOldAnalytics(daysToKeep = 90): void {
-  try {
-    const db = getCompatDb();
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
-    const cutoff = cutoffDate.toISOString();
-
-    db.prepare('DELETE FROM analytics_page_views WHERE timestamp < ?').run(cutoff);
-    db.prepare('DELETE FROM analytics_events WHERE timestamp < ?').run(cutoff);
-    db.prepare('DELETE FROM analytics_sessions WHERE start_time < ?').run(cutoff);
-
-    logger.info(`Analytics data older than ${daysToKeep} days cleaned`);
-  } catch (err) {
-    logger.error('Erro ao limpar analytics antigos', err);
+export async function cleanupAnalyticsRecords(days: number): Promise<number> {
+  if (days <= 0) {
+    return 0;
   }
-}
 
-export async function closeAnalyticsDb(): Promise<void> {
-  try {
-    const dbType = getDbType();
-    logger.info(`[Analytics] Closing ${dbType} database connection...`);
-    await closeDb();
-    logger.info(`[Analytics] ${dbType} database connection closed.`);
-  } finally {
-    // This block will run regardless of whether the try block succeeded
-  }
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const cutoffIso = cutoff.toISOString();
+
+  const countResult = (await db.get(
+    "SELECT COUNT(*) as count FROM analytics_events WHERE timestamp < ?",
+    [cutoffIso]
+  )) as { count: number } | null;
+
+  await db.run("DELETE FROM analytics_events WHERE timestamp < ?", [cutoffIso]);
+  return countResult?.count ?? 0;
 }

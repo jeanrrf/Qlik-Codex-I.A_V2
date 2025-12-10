@@ -13,18 +13,6 @@ import type { ScriptAnalysisData } from '../components/ScriptAnalysisInfo';
 
 
 
-interface AnalysisSubStep {
-
-  id: string;
-
-  name: string;
-
-  status: string;
-
-}
-
-
-
 export interface OptimizationStage {
 
   id: string;
@@ -346,7 +334,6 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
   // Auto-retry state
   const retryCountRef = useRef(0);
   const isRetryingRef = useRef(false);
-  const MAX_RETRIES = 3;
 
 
 
@@ -446,7 +433,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
       abortRef.current.abort();
 
-      console.log("Optimization aborted by user.");
+      console.warn("Optimization aborted by user.");
 
     }
 
@@ -850,76 +837,69 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
 
 
+              // Helper para mapear tasks dinâmicas para suas parent stages
+              const getStageIdForSubTask = (taskId: string): string | null => {
+                if (taskId.startsWith('CODE_GEN')) return 'CODE_GEN';
+                if (taskId.startsWith('DEEP_ANALYSIS') || taskId.startsWith('STRATEGIC_PLAN')) return 'ANALYSIS_AND_PLAN';
+                if (taskId.startsWith('FINAL_DELIVERY') || taskId.startsWith('VALIDATION')) return 'FINAL_DELIVERY';
+                return null;
+              };
+
               setProgress(prev => {
+                const newStages = prev.stages.map(stage => {
+                  let newSubSteps = stage.subSteps ? [...stage.subSteps] : [];
 
-                const newStages = prev.stages.map((stage, stageIdx) => {
+                  // Tenta encontrar a task existente
+                  const subIdx = newSubSteps.findIndex(s => s.id === sub.id);
 
-                  if (!stage.subSteps) return stage;
-
-
-
-                  const subIdx = stage.subSteps.findIndex(s => s.id === sub.id);
-
-                  if (subIdx === -1) return stage;
-
-
-
-                  const newSubSteps = [...stage.subSteps];
-
-                  newSubSteps[subIdx] = {
-
-                    ...newSubSteps[subIdx],
-
-                    status: sub.status,
-
-                    startTime: sub.startTime,
-
-                    endTime: sub.endTime,
-
-                    duration: sub.duration,
-
-                    error: sub.error
-
-                  };
-
-
+                  if (subIdx !== -1) {
+                    // ATUALIZA task existente
+                    newSubSteps[subIdx] = {
+                      ...newSubSteps[subIdx],
+                      status: sub.status,
+                      startTime: sub.startTime,
+                      endTime: sub.endTime,
+                      duration: sub.duration,
+                      error: sub.error
+                    };
+                  } else {
+                    // Tenta adicionar NOVA task dinâmica se pertencer a esta stage
+                    const targetStageId = getStageIdForSubTask(sub.id);
+                    if (targetStageId === stage.id) {
+                      console.log(`[Frontend] Adicionando task dinâmica ${sub.id} para stage ${stage.id}`);
+                      newSubSteps.push({
+                        id: sub.id,
+                        name: sub.name || sub.id, // Fallback name
+                        status: sub.status,
+                        startTime: sub.startTime || Date.now(),
+                        endTime: sub.endTime,
+                        duration: sub.duration,
+                        error: sub.error
+                      });
+                    } else {
+                      // Se não pertence a esta stage, retorna sem alterações (exceto se tivermos que recalcular status)
+                      return stage;
+                    }
+                  }
 
                   // Atualiza status da stage pai baseado nos substeps
-
                   const stageStatus = calculateStageStatus(newSubSteps);
 
-
-
                   return {
-
                     ...stage,
-
                     subSteps: newSubSteps,
-
                     status: stageStatus,
-
                     startTime: stageStatus === 'running' && !stage.startTime ? Date.now() : stage.startTime,
-
                     endTime: stageStatus === 'success' || stageStatus === 'error' ? Date.now() : undefined
-
                   };
-
                 });
 
-
-
                 return {
-
                   ...prev,
-
                   stages: newStages,
-
                   overallProgress: calculateOverallProgress(newStages),
-
                   currentStageIndex: newStages.findIndex(s => s.status === 'running')
-
                 };
-
               });
 
             } else if (event.type === 'complete') {
@@ -1173,7 +1153,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
     }
 
-  }, [updateStage, reset]);
+  }, [accessToken, updateStage, reset]);
 
 
 

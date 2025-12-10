@@ -113,6 +113,22 @@ export const ScriptInfoModal: React.FC<ScriptInfoModalProps> = ({ info, onClose 
             <div className="info-detail">{info.size.toLocaleString()} bytes</div>
           </div>
 
+          {/* Tokens - Moved up for better grid packing */}
+          {info.estimatedTokens && (
+            <div className="info-card">
+              <div className="info-card-header">
+                <span className="info-icon">🔢</span>
+                <span className="info-label">Tokens</span>
+              </div>
+              <div className="info-value">
+                {(info.estimatedTokens / 1000).toFixed(1)}K
+              </div>
+              <div className="info-detail">
+                ~{info.estimatedTokens.toLocaleString()} tokens
+              </div>
+            </div>
+          )}
+
           {/* Complexidade */}
           <div className="info-card complexity-card">
             <div className="info-card-header">
@@ -135,22 +151,6 @@ export const ScriptInfoModal: React.FC<ScriptInfoModalProps> = ({ info, onClose 
               />
             </div>
           </div>
-
-          {/* Tokens */}
-          {info.estimatedTokens && (
-            <div className="info-card">
-              <div className="info-card-header">
-                <span className="info-icon">🔢</span>
-                <span className="info-label">Tokens</span>
-              </div>
-              <div className="info-value">
-                {(info.estimatedTokens / 1000).toFixed(1)}K
-              </div>
-              <div className="info-detail">
-                ~{info.estimatedTokens.toLocaleString()} tokens
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="modal-footer">

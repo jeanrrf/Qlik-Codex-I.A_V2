@@ -33,9 +33,10 @@ export interface UsageStatsResponse {
 
 /**
  * Busca quotas diárias do usuário
+ * @param bustCache - Se true, força bypass de cache HTTP
  */
-export async function getQuotas(): Promise<QuotaResponse> {
-  return apiClient.get<QuotaResponse>('/api/usage/quota');
+export async function getQuotas(bustCache = false): Promise<QuotaResponse> {
+  return apiClient.get<QuotaResponse>('/api/usage/quota', { bustCache });
 }
 
 /**

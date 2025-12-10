@@ -8,7 +8,6 @@ import LandingPage from "./pages/LandingPage";
 import OptimizerPageV2 from "./pages/OptimizerPageV2";
 import { ProfilePage } from "./pages/ProfilePage";
 import AnalyticsDashboard from "./pages/Analytics/AnalyticsDashboard";
-import { apiClient } from "./api/client";
 import { useEssentialMetrics } from "./hooks/useEssentialMetrics";
 
 type View = "landing" | "optimizer" | "profile" | "analytics";
@@ -21,7 +20,7 @@ const getInitialView = (): View => {
     if (stored && ALLOWED_VIEWS.includes(stored)) {
       return stored;
     }
-  } catch (_err) {
+  } catch {
     // ignore storage errors
   }
   return "landing";
@@ -48,7 +47,7 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     try {
       localStorage.setItem("codex-last-view", view);
-    } catch (_err) {
+    } catch {
       // ignore storage errors
     }
   }, [view]);

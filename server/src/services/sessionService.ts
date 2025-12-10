@@ -3,8 +3,8 @@
  * Persiste estado de otimizações em andamento no Banco de Dados (Turso/Postgres)
  */
 
-import { logger } from "../lib/logger";
 import { DbAdapter } from "../lib/dbAdapter";
+import { logger } from "../lib/logger";
 import type { OptimizeMode } from "../types/qlik";
 export type LLMProviderName = "ainex" | "google" | "nvidia";
 
