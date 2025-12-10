@@ -4,7 +4,7 @@ import path from "node:path";
 import compression from "compression";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-import express from "express";
+import express, { Request, Response } from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import morgan from "morgan";
@@ -74,7 +74,7 @@ app.use(cors(corsOptions));
 // Compressão Gzip (gratuita) - reduz tamanho das respostas em 60-80%
 app.use(
   compression({
-    filter: (req, res) => {
+    filter: (req: Request, res: Response) => {
       // Não comprimir se já estiver comprimido ou for imagem/vídeo
       if (req.headers['x-no-compression']) {
         return false;
