@@ -18,6 +18,32 @@ export interface UsageQuotaCheck {
 
 const db = new DbAdapter();
 
+// Inicialização da tabela de quotas
+const INIT_STMTS = [
+  `CREATE TABLE IF NOT EXISTS user_daily_usage (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    mode TEXT NOT NULL,
+    executed_at TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_usage_user_date ON user_daily_usage(user_id, executed_at DESC)`,
+  `CREATE INDEX IF NOT EXISTS idx_usage_mode ON user_daily_usage(mode, executed_at DESC)`
+];
+
+async function ensureQuotaTable() {
+  try {
+    for (const sql of INIT_STMTS) {
+      await db.exec(sql);
+    }
+    logger.info("[QUOTA] Tabela user_daily_usage verificada/criada");
+  } catch (error) {
+    logger.error("[QUOTA] Erro ao criar tabela user_daily_usage", error);
+  }
+}
+
+// Executa inicialização (sem await para não bloquear import)
+ensureQuotaTable();
+
 // Cache em memória para reduzir consultas repetitivas ao verificar quotas.
 // TTL curto para não deixar dados desatualizados após uso real.
 const QUOTA_CACHE_TTL_MS = 25_000; // 25s (frontend consulta ~30s)
