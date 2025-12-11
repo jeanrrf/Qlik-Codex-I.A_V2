@@ -70,6 +70,14 @@ export interface MetricsEstimate {
   notes?: string;
 }
 
+export interface QualityMetrics {
+  maintainabilityIndex: number;
+  commentRatio: number;
+  averageComplexityPerTable: number;
+  codeToCommentRatio: string;
+  qualityGrade: "A" | "B" | "C" | "D" | "F";
+}
+
 export interface AgentReviewResult {
   summary: string;
   changes: OptimizeChange[];
@@ -89,6 +97,10 @@ export interface OptimizeResult {
     deterministicValidation?: DeterministicValidationSnapshot;
     validationWarnings?: string[];
     metricsEstimate: MetricsEstimate; // DEPRECATED
+    qualityMetrics?: {
+      before: QualityMetrics;
+      after: QualityMetrics;
+    };
     realMetrics?: RealMetrics; // NOVO: métricas reais calculadas
     roi?: {  // REVENUE FEATURE: ROI calculation
       monthly: { total: number;[key: string]: number };

@@ -158,9 +158,6 @@ async function runUltraExpertMode(
   const optimizer = new QlikOptimizeAgent(script, { signal: abortSignal });
   const originalLines = script.split(/\r?\n/).length;
 
-  // Run deterministic parser for metadata
-  const parsed = parseQlikScript(script);
-
   // Run the pipeline
   const megaResult = await optimizer.run();
 
@@ -332,7 +329,9 @@ ${scriptForPrompt}
       try {
         // eslint-disable-next-line import/no-unresolved
         const { extractJsonFromText } = await import('../lib/structuredResponse.js');
-        const { extractJsonFromText } = await import('../lib/structuredResponse');
+        const parsed = extractJsonFromText(rawResponse);
+
+        if (parsed) {
           if (typeof parsed.optimizedScript === "string") {
             optimizedScript = parsed.optimizedScript;
           }
@@ -442,139 +441,139 @@ ${scriptForPrompt}
     : new Error("NVIDIA Fast Mode falhou após múltiplas tentativas");
 }
 
-
-
-
-
-
-
 /**
- * ═══════════════════════════════════════════════════════════════════════════════
- * AINEX PRO PIPELINE — 8 ESTÁGIOS INTELIGENTES (EM DESENVOLVIMENTO)
- * ═══════════════════════════════════════════════════════════════════════════════
- * 
- * ROADMAP DE IMPLEMENTAÇÃO:
- * ─────────────────────────────────────────────────────────────────────────────
- * ✅ Stage 1: Deep Parse & Syntax Check - Agente criado (precisa ajustes de tipo)
- * ✅ Stage 2: Semantic Analysis & Performance Profiling - Agente criado (precisa ajustes)
- * ✅ Stage 3: Strategic Refactor Planning - Agente criado (precisa ajustes)
- * ✅ Stage 4: Code Generation - Agente criado (precisa ajustes)
- * ✅ Stage 5: Multi-Layer Validation - Agente criado (precisa ajustes)
- * ✅ Stage 6: Differential Review & Impact Analysis - Agente criado (precisa ajustes)
- * ✅ Stage 7: Technical Explain - Agente criado (precisa ajustes)
- * ✅ Stage 8: Final Metrics & Report - Agente criado (precisa ajustes)
- * 
- * PRÓXIMOS PASSOS:
- * ─────────────────────────────────────────────────────────────────────────────
- * 1. Ajustar tipos para compatibilidade com qlikParser (QlikJoin, QlikTable)
- * 2. Adaptar generateStructuredJson para nova assinatura (wrapper compatível)
- * 3. Integrar ValidationResult corretamente (success/errors structure)
- * 4. Criar eventos SSE específicos para cada stage
- * 5. Atualizar frontend para consumir novos eventos
- * 6. Adicionar testes unitários para cada agente
- * 
- * BENEFÍCIOS ESPERADOS:
- * ─────────────────────────────────────────────────────────────────────────────
- * - Análise 5x mais profunda (AST real, profiling de performance)
- * - Planejamento estratégico antes de gerar código
- * - Validação em 4 camadas (sintaxe, semântica, performance, equivalência)
- * - Diff linha-a-linha com justificativa técnica
- * - Explicações multi-persona (DEV, SÊNIOR, ARQUITETO)
- * - ROI estimado com checklist de deploy
- * 
- * Tempo estimado: 38-57 segundos (vs. 15-20s atuais) com valor 5x maior
- */
-
-/*
-async function runUltraExpertProMode(
-  script: string,
-  llmOptions?: GenerateStructuredJsonOptions,
-  generateConsultancy = true,
-  abortSignal?: AbortSignal
-): Promise<FullOptimizeResult> {
-  // IMPLEMENTAÇÃO COMENTADA TEMPORARIAMENTE
-  // Código completo disponível nos arquivos dos agentes criados
-  throw new Error("AINEX PRO Pipeline em desenvolvimento - use runUltraExpertMode por enquanto");
-}
-*/
-
-/**
- * Entry point: Roteamento por modo
- * ✨ FREE TIER: Suporta truncamento inteligente para limites de linhas
+ * Otimiza um script Qlik usando o modo selecionado.
+ * Esta função orquestra a chamada para o modo de otimização apropriado
+ * com base na configuração e nos parâmetros fornecidos.
  */
 export async function optimizeScript(
-  script: string,
-  mode: OptimizeMode, // Mantido para compatibilidade de API, mas ignorado internamente
+  originalScript: string,
+  mode: OptimizeMode = "ultra-expert",
   llmOptions?: LLMOptions,
-  generateConsultancy = true,
-  shouldTruncate?: boolean,
+  generateConsultancy = false,
+  applyTruncation = false,
   lineLimit?: number,
   abortSignal?: AbortSignal
 ): Promise<FullOptimizeResult> {
-  stepTimingService.reset();
+  let isTruncated = false;
 
-  // Debug: Log parâmetros recebidos
-  const originalLines = script.split(/\r?\n/).length;
-  logger.debug("optimizeScript called", {
-    mode,
-    originalLines,
-    shouldTruncate,
-    lineLimit
-  });
+  // 1. Análise inicial e truncamento inteligente (se necessário)
+  let scriptToProcess = originalScript;
+  if (applyTruncation) {
+    const truncationResult: SmartTruncationResult = applySmartTruncation(
+      originalScript,
+      lineLimit ?? 200
+    );
+    scriptToProcess = truncationResult.truncatedScript;
+    isTruncated = truncationResult.wasTruncated;
 
-  // Verifica cancelamento logo no início
-  if (abortSignal?.aborted) {
-    throw new Error('Optimization aborted by client');
-  }
-
-  let finalScript = script;
-  let truncationInfo: SmartTruncationResult | null = null;
-
-  // ✨ APLICAR TRUNCAMENTO INTELIGENTE SE NECESSÁRIO (FREE TIER)
-  if (shouldTruncate && lineLimit) {
-    logger.info(`🔒 FREE TIER: Aplicando limite de ${lineLimit} linhas com truncamento inteligente...`);
-
-    truncationInfo = applySmartTruncation(script, lineLimit);
-    finalScript = truncationInfo.truncatedScript;
-
-    if (truncationInfo.wasTruncated) {
-      logger.warn(truncationInfo.warningMessage);
-      logger.info(`✂️  Cortado em linha ${truncationInfo.actualLines} (${lineLimit} base + ${truncationInfo.extraLinesAdded} extras)`);
-
-      // Emite aviso via SSE
+    if (truncationResult.wasTruncated) {
+      const warningMessage = truncationResult.warningMessage
+        || `⚠️ FREE TIER: Script analisado até linha ${truncationResult.actualLines}. ${truncationResult.originalLines - truncationResult.actualLines} linhas não foram incluídas.`;
+      logger.warn(warningMessage);
       sseEmitter.sendToCurrent({
-        type: 'truncation_warning',
-        data: {
-          originalLines: truncationInfo.originalLines,
-          truncatedLines: truncationInfo.actualLines,
-          extraLines: truncationInfo.extraLinesAdded,
-          cutPoint: truncationInfo.cutPoint,
-          message: truncationInfo.warningMessage
-        }
+        type: "warning",
+        message: warningMessage
       });
-    } else {
-      logger.info(`✓ Script dentro do limite (${truncationInfo.originalLines} linhas)`);
     }
+  } else if (config.maxInputChars > 0 && originalScript.length > config.maxInputChars) {
+    const truncationResult: SmartTruncationResult = applySmartTruncation(
+      originalScript,
+      config.maxInputChars
+    );
+    scriptToProcess = truncationResult.truncatedScript;
+    isTruncated = true;
+    logger.warn(`Script truncado para ${config.maxInputChars} caracteres. Análise pode ser parcial.`);
+    sseEmitter.sendToCurrent({
+      type: "warning",
+      message: `O script original excede o limite de ${config.maxInputChars} caracteres e foi truncado para análise. A otimização pode ser parcial.`
+    });
   }
 
-  // Continua processamento normal com script (possivelmente truncado)
   let result: FullOptimizeResult;
 
-  if (mode === "nvidia-fast") {
-    logger.info("MODO NVIDIA FAST - Pipeline direto");
-    result = await runNvidiaFastMode(finalScript, llmOptions, abortSignal);
-  } else {
-    logger.info("MODO ULTRA EXPERT - Pipeline Avancado");
-    result = await runUltraExpertMode(finalScript, llmOptions, generateConsultancy, truncationInfo?.wasTruncated || false, abortSignal);
+  try {
+    stepTimingService.start("TOTAL_OPTIMIZATION");
+
+    switch (mode) {
+      case "nvidia-fast":
+        result = await runNvidiaFastMode(scriptToProcess, llmOptions, abortSignal);
+        break;
+      case "ultra-expert":
+      default:
+        result = await runUltraExpertMode(
+          scriptToProcess,
+          llmOptions,
+          generateConsultancy,
+          isTruncated,
+          abortSignal
+        );
+        break;
+    }
+
+    // Garante que o script original completo seja retornado
+    result.originalScript = originalScript;
+
+    // Aplica validação determinística final
+    result = applyDeterministicValidation(result);
+
+    // Calcula métricas de qualidade
+    const qualityMetricsStart = Date.now();
+    const originalParsed = parseQlikScript(result.originalScript);
+    const optimizedParsed = parseQlikScript(result.optimizedScript);
+    const originalMetrics = calculateQualityMetrics(originalParsed);
+    const optimizedMetrics = calculateQualityMetrics(optimizedParsed);
+    result.analysis.qualityMetrics = {
+      before: originalMetrics,
+      after: optimizedMetrics
+    };
+    const qualityMetricsDuration = Date.now() - qualityMetricsStart;
+
+    sseEmitter.sendToCurrent({
+      type: "substep",
+      substep: {
+        id: "QUALITY_METRICS",
+        name: "Cálculo de métricas de qualidade",
+        status: "success",
+        duration: qualityMetricsDuration,
+        endTime: new Date().toISOString()
+      }
+    });
+
+    // Finaliza o tempo total
+    const totalDuration = stepTimingService.stop("TOTAL_OPTIMIZATION");
+    logger.info(`🏁 Otimização concluída em ${totalDuration}ms`);
+
+    return result;
+  } catch (error) {
+    const totalDuration = stepTimingService.stop("TOTAL_OPTIMIZATION");
+    logger.error(`❌ Erro fatal durante a otimização após ${totalDuration}ms`, {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
+
+    // Em caso de erro, retorna uma estrutura de falha consistente
+    return {
+      originalScript,
+      optimizedScript: originalScript, // Retorna o original em caso de falha
+      summary: `Falha na otimização: ${error instanceof Error ? error.message : String(error)}`,
+      diffStats: { linesAdded: 0, linesRemoved: 0, linesModified: 0 },
+      documentationMarkdown: `## Erro\nOcorreu um erro durante o processo de otimização:\n\`\`\`\n${error instanceof Error ? error.stack : String(error)}\n\`\`\``,
+      analysis: {
+        changes: [],
+        breakingRisk: "high",
+        safeToApply: false,
+        mode,
+        metricsEstimate: {
+          loadComplexityBefore: "medium",
+          loadComplexityAfter: "medium",
+          maintainabilityBefore: "medium",
+          maintainabilityAfter: "medium"
+        },
+        notes: `Ocorreu um erro que impediu a conclusão da análise: ${error instanceof Error ? error.message : String(error)}`
+      }
+    };
   }
-
-  result = applyDeterministicValidation(result);
-
-  if (truncationInfo?.wasTruncated) {
-    result.summary = `${truncationInfo.warningMessage}\n\n${result.summary}`;
-  }
-
-  return result;
 }
 
 /**

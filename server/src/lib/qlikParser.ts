@@ -1,3 +1,5 @@
+import type { QualityMetrics } from "../types/qlik";
+
 /**
  * Qlik Script Parser - Análise Estrutural Real
  * Extrai metadados, estruturas e padrões do código Qlik
@@ -282,7 +284,7 @@ export function detectSyntheticKeys(parsed: ParsedScript): AntiPattern[] {
 /**
  * Calcula métricas de qualidade do código
  */
-export function calculateQualityMetrics(parsed: ParsedScript) {
+export function calculateQualityMetrics(parsed: ParsedScript): QualityMetrics {
   const { metrics, complexity } = parsed;
 
   // Índice de manutenibilidade (simplificado, 0-100)

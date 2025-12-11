@@ -11,6 +11,7 @@ import { SubStepExecution } from "../types/optimization";
  *   4. Diagnóstico de Padrões
  */
 export class StepTimingService {
+  private activeSteps: Map<string, number> = new Map();
   private activeSubSteps: Map<string, SubStepExecution> = new Map();
   private completedSubSteps: Map<string, SubStepExecution[]> = new Map();
 
@@ -146,6 +147,23 @@ export class StepTimingService {
   reset(): void {
     this.activeSubSteps.clear();
     this.completedSubSteps.clear();
+    this.activeSteps.clear();
+  }
+
+  /**
+   * Controla o tempo total de uma etapa principal
+   */
+  start(stepId: string, name?: string): void {
+    this.activeSteps.set(stepId, Date.now());
+    sseEmitter.sendStepProgress(stepId, name ?? stepId, 'running');
+  }
+
+  stop(stepId: string, name?: string): number {
+    const start = this.activeSteps.get(stepId);
+    const duration = start ? Date.now() - start : 0;
+    this.activeSteps.delete(stepId);
+    sseEmitter.sendStepProgress(stepId, name ?? stepId, 'success', `${duration}ms`);
+    return duration;
   }
 
   /**

@@ -277,5 +277,9 @@ export const nvidiaProvider: LLMProvider = {
       });
       throw error;
     }
+  },
+  getEmbedding: async (_text: string): Promise<number[]> => {
+    // NVIDIA embedding ainda não está integrado; manter interface consistente
+    throw new Error("NVIDIA embeddings não suportadas no momento");
   }
 };

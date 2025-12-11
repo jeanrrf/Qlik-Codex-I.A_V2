@@ -9,7 +9,6 @@ import { parseQlikScript } from "../lib/qlikParser";
 import { sseEmitter } from "../lib/sseEmitter";
 import type { OptimizationStepId } from "../types/optimization";
 import { AnalysisAndPlanSchema, CodeGenSchema, FinalDeliverySchema } from "../validators/megaOptimizerSchemas";
-import { vectorStore } from "../services/vectorStore";
 
 import { buildMegaPrompt, buildParserSummary, MegaTaskId } from "./promptPlan";
 import { QlikGranularOptimizer } from "./qlikGranularOptimizer";

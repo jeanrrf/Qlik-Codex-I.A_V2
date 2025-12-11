@@ -4,6 +4,8 @@ dotenv.config();
 
 const APP_VERSION = "0.1.0";
 const rawPort = Number(process.env.PORT ?? "3000");
+const rawMaxInputChars = Number(process.env.MAX_INPUT_CHARS ?? "0");
+const maxInputChars = Number.isFinite(rawMaxInputChars) ? rawMaxInputChars : 0;
 
 const nodeEnv = (process.env.NODE_ENV || "development") as
   | "development"
@@ -74,6 +76,7 @@ export const config = {
   corsOrigins: parsedCorsOrigins,
   serveStaticFrontend,
   port: Number.isNaN(rawPort) ? 3000 : rawPort,
+  maxInputChars,
   geminiApiKey: process.env.GEMINI_API_KEY || "",
   geminiModel: process.env.GEMINI_MODEL_NAME || "gemini-2.5-flash",
   // Fallback para Gemini (agora 2.5 Flash-Light / 2.0 Flash-Lite)
