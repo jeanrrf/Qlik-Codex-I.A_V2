@@ -33,6 +33,10 @@ module.exports = [
       "import/resolver": {
         node: {
           extensions: [".js", ".ts"]
+        },
+        typescript: {
+          alwaysTryTypes: true,
+          project: tsconfigPath
         }
       }
     },
@@ -51,7 +55,7 @@ module.exports = [
           pathGroupsExcludedImportTypes: ["builtin"]
         }
       ],
-      "import/no-unresolved": "error",
+      "import/no-unresolved": ["error", { ignore: ['\\.js$'] }],
       // Temporarily relax require-await until async handlers are refactored
       "@typescript-eslint/require-await": "off"
     }
