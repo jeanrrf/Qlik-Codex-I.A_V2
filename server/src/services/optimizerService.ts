@@ -326,7 +326,7 @@ export async function optimizeScript(
         "success"
       );
     } else {
-      logger.info(`✓ Script dentro do limite (${truncationInfo.originalLines} linhas / ${estimatedTokens} tokens estimados)`);
+      logger.info(`✓ Script dentro do limite (${truncationInfo.originalLines} linhas)`);
     }
   }
 
