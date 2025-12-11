@@ -337,7 +337,8 @@ ${scriptForPrompt}
       let changes: Array<Record<string, unknown>> = [];
 
       try {
-        const parsed = JSON.parse(rawResponse);
+        const { extractJsonFromText } = await import('../lib/structuredResponse.js');
+        const parsed = extractJsonFromText(rawResponse);
         if (parsed) {
           if (typeof parsed.optimizedScript === "string") {
             optimizedScript = parsed.optimizedScript;

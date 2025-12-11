@@ -85,6 +85,7 @@ export interface UsageLimits {
   enabledModes: string[];
   canUseMultipleFiles: boolean;
   ultraExpertExecutionsPerDay: number; // -1 = ilimitado, 0 = desabilitado
+  nvidiaFastExecutionsPerDay: number; // -1 = ilimitado, 0 = desabilitado
 }
 
 export const RoleUsageLimits: Record<UserRole, UsageLimits> = {
@@ -95,7 +96,8 @@ export const RoleUsageLimits: Record<UserRole, UsageLimits> = {
     maxConcurrentSessions: -1,
     enabledModes: ["ultra-expert", "nvidia-fast"],
     canUseMultipleFiles: true,
-    ultraExpertExecutionsPerDay: -1 // Ilimitado
+    ultraExpertExecutionsPerDay: -1, // Ilimitado
+    nvidiaFastExecutionsPerDay: -1 // Ilimitado
   },
   [UserRole.USER]: {
     optimizationsPerDay: 4, // FREE TIER: 4 otimizações/dia
@@ -104,6 +106,7 @@ export const RoleUsageLimits: Record<UserRole, UsageLimits> = {
     maxConcurrentSessions: 2,
     enabledModes: ["ultra-expert", "nvidia-fast"], // Permite modo rápido NVIDIA
     canUseMultipleFiles: false, // Apenas 1 arquivo
-    ultraExpertExecutionsPerDay: 1 // 1 execução Ultra Expert POR DIA
+    ultraExpertExecutionsPerDay: 1, // 1 execução Ultra Expert POR DIA
+    nvidiaFastExecutionsPerDay: 3 // 3 execuções NVIDIA Fast POR DIA
   }
 };

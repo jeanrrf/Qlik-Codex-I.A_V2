@@ -117,7 +117,21 @@ export class QlikGranularOptimizer {
       }
 
       // Extrai o código do resultado (remove markdown, etc)
-      const optimizedScript = this.extractCode(response.result);
+      // Use extractor util to parse structured JSON or fallback to codeblocks
+      let optimizedScript: string;
+      try {
+        const { extractJsonFromText } = await import('../lib/structuredResponse.js');
+        const parsed = extractJsonFromText(response.result);
+        if (parsed && typeof parsed.optimizedScript === 'string') {
+          optimizedScript = String(parsed.optimizedScript);
+        } else if (typeof response.result === 'string') {
+          optimizedScript = this.extractCode(response.result);
+        } else {
+          optimizedScript = String(response.result);
+        }
+      } catch (_e) {
+        optimizedScript = this.extractCode(response.result);
+      }
 
       // Verifica se houve mudança
       const hasChanges = optimizedScript.trim() !== currentScript.trim();

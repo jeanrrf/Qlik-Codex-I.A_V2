@@ -267,23 +267,19 @@ export class QlikMegaOptimizer {
 
         let parsedResult: Record<string, unknown> = {};
         try {
-          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-          const jsonStr = jsonMatch ? jsonMatch[0] : responseText;
-          const raw = JSON.parse(jsonStr);
+          // Use robust extractor util
+          const { extractJsonFromText } = await import('../lib/structuredResponse.js');
+          const raw = extractJsonFromText(responseText);
           if (typeof raw === 'object' && raw !== null) {
             parsedResult = raw as Record<string, unknown>;
           } else {
-            // Wrap non-object responses (string/script) into a predictable shape
             parsedResult = { optimizedScript: String(raw) };
           }
 
-          // Fix: Handle cases where NVIDIA/LLM returns double-escaped newlines in scripts
-          // This manifests as "1 line" code in frontend because \n is literal, not control char
+          // Normalize escaped newlines if present
           const opt = parsedResult.optimizedScript;
-          if (typeof opt === 'string') {
-            if (opt.includes('\\n') && !opt.includes('\n')) {
-              parsedResult.optimizedScript = opt.replace(/\\n/g, '\n');
-            }
+          if (typeof opt === 'string' && opt.includes('\\n') && !opt.includes('\n')) {
+            parsedResult.optimizedScript = opt.replace(/\\n/g, '\n');
           }
         } catch (e) {
           logger.warn(`[MegaOptimizer] Failed to parse JSON for ${taskName}`, { error: e, attempt });
