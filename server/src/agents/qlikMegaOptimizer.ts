@@ -3,9 +3,9 @@ import { createHash } from "crypto";
 import { ZodSchema } from "zod";
 
 import { logger } from "../lib/logger";
+import { compactScriptForPrompt } from "../lib/promptCompactor";
 import { ProviderOrchestrator, createOrchestrator } from "../lib/providerOrchestrator";
 import { parseQlikScript } from "../lib/qlikParser";
-import { compactScriptForPrompt } from "../lib/promptCompactor";
 import { sseEmitter } from "../lib/sseEmitter";
 import type { OptimizationStepId } from "../types/optimization";
 import { AnalysisAndPlanSchema, CodeGenSchema, FinalDeliverySchema } from "../validators/megaOptimizerSchemas";
@@ -268,6 +268,7 @@ export class QlikMegaOptimizer {
         let parsedResult: Record<string, unknown> = {};
         try {
           // Use robust extractor util
+          // eslint-disable-next-line import/no-unresolved
           const { extractJsonFromText } = await import('../lib/structuredResponse.js');
           const raw = extractJsonFromText(responseText);
           if (typeof raw === 'object' && raw !== null) {

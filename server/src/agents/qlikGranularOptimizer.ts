@@ -120,6 +120,7 @@ export class QlikGranularOptimizer {
       // Use extractor util to parse structured JSON or fallback to codeblocks
       let optimizedScript: string;
       try {
+        // eslint-disable-next-line import/no-unresolved
         const { extractJsonFromText } = await import('../lib/structuredResponse.js');
         const parsed = extractJsonFromText(response.result);
         if (parsed && typeof parsed.optimizedScript === 'string') {

@@ -332,6 +332,7 @@ ${scriptForPrompt}
       let changes: Array<Record<string, unknown>> = [];
 
       try {
+        // eslint-disable-next-line import/no-unresolved
         const { extractJsonFromText } = await import('../lib/structuredResponse.js');
         const parsed = extractJsonFromText(rawResponse);
         if (parsed) {

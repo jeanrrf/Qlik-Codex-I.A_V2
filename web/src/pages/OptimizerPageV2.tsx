@@ -411,6 +411,10 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
   }, [optimization.isRunning, optimization.progress, script, mode, providerForMode, llmModelForMode, session]);
 
   // === HANDLERS ===
+  const handleQuotaUpdate = useCallback((quota: UsageQuotaCheck) => {
+    setQuotaData(quota);
+  }, []);
+
   const handleBackNavigation = () => {
     navigateBack("landing");
   };
@@ -857,10 +861,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
               <QuotaDisplay
                 mode={mode}
                 compact
-                onQuotaUpdate={(quota) => {
-                  // Callback opcional para sincronizar estado
-                  setQuotaData(quota);
-                }}
+                onQuotaUpdate={handleQuotaUpdate}
               />
             </div>
           )}
