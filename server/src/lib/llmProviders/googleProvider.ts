@@ -51,7 +51,7 @@ async function generate(prompt: string, options?: ProviderCallOptions): Promise<
   const modelToUse = options?.model || MODEL_NAME;
   const { maxOutputTokens, source } = resolveMaxOutputTokens(options);
 
-  logger.info("Google LLM: limite de tokens aplicado", {
+  logger.info("Google LLM: max output tokens applied", {
     model: modelToUse,
     maxOutputTokens,
     source,
