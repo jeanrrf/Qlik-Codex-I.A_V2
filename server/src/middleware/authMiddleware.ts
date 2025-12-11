@@ -26,6 +26,7 @@ import { asyncHandler } from "./asyncHandler";
 export interface AuthRequest extends Request {
   user?: User;
   sessionId?: string;
+  authDebug?: string;
 }
 
 /**
@@ -154,6 +155,7 @@ export async function optionalAuth(
     const token = extractToken(req);
 
     if (!token) {
+      req.authDebug = "No token found";
       next();
       return;
     }
@@ -175,15 +177,20 @@ export async function optionalAuth(
           req.user = user;
           req.sessionId = session.id;
           await updateSessionActivity(session.id);
+        } else {
+          req.authDebug = `User ${decoded.userId} not found`;
         }
+      } else {
+        req.authDebug = `Session ${decoded.sessionId} not found or expired`;
       }
-    } catch {
-      // Silently ignore auth errors for optional auth
+    } catch (err) {
+      req.authDebug = `Auth error: ${err instanceof Error ? err.message : String(err)}`;
     }
 
     next();
   } catch (err) {
     logger.error("Optional auth error", err);
+    req.authDebug = `Middleware error: ${err instanceof Error ? err.message : String(err)}`;
     next();
   }
 }

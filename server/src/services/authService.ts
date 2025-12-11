@@ -263,11 +263,25 @@ export async function getSessionById(sessionId: string): Promise<AuthSession | n
   const db = await getAuthDb();
 
   try {
+    // Fetch session without date check first to debug/handle expiration in JS
     const session = await db
-      .prepare("SELECT * FROM auth_sessions WHERE id = ? AND expires_at > datetime('now')")
+      .prepare("SELECT * FROM auth_sessions WHERE id = ?")
       .get(sessionId) as Record<string, unknown> | undefined;
 
     if (!session) {
+      return null;
+    }
+
+    // Check expiration in JS to avoid SQLite timezone issues
+    const expiresAt = new Date(session.expires_at as string);
+    const now = new Date();
+
+    if (expiresAt <= now) {
+      logger.warn("[AUTH] Sessão encontrada mas EXPIRADA", {
+        sessionId: session.id,
+        expiresAt: session.expires_at,
+        now: now.toISOString()
+      });
       return null;
     }
 

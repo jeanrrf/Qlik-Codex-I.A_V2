@@ -283,7 +283,8 @@ router.get(
   asyncHandler(async (req: AuthRequest, res: Response) => {
     if (!req.user) {
       res.json({
-        authenticated: false
+        authenticated: false,
+        debug: req.authDebug
       });
       return;
     }
