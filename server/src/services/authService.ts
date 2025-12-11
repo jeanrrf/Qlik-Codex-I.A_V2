@@ -263,11 +263,38 @@ export async function getSessionByToken(token: string): Promise<AuthSession | nu
   const db = await getAuthDb();
 
   try {
+    logger.debug("[AUTH] Buscando sessão por token...", { tokenPrefix: token.substring(0, 20) });
+
     const session = await db
       .prepare("SELECT * FROM auth_sessions WHERE token = ? AND expires_at > datetime('now')")
       .get(token) as Record<string, unknown> | undefined;
 
-    if (!session) return null;
+    if (!session) {
+      logger.warn("[AUTH] Sessão não encontrada ou expirada", { tokenPrefix: token.substring(0, 20) });
+
+      // Verificar se sessão existe mas está expirada
+      const expiredSession = await db
+        .prepare("SELECT id, expires_at FROM auth_sessions WHERE token = ?")
+        .get(token) as Record<string, unknown> | undefined;
+
+      if (expiredSession) {
+        logger.warn("[AUTH] Sessão encontrada mas EXPIRADA", {
+          sessionId: expiredSession.id,
+          expiresAt: expiredSession.expires_at,
+          now: new Date().toISOString()
+        });
+      } else {
+        logger.warn("[AUTH] Sessão NÃO EXISTE no banco", { tokenPrefix: token.substring(0, 20) });
+      }
+
+      return null;
+    }
+
+    logger.info("[AUTH] Sessão encontrada e válida", {
+      sessionId: session.id,
+      userId: session.user_id,
+      expiresAt: session.expires_at
+    });
 
     return {
       id: String(session.id),
@@ -281,7 +308,7 @@ export async function getSessionByToken(token: string): Promise<AuthSession | nu
       userAgent: session.user_agent as string | null
     };
   } catch (err) {
-    logger.error("Error fetching session", err);
+    logger.error("[AUTH] Erro ao buscar sessão", err);
     return null;
   }
 }

@@ -86,7 +86,9 @@ export async function requireAuth(
     let decoded;
     try {
       decoded = verifyToken(token);
-    } catch (_err) {
+      logger.debug("[AUTH] Token JWT válido", { userId: decoded.userId, sessionId: decoded.sessionId });
+    } catch (err) {
+      logger.warn("[AUTH] Token JWT inválido ou expirado", { error: err instanceof Error ? err.message : 'Unknown' });
       res.status(401).json({
         error: "Invalid token",
         message: "Authentication token is invalid or expired"
@@ -95,14 +97,22 @@ export async function requireAuth(
     }
 
     // Buscar sessão e verificar validade
+    logger.debug("[AUTH] Buscando sessão no banco...", { sessionId: decoded.sessionId });
     const session = await getSessionByToken(token);
     if (!session) {
+      logger.warn("[AUTH] Sessão não encontrada no banco", {
+        userId: decoded.userId,
+        sessionId: decoded.sessionId,
+        tokenPrefix: token.substring(0, 20)
+      });
       res.status(401).json({
         error: "Session expired",
         message: "Your session has expired. Please login again."
       });
       return;
     }
+
+    logger.debug("[AUTH] Sessão válida encontrada", { sessionId: session.id, userId: session.userId });
 
     // Buscar usuário
     const user = await getUserById(decoded.userId);
