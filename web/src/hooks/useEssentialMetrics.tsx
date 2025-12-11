@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useRef } from 'react';
+import { apiClient } from '../api/client';
 
 // Session ID persistente
 const getOrCreateSessionId = (): string => {
@@ -28,14 +29,10 @@ export function useEssentialMetrics() {
       tracked.current = true;
 
       // Envia visita ao backend (silencioso, não bloqueia UI)
-      fetch('/api/metrics/visit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ sessionId: sessionId.current })
-      }).catch(() => {
-        // Ignora erros silenciosamente
-      });
+      apiClient.post('/api/metrics/visit', { sessionId: sessionId.current })
+        .catch(() => {
+          // Ignora erros silenciosamente
+        });
     }
   }, []);
 

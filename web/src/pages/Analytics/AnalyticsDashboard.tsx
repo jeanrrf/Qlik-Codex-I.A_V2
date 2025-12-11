@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '../../contexts/NavigationContext';
+import { apiClient } from '../../api/client';
 import './AnalyticsDashboard.css';
 
 interface AnalyticsSummary {
@@ -33,7 +34,7 @@ interface RealtimeEvent {
 }
 
 export default function AnalyticsDashboard() {
-  const { isOwner } = useAuth();
+  const { isOwner, accessToken } = useAuth();
   const { navigateBack } = useNavigation();
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [realtimeEvents, setRealtimeEvents] = useState<RealtimeEvent[]>([]);
@@ -59,7 +60,11 @@ export default function AnalyticsDashboard() {
   useEffect(() => {
     if (!isOwner() || activeTab !== 'realtime' || !realtimeEnabled) return;
 
-    const eventSource = new EventSource('/api/analytics/realtime', {
+    const url = accessToken
+      ? `/api/analytics/realtime?token=${accessToken}`
+      : '/api/analytics/realtime';
+
+    const eventSource = new EventSource(url, {
       withCredentials: true
     });
 
@@ -87,15 +92,7 @@ export default function AnalyticsDashboard() {
 
   async function loadSummary() {
     try {
-      const response = await fetch('/api/analytics/summary', {
-        credentials: 'include'
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao carregar analytics');
-      }
-
-      const data = await response.json();
+      const data = await apiClient.get<AnalyticsSummary>('/api/analytics/summary');
       setSummary(data);
       setLoading(false);
     } catch (err: unknown) {
@@ -111,15 +108,9 @@ export default function AnalyticsDashboard() {
     }
 
     try {
-      const response = await fetch('/api/analytics/cleanup?days=90', {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-
-      if (response.ok) {
-        alert('Limpeza concluída com sucesso');
-        loadSummary();
-      }
+      await apiClient.delete('/api/analytics/cleanup?days=90');
+      alert('Limpeza concluída com sucesso');
+      loadSummary();
     } catch {
       alert('Erro ao limpar dados');
     }

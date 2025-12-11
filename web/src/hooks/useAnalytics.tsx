@@ -5,6 +5,7 @@
 
 import React, { useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { apiClient } from '../api/client';
 
 interface AnalyticsConfig {
   apiUrl?: string;
@@ -61,14 +62,7 @@ export function useAnalytics(config: AnalyticsConfig = {}) {
   const sendToBackend = useCallback(
     async (endpoint: string, data: unknown) => {
       try {
-        await fetch(`${mergedConfig.apiUrl}${endpoint}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          credentials: 'include',
-          body: JSON.stringify(data)
-        });
+        await apiClient.post(`${mergedConfig.apiUrl}${endpoint}`, data);
 
         if (mergedConfig.debug) {
           console.warn('[Analytics]', endpoint, data);

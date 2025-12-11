@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { apiClient } from '../api/client';
 import './OwnerKpiDashboard.css';
 
 interface OwnerStats {
@@ -15,13 +16,7 @@ export function OwnerKpiDashboard() {
   useEffect(() => {
     const loadOwnerKpis = async () => {
       try {
-        const res = await fetch('/api/analytics/summary', {
-          credentials: 'include'
-        });
-
-        if (!res.ok) throw new Error('Falha ao carregar dados');
-
-        const data = await res.json();
+        const data = await apiClient.get<any>('/api/analytics/summary');
         setStats({
           ownerVisits: data.ownerVisits ?? 0,
           ownerEvents: data.ownerEvents ?? 0,
