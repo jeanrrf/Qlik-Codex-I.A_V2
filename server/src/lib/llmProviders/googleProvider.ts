@@ -10,6 +10,12 @@ import type {
 } from "./types";
 
 const MODEL_NAME = config.geminiModel;
+const DEFAULT_MAX_OUTPUT_TOKENS = config.geminiDefaultMaxOutputTokens || 8192;
+const TASK_TYPE_MAX_OUTPUT_TOKENS: Record<string, number> = {
+  long_form: config.geminiExtendedMaxOutputTokens,
+  documentation: config.geminiExtendedMaxOutputTokens,
+  formatting: config.geminiExtendedMaxOutputTokens
+};
 
 let client: GoogleGenAI | undefined;
 
@@ -19,12 +25,38 @@ if (config.geminiApiKey) {
   });
 }
 
+function resolveMaxOutputTokens(options?: ProviderCallOptions): {
+  maxOutputTokens: number;
+  source: string;
+} {
+  if (options?.maxOutputTokens && options.maxOutputTokens > 0) {
+    return { maxOutputTokens: options.maxOutputTokens, source: "explicit_option" };
+  }
+
+  if (options?.taskType) {
+    const taskLimit = TASK_TYPE_MAX_OUTPUT_TOKENS[options.taskType];
+    if (taskLimit) {
+      return { maxOutputTokens: taskLimit, source: `taskType:${options.taskType}` };
+    }
+  }
+
+  return { maxOutputTokens: DEFAULT_MAX_OUTPUT_TOKENS, source: "default" };
+}
+
 async function generate(prompt: string, options?: ProviderCallOptions): Promise<ProviderResult> {
   if (!client) {
     throw new Error("Google Gemini client not configured");
   }
 
   const modelToUse = options?.model || MODEL_NAME;
+  const { maxOutputTokens, source } = resolveMaxOutputTokens(options);
+
+  logger.info("Google LLM: limite de tokens aplicado", {
+    model: modelToUse,
+    maxOutputTokens,
+    source,
+    taskType: options?.taskType
+  });
 
   // OTIMIZAÇÃO: Timeout de 60s para Gemini 2.5 Flash
   // Gemini é rápido mas scripts grandes podem demorar
@@ -39,7 +71,7 @@ async function generate(prompt: string, options?: ProviderCallOptions): Promise<
       ],
       config: {
         responseMimeType: "application/json",
-        maxOutputTokens: 65536,
+        maxOutputTokens,
         temperature: 0.1,
       }
     }),
