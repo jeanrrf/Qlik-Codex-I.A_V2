@@ -35,18 +35,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
    * Função utilitária para validar sessão usando cookies HttpOnly
    */
   const revalidate = async () => {
+    console.log("🔄 [AuthContext] Revalidate: Iniciando...");
     try {
       let storedToken: string | undefined;
       try {
         storedToken = localStorage.getItem(ACCESS_TOKEN_KEY) || undefined;
+        console.log("📦 [AuthContext] Token do localStorage:", !!storedToken);
       } catch {
+        console.warn("⚠️ [AuthContext] Erro ao acessar localStorage");
         storedToken = undefined;
       }
 
+      console.log("🌐 [AuthContext] Verificando status de autenticação...");
       const status = await checkAuthStatus(storedToken);
+      console.log("✅ [AuthContext] Status recebido:", status);
 
       if (status.authenticated && status.user) {
+        console.log("👤 [AuthContext] Usuário autenticado, buscando dados completos...");
         const userData = await getCurrentUser(storedToken);
+        console.log("✅ [AuthContext] Dados do usuário recebidos:", userData.user?.email);
         setState({
           user: userData.user as User,
           isAuthenticated: true,
@@ -54,7 +61,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
           error: null,
           accessToken: storedToken || "cookie"
         });
+        console.log("✅ [AuthContext] Estado atualizado - usuário autenticado");
       } else {
+        console.log("❌ [AuthContext] Usuário não autenticado");
         setState({
           user: null,
           isAuthenticated: false,
@@ -64,7 +73,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         });
       }
     } catch (err) {
-      console.error("Auth initialization error:", err);
+      console.error("❌ [AuthContext] Erro na inicialização:", err);
       setState({
         user: null,
         isAuthenticated: false,

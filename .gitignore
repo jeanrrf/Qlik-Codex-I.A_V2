@@ -22,6 +22,17 @@ server/dist
 web/dist
 *.log
 
+# Temporary files and snippets (sanitização)
+*.txt
+*.snippet
+*.tmp
+*.bak
+*.old
+*_backup
+*_old
+lint_report.txt
+_snippet.*
+
 # Editor
 .vscode
 .idea

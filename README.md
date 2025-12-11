@@ -38,19 +38,15 @@ cd server && npm start  # Servidor serve frontend em http://localhost:3000
 
 ## 📚 Documentação
 
-### Técnica
-- [SERVER README](server/README.md) - Arquitetura backend
-- [WEB README](web/README.md) - Arquitetura frontend
-- [DATABASE](server/DATABASE.md) - Estrutura banco de dados
+📖 **[Índice Completo de Documentação](docs/README.md)**
 
-### Features
-- [BUILD_FINAL.md](docs/BUILD_FINAL.md) - Guia de build completo
-- [AUTH_SYSTEM.md](docs/AUTH_SYSTEM.md) - Sistema de autenticação
-- [ROI_CALCULATOR_FEATURE.md](docs/ROI_CALCULATOR_FEATURE.md) - Calculadora ROI
-- [PROGRESS_UI_INTEGRATION.md](docs/PROGRESS_UI_INTEGRATION.md) - Sistema de progresso SSE
-
-### Deployment
-- [PRODUCTION.md](PRODUCTION.md) - Guia de deploy e checklist
+### Quick Links
+- [Arquitetura Backend](server/README.md) - Express + TypeScript
+- [Arquitetura Frontend](web/README.md) - React + Vite
+- [Banco de Dados](docs/guides/DATABASE.md) - SQLite/Turso
+- [Setup de Produção](docs/PRODUCTION_SETUP.md) - Turso + Render + Vercel
+- [Deploy Checklist](DEPLOY_CHECKLIST.md) - Passo a passo completo
+- [Regras do Repositório](AGENTS.md) - Guidelines e padrões
 
 ## 🎯 Features Principais
 

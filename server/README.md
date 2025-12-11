@@ -38,6 +38,12 @@ src/
 
 A integração com o LLM será implementada dentro dos arquivos em `src/agents` e `src/lib/llmClient` nas próximas etapas.
 
+## 📚 Documentação Relacionada
+
+- [Banco de Dados](../docs/guides/DATABASE.md) - Estrutura SQLite/Turso
+- [Extreme Mode](../docs/EXTREME_MODE_IMPLEMENTATION.md) - Features avançadas
+- [Setup de Produção](../docs/PRODUCTION_SETUP.md) - Deploy em produção
+
 ## Recursos Inativos (Para Futuro)
 
 ### Cache Service (`services/cacheService.ts`)
@@ -71,4 +77,4 @@ Um gerenciador de contexto request-scoped para futuro suporte a autenticação e
 - ✓ `/nvidiaService.js` (raiz) - Duplicado/legado
 - ✓ Outros arquivos backup
 
-Para detalhes completos, veja: `.github/CLEANUP_MANIFEST.md`
+Para detalhes completos, veja: [Cleanup Plan](../CLEANUP_PLAN.md)
