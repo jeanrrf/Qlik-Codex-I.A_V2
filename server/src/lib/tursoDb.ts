@@ -3,7 +3,7 @@
  * Alternativa simples ao Supabase/PostgreSQL
  */
 
-import type { Client, InValue } from '@libsql/client';
+import type { Client, InValue } from '@libsql/client' assert { "resolution-mode": "import" };
 
 
 import { logger } from './logger';

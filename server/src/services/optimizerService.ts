@@ -3,6 +3,7 @@ import { QlikMegaOptimizer } from "../agents/qlikMegaOptimizer";
 import { config } from "../lib/config";
 import { nvidiaProvider } from "../lib/llmProviders/nvidiaProvider";
 import { logger } from "../lib/logger";
+import { compactScriptForPrompt } from "../lib/promptCompactor";
 import {
   parseQlikScript,
   // detectSyntheticKeys,
@@ -285,6 +286,10 @@ async function runNvidiaFastMode(
 
   const model = llmOptions?.model || config.nvidiaFastModel;
 
+  const compaction = compactScriptForPrompt(script);
+  logger.info("[NVIDIA FAST] Script compactado para prompt", compaction.stats);
+  const scriptForPrompt = compaction.compacted;
+
   // Prompt direto: pede script otimizado + resumo + mudanças em JSON
   const prompt = `
 Você é o QLIK CODEX I.A. Refatore o script Qlik abaixo para máxima performance e legibilidade.
@@ -302,7 +307,7 @@ Você é o QLIK CODEX I.A. Refatore o script Qlik abaixo para máxima performanc
 sem Markdown nem explicações adicionais.
 
 --- SCRIPT ORIGINAL ---
-${script}
+${scriptForPrompt}
 `;
 
   const start = Date.now();

@@ -22,7 +22,8 @@ const TASK_TEMPLATES: Record<MegaTaskId, string> = {
 - Audite estrutura (tabelas, joins, riscos: chave sintética, referência circular, cartesiano, LOAD *).
 - Ache gargalos de performance (JOIN sem chave, RESIDENT em cascata, WHERE ausente).
 - Crie plano priorizado (Impacto vs Esforço) com 5-8 passos máximos.
-Formato JSON:
+Limites de saída: máximo 6 bottlenecks, máximo 6 oportunidades, texto total <= 2800 caracteres.
+Formato JSON (sem markdown, sem comentários):
 {
   "analysis": {
     "structuralScore": number,
@@ -42,6 +43,7 @@ Formato JSON:
   CODE_GEN: `TAREFA: CODE GEN (aplicar plano, preservar lógica)
 - Otimize sem mudar regras de negócio.
 - Use nomenclatura consistente; alinhar AS; remover SELECT/LOAD *; garantir DROP de temporárias.
+- Limites de saída: changesApplied no máximo 8 itens; resposta total <= 2800 caracteres; sem markdown/HTML.
 - Saída deve ser JSON (texto puro, sem markdown):
 {
   "optimizedScript": "SCRIPT_OTIMIZADO_EM_TEXTO_PURO",
@@ -58,7 +60,8 @@ Formato JSON:
   FINAL_DELIVERY: `TAREFA: VALIDAÇÃO + DOC FINAL (uma resposta JSON)
 - Validar sintaxe e segurança (sem DDL/DML, sem funções não-Qlik).
 - Gerar documentação concisa (Mermaid ER), checklist de implantação.
-Formato JSON:
+- Limites de saída: máximo 6 issues e 8 itens de checklist; manter total <= 2200 caracteres; sem markdown/HTML fora de mermaid.
+Formato JSON (texto puro):
 {
   "validation": { "isValid": boolean, "issuesFound": string[], "safetyScore": number },
   "documentation": { "title": string, "description": string, "diagramMermaid": string, "reloadStrategy": string },
@@ -91,14 +94,16 @@ ${buildNegativeSection()}
 --- CONTEXTO ESTRUTURADO ---
 Parser: ${parserSummary}
 ${historyBlock}
---- SCRIPT ORIGINAL ---
+--- SCRIPT ORIGINAL (compactado para economia de tokens) ---
 ${script}
 
 --- INSTRUÇÕES DA TAREFA ---
 ${taskTemplate}
 
 --- FORMATO OBRIGATÓRIO ---
-- Responder somente o JSON especificado, texto puro, sem markdown/HTML.
+- Responder somente o JSON especificado, texto puro, sem markdown/HTML nem fences.
+- Limitar listas a no máximo 8 itens e resposta total a ~2800 caracteres.
+- Se nenhuma mudança for necessária, devolver campos coerentes indicando ausência de alterações.
 - Manter quebras de linha e indentação do script dentro do campo optimizedScript quando aplicável.
 `;
 }

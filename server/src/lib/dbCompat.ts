@@ -1,4 +1,4 @@
-import type { InValue } from "@libsql/client";
+import type { InValue } from "@libsql/client" assert { "resolution-mode": "import" };
 
 import { getTursoDb, TursoSqliteWrapper, initTursoDb } from "./tursoDb";
 

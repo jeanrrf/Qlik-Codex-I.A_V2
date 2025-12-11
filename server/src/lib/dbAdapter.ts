@@ -2,7 +2,7 @@
  * Database Factory - Turso (Sole Provider)
  */
 
-import type { Client, InArgs } from "@libsql/client";
+import type { Client, InArgs } from "@libsql/client" assert { "resolution-mode": "import" };
 
 import { logger } from "./logger";
 import { getTursoDb, initTursoDb } from "./tursoDb";

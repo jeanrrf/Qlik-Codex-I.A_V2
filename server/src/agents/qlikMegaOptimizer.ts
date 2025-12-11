@@ -5,6 +5,7 @@ import { ZodSchema } from "zod";
 import { logger } from "../lib/logger";
 import { ProviderOrchestrator, createOrchestrator } from "../lib/providerOrchestrator";
 import { parseQlikScript } from "../lib/qlikParser";
+import { compactScriptForPrompt } from "../lib/promptCompactor";
 import { sseEmitter } from "../lib/sseEmitter";
 import type { OptimizationStepId } from "../types/optimization";
 import { AnalysisAndPlanSchema, CodeGenSchema, FinalDeliverySchema } from "../validators/megaOptimizerSchemas";
@@ -62,6 +63,7 @@ interface MegaOptimizerOptions {
 
 export class QlikMegaOptimizer {
   private script: string;
+  private promptScript: string;
   private scriptHash: string;
   private compactHistory: string = ""; // Resumo compacto em vez de histórico completo
   private taskTimes: Record<string, number> = {};
@@ -73,10 +75,14 @@ export class QlikMegaOptimizer {
     // Sanitize input script to remove any HTML tags if the user pasted formatted code
     // Uses a smart regex to preserve "WHERE Value < 10" but remove "<span...>"
     this.script = QlikMegaOptimizer.sanitizeScript(script);
+    const compaction = compactScriptForPrompt(this.script);
+    this.promptScript = compaction.compacted;
     this.scriptHash = createHash('sha256').update(this.script).digest('hex').substring(0, 16);
     this.abortSignal = options?.signal;
     const parsed = parseQlikScript(this.script);
     this.parserSummary = buildParserSummary(parsed);
+
+    logger.info("[MegaOptimizer] Script compactado para prompt", compaction.stats);
 
     // Cria orquestrador com configuração otimizada para MegaOptimizer + Kimi K2
     this.orchestrator = createOrchestrator({
@@ -188,8 +194,11 @@ export class QlikMegaOptimizer {
 
   private async executeTask(taskName: MegaTaskId, schema?: ZodSchema): Promise<Record<string, unknown>> {
     const totalStart = Date.now();
+    const scriptForPrompt = taskName === "FINAL_DELIVERY"
+      ? "Contexto do script já fornecido nas etapas anteriores. Use apenas os artefatos gerados (optimizedScript, plan, validation)."
+      : this.promptScript;
 
-    const fullPrompt = buildMegaPrompt(taskName, this.script, this.parserSummary, this.compactHistory);
+    const fullPrompt = buildMegaPrompt(taskName, scriptForPrompt, this.parserSummary, this.compactHistory);
 
     const timeout = TASK_TIMEOUTS[taskName] || 90000;
     const stepId = `mega_${taskName.toLowerCase()}` as OptimizationStepId;
@@ -222,6 +231,7 @@ export class QlikMegaOptimizer {
       try {
         logger.info(`[MegaOptimizer] >>> SENDING [${taskName}] via Orchestrator`, {
           contextSizeChars: fullPrompt.length,
+          scriptSizeChars: scriptForPrompt.length,
           timeout: `${timeout}ms`,
           sentAt: new Date().toISOString(),
           attempt
