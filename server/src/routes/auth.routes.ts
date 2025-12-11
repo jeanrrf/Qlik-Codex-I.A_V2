@@ -134,7 +134,6 @@ router.post(
     }
 
     // Importar função de verificação
-    // eslint-disable-next-line import/no-unresolved
     const { verifyOwnerToken, ensureOwnerUser } = await import("../services/authService.js");
 
     if (!verifyOwnerToken(token)) {
