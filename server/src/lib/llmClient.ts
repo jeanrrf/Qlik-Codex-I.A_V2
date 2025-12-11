@@ -17,6 +17,8 @@ const providerMap = {
 export interface GenerateStructuredJsonOptions {
   provider?: ProviderName;
   model?: string;
+  maxOutputTokens?: number;
+  taskType?: string;
 }
 
 export async function generateStructuredJson(
@@ -49,7 +51,9 @@ export async function generateStructuredJson(
       const result = await withRetry(
         async () => {
           return await provider.generateStructuredJson(prompt, {
-            model: options?.model
+            model: options?.model,
+            maxOutputTokens: options?.maxOutputTokens,
+            taskType: options?.taskType
           });
         },
         {

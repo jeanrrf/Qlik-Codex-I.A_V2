@@ -79,7 +79,9 @@ export async function formatQlikScript(script: string): Promise<FormatterResult>
     // Usando modelo configurado (default: gemini-2.5-flash)
     const { text } = await generateStructuredJson(prompt, {
       provider: "google",
-      model: config.geminiModel
+      model: config.geminiModel,
+      maxOutputTokens: config.geminiExtendedMaxOutputTokens,
+      taskType: "formatting"
     });
 
     if (!text) throw new Error("LLM retornou vazio");

@@ -8,6 +8,8 @@ export interface ProviderResult {
 
 export interface ProviderCallOptions {
   model?: string;
+  maxOutputTokens?: number;
+  taskType?: string;
 }
 
 export interface LLMProvider {

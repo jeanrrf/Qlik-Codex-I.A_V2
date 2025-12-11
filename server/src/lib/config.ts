@@ -9,6 +9,12 @@ const llmProvidersEnv = (process.env.LLM_PROVIDERS ?? "google")
   .map((provider) => provider.trim().toLowerCase())
   .filter((provider) => provider.length > 0);
 const llmProviders = llmProvidersEnv.length > 0 ? llmProvidersEnv : ["google"];
+const geminiDefaultMaxOutputTokens = Number(
+  process.env.GEMINI_MAX_OUTPUT_TOKENS_DEFAULT ?? "8192"
+);
+const geminiExtendedMaxOutputTokens = Number(
+  process.env.GEMINI_MAX_OUTPUT_TOKENS_EXTENDED ?? "16384"
+);
 
 export const config = {
   nodeEnv: (process.env.NODE_ENV || "development") as
@@ -20,6 +26,8 @@ export const config = {
   port: Number.isNaN(rawPort) ? 3000 : rawPort,
   geminiApiKey: process.env.GEMINI_API_KEY || "",
   geminiModel: process.env.GEMINI_MODEL_NAME || "gemini-2.5-flash",
+  geminiDefaultMaxOutputTokens,
+  geminiExtendedMaxOutputTokens,
   nvidiaApiKey: process.env.NVIDIA_API_KEY || "",
   nvidiaModel: process.env.NVIDIA_MODEL_NAME || "moonshotai/kimi-k2-instruct",  // Kimi K2 - 1T MoE model
   llmProviders,
