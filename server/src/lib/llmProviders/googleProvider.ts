@@ -10,7 +10,7 @@ import type {
 } from "./types";
 
 const MODEL_NAME = config.geminiModel;
-const DEFAULT_MAX_OUTPUT_TOKENS = config.geminiDefaultMaxOutputTokens || 8192;
+const DEFAULT_MAX_OUTPUT_TOKENS = config.geminiDefaultMaxOutputTokens;
 const TASK_TYPE_MAX_OUTPUT_TOKENS: Record<string, number> = {
   long_form: config.geminiExtendedMaxOutputTokens,
   documentation: config.geminiExtendedMaxOutputTokens,
@@ -25,12 +25,12 @@ if (config.geminiApiKey) {
   });
 }
 
-function resolveMaxOutputTokens(options?: ProviderCallOptions): {
+export function resolveMaxOutputTokens(options?: ProviderCallOptions): {
   maxOutputTokens: number;
   source: string;
 } {
   if (options?.maxOutputTokens && options.maxOutputTokens > 0) {
-    return { maxOutputTokens: options.maxOutputTokens, source: "explicit_option" };
+    return { maxOutputTokens: options.maxOutputTokens, source: "opcao_explicita" };
   }
 
   if (options?.taskType) {
@@ -40,7 +40,7 @@ function resolveMaxOutputTokens(options?: ProviderCallOptions): {
     }
   }
 
-  return { maxOutputTokens: DEFAULT_MAX_OUTPUT_TOKENS, source: "default" };
+  return { maxOutputTokens: DEFAULT_MAX_OUTPUT_TOKENS, source: "padrao" };
 }
 
 async function generate(prompt: string, options?: ProviderCallOptions): Promise<ProviderResult> {
