@@ -443,18 +443,37 @@ export class QlikMegaOptimizer {
       substep: { id: "STRATEGIC_PLAN", name: "Completed STRATEGIC_PLAN (Fused)", status: "success", duration: splitDuration, endTime: new Date().toISOString() }
     });
 
-    // OTIMIZAÇÃO: Paralelizar CODE_GEN e FINAL_DELIVERY
-    // Antes: Task2 (30s) → Task3 (30s) = 60s sequencial
-    // Agora: Promise.all([Task2, Task3]) = ~35s paralelo
-    logger.info("[MegaOptimizer] Iniciando CODE_GEN e FINAL_DELIVERY em PARALELO");
+    // CORREÇÃO: Execução sequencial para evitar encavalamento de provedores
+    // O paralelismo causava falhas de quota e concorrência no SSE
+    logger.info("[MegaOptimizer] Iniciando CODE_GEN e FINAL_DELIVERY em SEQUÊNCIA");
 
-    const parallelStart = Date.now();
-    const [codeGen, delivery] = await Promise.all([
-      this.executeTask("CODE_GEN", CodeGenSchema),
-      this.executeTask("FINAL_DELIVERY", FinalDeliverySchema)
-    ]);
+    // Emitir evento de início de CodeGen para UX
+    sseEmitter.sendToCurrent({
+      type: "substep",
+      substep: {
+        id: "CODE_GEN_START",
+        name: "Iniciando Geração de Código (Sequencial)",
+        status: "running",
+        startTime: new Date().toISOString()
+      }
+    });
 
-    logger.info(`[MegaOptimizer] Tarefas paralelas concluídas em ${Date.now() - parallelStart}ms`);
+    const codeGen = await this.executeTask("CODE_GEN", CodeGenSchema);
+
+    // Emitir evento de transição para Final Delivery
+    sseEmitter.sendToCurrent({
+      type: "substep",
+      substep: {
+        id: "FINAL_DELIVERY_START",
+        name: "Iniciando Validação e Documentação",
+        status: "running",
+        startTime: new Date().toISOString()
+      }
+    });
+
+    const delivery = await this.executeTask("FINAL_DELIVERY", FinalDeliverySchema);
+
+    logger.info(`[MegaOptimizer] Tarefas sequenciais concluídas`);
 
     // Sanitize optimizedScript using the same method as input
     if (typeof codeGen.optimizedScript === 'string') {
@@ -476,6 +495,13 @@ export class QlikMegaOptimizer {
       changes: changes
     };
 
+    // Inject provider stats into report for transparency
+    const reportObj = typeof delivery.report === 'object' && delivery.report !== null ? (delivery.report as Record<string, unknown>) : {};
+    const reportWithStats = {
+      ...reportObj,
+      providerStats: orchestratorStats.providerStats
+    };
+
     return {
       originalScript: this.script,
       optimizedScript: typeof codeGen.optimizedScript === 'string' ? codeGen.optimizedScript : this.script,
@@ -484,7 +510,7 @@ export class QlikMegaOptimizer {
       plan: typeof plan === 'object' && plan !== null ? (plan as Record<string, unknown>) : {},
       validation: typeof delivery.validation === 'object' && delivery.validation !== null ? (delivery.validation as Record<string, unknown>) : {},
       documentation: typeof delivery.documentation === 'object' && delivery.documentation !== null ? (delivery.documentation as Record<string, unknown>) : {},
-      report: typeof delivery.report === 'object' && delivery.report !== null ? (delivery.report as Record<string, unknown>) : {},
+      report: reportWithStats,
       metrics: {
         totalTime,
         taskTimes: this.taskTimes,

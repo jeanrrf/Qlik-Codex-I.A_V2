@@ -140,6 +140,7 @@ export function extractContent(content?: NvidiaMessageContent): string | undefin
   // b" que é inválido)
   const looksLikeJson = joined.startsWith('{') || joined.startsWith('[') || joined.includes('```json');
 
+  // Mistral/Llama fix: sometimes they return literal "\n" instead of newlines in non-JSON text
   if (!looksLikeJson && joined.length > 100 && !joined.includes('\n') && joined.includes('\\n')) {
     return joined.replace(/\\n/g, '\n');
   }
@@ -155,6 +156,10 @@ async function callNvidiaWithModel(
   const endpoint = `${NVIDIA_BASE_URL}/chat/completions`;
 
   logger.info("NVIDIA API: Tentando modelo", { model: modelName });
+
+  // Ajuste de parâmetros para Mistral vs outros
+  const isMistral = modelName.toLowerCase().includes("mistral");
+  const maxTokens = isMistral ? 8192 : 16384; // Mistral pode ter limites diferentes
 
   // Timeout ampliado para modelos com reasoning profundo (Kimi K2, etc.)
   const timedResponse = withTimeout(
@@ -177,7 +182,7 @@ async function callNvidiaWithModel(
         ],
         temperature: 0.15,
         top_p: 0.95,
-        max_tokens: 16384,  // Aumentado para scripts grandes
+        max_tokens: maxTokens,
         stream: false
       }),
       signal

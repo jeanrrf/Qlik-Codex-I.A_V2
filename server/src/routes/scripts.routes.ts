@@ -64,7 +64,7 @@ router.post(
 
     // Monitora desconexão do cliente
     req.on('close', () => {
-      logger.warn('[SSE] Client disconnected - aborting optimization');
+      logger.warn('[SSE] Client disconnected (req.on close) - aborting optimization');
       abortController.abort();
       sseEmitter.setCurrentClient(null);
     });

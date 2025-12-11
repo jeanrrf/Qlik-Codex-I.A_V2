@@ -76,13 +76,15 @@ export const config = {
   port: Number.isNaN(rawPort) ? 3000 : rawPort,
   geminiApiKey: process.env.GEMINI_API_KEY || "",
   geminiModel: process.env.GEMINI_MODEL_NAME || "gemini-2.5-flash",
-  // Fallback para Gemini
-  geminiFallbackModel: process.env.GEMINI_FALLBACK_MODEL_NAME || "gemini-2.0-flash",
+  // Fallback para Gemini (agora 2.5 Flash-Light / 2.0 Flash-Lite)
+  geminiFallbackModel: process.env.GEMINI_FALLBACK_MODEL_NAME || "gemini-2.0-flash-lite-preview-02-05",
   nvidiaApiKey: process.env.NVIDIA_API_KEY || "",
   // Default NVIDIA model used for optimizations. Switched to DeepSeek R1 per request.
   nvidiaModel: process.env.NVIDIA_MODEL_NAME || "deepseek-ai/deepseek-r1",
   // Fallback NVIDIA (modelo ~500B, agora Qwen 3 Coder 480B na NIM)
   nvidiaFallbackModel: process.env.NVIDIA_FALLBACK_MODEL_NAME || "qwen/qwen3-coder-480b-a35b-instruct",
+  // Tertiary Fallback (Mistral)
+  nvidiaTertiaryModel: process.env.NVIDIA_TERTIARY_MODEL_NAME || "mistralai/devstral-2-123b-instruct-2512",
   // Modo rápido NVIDIA (modelo >100B por padrão; ajuste via env para variantes mais leves/rápidas)
   // Por padrão usamos o mesmo modelo deepseek-r1 para otimizações rápidas também — pode ser customizado via env
   nvidiaFastModel: process.env.NVIDIA_FAST_MODEL_NAME || "deepseek-ai/deepseek-r1",

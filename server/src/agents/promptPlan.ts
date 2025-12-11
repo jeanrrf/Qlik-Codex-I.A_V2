@@ -47,7 +47,7 @@ Formato JSON:
   "optimizedScript": "SCRIPT_OTIMIZADO_EM_TEXTO_PURO",
   "changesApplied": [
     {
-      "category": "performance",
+      "category": "performance" | "readability" | "cleanup" | "structure" | "model_integrity" | "maintainability" | "security" | "logic",
       "area": "Descrição concisa da área otimizada (ex: joins, RESIDENT, QVD)",
       "impact": "Impacto da mudança (ex: redução de tempo de carga)",
       "riskLevel": "low"

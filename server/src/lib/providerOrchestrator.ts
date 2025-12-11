@@ -103,8 +103,9 @@ export class ProviderOrchestrator {
     // Plano fixo de fallback por modelo.
     const attemptPlan: Array<{ provider: "google" | "nvidia"; model?: string; label: string }> = [
       { provider: "google", model: config.geminiModel, label: "Gemini 2.5 Flash" },
-      { provider: "google", model: config.geminiFallbackModel, label: "Gemini 2.0 Flash (fallback)" },
-      { provider: "nvidia", model: config.nvidiaFallbackModel, label: "NVIDIA 500B fallback" }
+      { provider: "google", model: config.geminiFallbackModel, label: "Gemini 2.5 Flash-Light" },
+      { provider: "nvidia", model: config.nvidiaFallbackModel, label: "NVIDIA 500B fallback" },
+      { provider: "nvidia", model: config.nvidiaTertiaryModel, label: "Mistral 123B (tertiary)" }
     ];
 
     for (const plan of attemptPlan) {
@@ -213,8 +214,8 @@ export class ProviderOrchestrator {
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
 
-        if (errorMessage === "ABORTED") {
-          throw error;
+        if (errorMessage === "ABORTED" || errorMessage.includes("aborted by signal")) {
+          throw new Error("ABORTED");
         }
 
         logger.error("Erro critico ao chamar provedor", {
@@ -378,6 +379,10 @@ export class ProviderOrchestrator {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const timedOut = errorMessage === "TIMEOUT";
 
+      if (errorMessage === "ABORTED" || errorMessage.includes("aborted by signal")) {
+        throw new Error("ABORTED");
+      }
+
       // Se for erro de cota/limite, desativa o provedor/modelo nesta sessão
       const quotaReason = this.extractQuotaReason(error);
       if (quotaReason) {
@@ -410,7 +415,7 @@ export class ProviderOrchestrator {
     const message = error instanceof Error ? error.message : String(error);
 
     // Casos claros de cota/exaustão
-    const quotaPatterns = /(quota|rate limit|limite|exceeded|exhausted|429)/i;
+    const quotaPatterns = /(quota|rate limit|limite|exceeded|exhausted|429|resource|capacity|overloaded|busy)/i;
     const isQuotaMessage = quotaPatterns.test(message || "");
 
     if (error instanceof LLMError) {

@@ -44,7 +44,7 @@ export type AnalysisAndPlanResult = z.infer<typeof AnalysisAndPlanSchema>;
 export const CodeGenSchema = z.object({
   optimizedScript: z.string().describe("The full, executable Qlik Load Script with optimizations applied"),
   changesApplied: z.array(z.object({
-    category: z.enum(["performance", "readability", "cleanup", "structure"]).describe("Category of the change"),
+    category: z.enum(["performance", "readability", "cleanup", "structure", "model_integrity", "maintainability", "security", "logic"]).describe("Category of the change"),
     area: z.string().describe("Description of what was changed"),
     impact: z.string().describe("Impact of the change (e.g., 'High performance gain')"),
     riskLevel: z.enum(["none", "low", "medium", "high"]).describe("Risk level of this change")
