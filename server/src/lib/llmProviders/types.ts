@@ -18,4 +18,5 @@ export interface LLMProvider {
     prompt: string,
     options?: ProviderCallOptions
   ): Promise<ProviderResult>;
+  getEmbedding(text: string): Promise<number[]>;
 }

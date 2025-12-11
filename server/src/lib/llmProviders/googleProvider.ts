@@ -104,5 +104,25 @@ export const googleProvider: LLMProvider = {
       });
       throw error;
     }
+  },
+  getEmbedding: async (text: string): Promise<number[]> => {
+    if (!client) throw new Error("Google Client not initialized");
+
+    try {
+      // Modelo específico para embeddings (otimizado para retrieval)
+      const response = await client.models.embedContent({
+        model: "text-embedding-004",
+        contents: [{ parts: [{ text }] }]
+      });
+
+      if (!response.embeddings?.[0]?.values) {
+        throw new Error("No embedding returned from Google API");
+      }
+
+      return response.embeddings[0].values;
+    } catch (error) {
+      logger.error("Google Embedding Error", error);
+      throw error;
+    }
   }
 };
