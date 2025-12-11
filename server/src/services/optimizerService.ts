@@ -275,16 +275,14 @@ export async function optimizeScript(
 
   // Debug: Log parâmetros recebidos
   const originalLines = script.split(/\r?\n/).length;
-  const estimatedTokens = Math.ceil(script.length / 4);
+  const estimatedTokens = Math.ceil(script.length / 4); // para fins de logging apenas
   const freeTierLineLimit = lineLimit ?? 200;
-  const freeTierTokenLimit = freeTierLineLimit * 50; // limite aproximado baseado em tamanho médio de linha
   logger.debug("optimizeScript called", {
     mode: "FORCED_ULTRA_EXPERT",
     originalLines,
     estimatedTokens,
     shouldTruncate,
-    lineLimit: freeTierLineLimit,
-    tokenLimit: freeTierTokenLimit
+    lineLimit: freeTierLineLimit
   });
 
   // Verifica cancelamento logo no início
@@ -297,7 +295,7 @@ export async function optimizeScript(
 
   // ✨ APLICAR TRUNCAMENTO INTELIGENTE SE NECESSÁRIO (FREE TIER)
   const enforceTruncation = shouldTruncate !== false;
-  const exceedsLimits = originalLines > freeTierLineLimit || estimatedTokens > freeTierTokenLimit;
+  const exceedsLimits = originalLines > freeTierLineLimit;
 
   if (enforceTruncation && exceedsLimits) {
     logger.info(`🔒 FREE TIER: Aplicando limite de ${freeTierLineLimit} linhas com truncamento inteligente...`);
