@@ -15,6 +15,7 @@ let tursoClient: Client | null = null;
  */
 export async function initTursoDb(): Promise<Client> {
   if (tursoClient) {
+    logger.info('Turso client already initialized, reusing existing connection');
     return tursoClient;
   }
 
@@ -26,16 +27,28 @@ export async function initTursoDb(): Promise<Client> {
     throw new Error('TURSO_DATABASE_URL and TURSO_AUTH_TOKEN must be set');
   }
 
+  logger.info('Importing @libsql/client...');
   const { createClient } = await import('@libsql/client');
+
+  logger.info('Creating Turso client connection...', {
+    url: url.substring(0, 30) + '...',
+    hasAuthToken: Boolean(authToken)
+  });
 
   tursoClient = createClient({
     url,
     authToken
   });
 
-  logger.info('Turso database initialized (URL present, token available)');
-
-
+  // Test connection with a simple query
+  logger.info('Testing Turso connection...');
+  try {
+    await tursoClient.execute('SELECT 1');
+    logger.info('✓ Turso database connection successful');
+  } catch (err) {
+    logger.error('✗ Turso connection test failed', err);
+    throw new Error(`Failed to connect to Turso: ${err instanceof Error ? err.message : String(err)}`);
+  }
 
   return tursoClient;
 }

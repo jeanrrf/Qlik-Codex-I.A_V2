@@ -278,7 +278,7 @@ export const nvidiaProvider: LLMProvider = {
       throw error;
     }
   },
-  getEmbedding: async (text: string): Promise<number[]> => {
+  getEmbedding: async (_text: string): Promise<number[]> => {
     throw new Error("Embedding generation not supported by Nvidia provider yet.");
   }
 };

@@ -327,9 +327,31 @@ ${scriptForPrompt}
       let changes: Array<Record<string, unknown>> = [];
 
       try {
-        // eslint-disable-next-line import/no-unresolved
-        const { extractJsonFromText } = await import('../lib/structuredResponse.js');
-        const parsed = extractJsonFromText(rawResponse);
+        let parsed:
+          | Record<string, unknown>
+          | undefined
+          | null = undefined;
+        try {
+          const mod = await import('../lib/structuredResponse.js');
+          if (mod && typeof mod.extractJsonFromText === 'function') {
+            parsed = mod.extractJsonFromText(rawResponse);
+          }
+        } catch (_) {
+          try {
+            parsed = JSON.parse(rawResponse);
+          } catch (_e) {
+            const first = rawResponse.indexOf('{');
+            const last = rawResponse.lastIndexOf('}');
+            if (first >= 0 && last > first) {
+              try {
+                parsed = JSON.parse(rawResponse.substring(first, last + 1));
+              } catch (_err) {
+                logger.warn('[NVIDIA FAST] structuredResponse.cjs import failed and raw JSON parse failed', { error: String(_err) });
+                parsed = undefined;
+              }
+            }
+          }
+        }
 
         if (parsed) {
           if (typeof parsed.optimizedScript === "string") {
@@ -551,6 +573,12 @@ export async function optimizeScript(
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined
     });
+
+    // If error is fatal (parse errors, schema validation, aborts/timeouts), rethrow so HTTP layer can return 5xx
+    const errMsg = error instanceof Error ? error.message : String(error);
+    if (/JSON\s+Parse\s+Error|Schema\s+Validation\s+Error|Schema\s+validation|ABORTED|TIMEOUT|Todas\s+as|FALLBACK\s+ACIONADO/i.test(errMsg)) {
+      throw error instanceof Error ? error : new Error(errMsg);
+    }
 
     // Em caso de erro, retorna uma estrutura de falha consistente
     return {

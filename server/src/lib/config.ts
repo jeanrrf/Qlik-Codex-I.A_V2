@@ -123,6 +123,10 @@ export const config = {
   // Use ANALYTICS_ENABLED=true in env to explicitly enable analytics
   analyticsEnabled: (process.env.ANALYTICS_ENABLED || 'false').toLowerCase() === 'true',
 
+  // Prompt token safety budget (characters/4 ≈ tokens)
+  maxPromptTokens: Number(process.env.MAX_PROMPT_TOKENS ?? '50000'),
+
+
   // Optimization thresholds for LLM prompts
   optimizationThresholds: {
     highComplexityLOC: 500,

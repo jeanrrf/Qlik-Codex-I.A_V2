@@ -155,7 +155,16 @@ router.post(
       sseEmitter.setCurrentClient(null);
 
     } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
       logger.error("[SSE] Optimization error", { error: String(error) });
+
+      // Determine HTTP status based on error severity
+      const isFatal = /JSON\s+Parse\s+Error|Schema\s+Validation\s+Error|ABORTED|TIMEOUT|FALLBACK\s+ACIONADO/i.test(errMsg);
+
+      if (isFatal) {
+        res.status(500);
+      }
+
       res.write(`data: ${JSON.stringify({ type: 'error', error: String(error) })}\n\n`);
       res.end();
 

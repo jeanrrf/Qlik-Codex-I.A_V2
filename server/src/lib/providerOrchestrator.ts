@@ -461,13 +461,17 @@ export class ProviderOrchestrator {
     failedAttempts: number;
     timeouts: number;
     providerStats: Record<string, { success: number; failed: number }>;
+    disabledModelsCount: number;
+    disabledModels?: string[];
   } {
     const stats = {
       totalAttempts: this.attemptHistory.length,
       successfulAttempts: 0,
       failedAttempts: 0,
       timeouts: 0,
-      providerStats: {} as Record<string, { success: number; failed: number }>
+      providerStats: {} as Record<string, { success: number; failed: number }>,
+      disabledModelsCount: this.disabledProviderModels.size,
+      disabledModels: Array.from(this.disabledProviderModels)
     };
 
     for (const attempt of this.attemptHistory) {

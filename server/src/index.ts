@@ -184,7 +184,9 @@ async function startServer() {
       logger.warn('Google OAuth environment variables missing (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET). OAuth login may fail.');
     }
 
+    logger.info('Initializing database connection...');
     await initDb();
+    logger.info('Database initialization completed successfully');
   } catch (err) {
     logger.error("Failed to initialize database", err);
     process.exit(1);

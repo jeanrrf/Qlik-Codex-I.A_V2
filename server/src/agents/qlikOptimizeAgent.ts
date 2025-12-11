@@ -2,6 +2,7 @@ import { createHash } from "crypto";
 
 import { ZodSchema } from "zod";
 
+import { config } from "../lib/config";
 import { logger } from "../lib/logger";
 import { compactScriptForPrompt } from "../lib/promptCompactor";
 import { ProviderOrchestrator, createOrchestrator } from "../lib/providerOrchestrator";
@@ -198,7 +199,35 @@ export class QlikOptimizeAgent {
       ? "Contexto do script já fornecido nas etapas anteriores. Use apenas os artefatos gerados (optimizedScript, plan, validation)."
       : this.promptScript;
 
-    const fullPrompt = buildMegaPrompt(taskName, scriptForPrompt, this.parserSummary, this.compactHistory);
+    let fullPrompt = buildMegaPrompt(taskName, scriptForPrompt, this.parserSummary, this.compactHistory);
+
+    // Token budgeting: if prompt estimated tokens exceeds config limit, trim compactHistory progressively
+    const maxTokens = config.maxPromptTokens || 50000;
+    let estimatedTokens = Math.ceil(fullPrompt.length / 4);
+    if (estimatedTokens > maxTokens) {
+      logger.warn(`[MegaOptimizer] Prompt exceeds token budget (${estimatedTokens} tokens > ${maxTokens}). Trimming history...`, { taskName, estimatedTokens });
+
+      sseEmitter.sendToCurrent({ type: "warning", message: `Prompt trimmed due to token budget (${estimatedTokens} tokens > ${maxTokens})` });
+
+      // Try progressive trimming: remove earliest summaries from compactHistory until under budget
+      const parts = this.compactHistory.split('\n').filter(Boolean);
+      while (parts.length > 0) {
+        parts.shift(); // remove oldest
+        this.compactHistory = parts.join('\n');
+        fullPrompt = buildMegaPrompt(taskName, scriptForPrompt, this.parserSummary, this.compactHistory);
+        estimatedTokens = Math.ceil(fullPrompt.length / 4);
+        if (estimatedTokens <= maxTokens) break;
+      }
+
+      if (estimatedTokens > maxTokens) {
+        // As a last resort, clear compactHistory entirely
+        this.compactHistory = '';
+        fullPrompt = buildMegaPrompt(taskName, scriptForPrompt, this.parserSummary, this.compactHistory);
+        estimatedTokens = Math.ceil(fullPrompt.length / 4);
+      }
+
+      logger.info(`[MegaOptimizer] Prompt size after trimming: ${estimatedTokens} tokens`, { taskName });
+    }
 
     const timeout = TASK_TIMEOUTS[taskName] || 90000;
     const stepId = `mega_${taskName.toLowerCase()}` as OptimizationStepId;
@@ -267,10 +296,30 @@ export class QlikOptimizeAgent {
 
         let parsedResult: Record<string, unknown> = {};
         try {
-          // Use robust extractor util
-          // eslint-disable-next-line import/no-unresolved
-          const { extractJsonFromText } = await import('../lib/structuredResponse.js');
-          const raw = extractJsonFromText(responseText);
+          // Use robust extractor util (dynamic import - prefer extensionless to support ts/ts-node)
+          let raw: unknown = undefined;
+          try {
+            const mod = await import('../lib/structuredResponse.js');
+            if (mod && typeof mod.extractJsonFromText === 'function') {
+              raw = await (mod.extractJsonFromText as (t: string) => unknown)(responseText);
+            }
+          } catch (modErr) {
+            logger.warn('[MegaOptimizer] structuredResponse import failed, falling back to conservative JSON parse', { error: modErr });
+            try {
+              raw = JSON.parse(responseText);
+            } catch (_simpleErr) {
+              // As a last fallback, attempt to extract substring between first { and last }
+              const first = responseText.indexOf('{');
+              const last = responseText.lastIndexOf('}');
+              if (first >= 0 && last > first) {
+                try {
+                  raw = JSON.parse(responseText.substring(first, last + 1));
+                } catch (subErr) {
+                  logger.warn('[MegaOptimizer] Fallback JSON extraction also failed', { error: subErr });
+                }
+              }
+            }
+          }
           if (typeof raw === 'object' && raw !== null) {
             parsedResult = raw as Record<string, unknown>;
           } else {

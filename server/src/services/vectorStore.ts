@@ -1,6 +1,6 @@
 
 export const vectorStore = {
   // Placeholder for vector store implementation
-  addDocument: async (doc: any) => { console.log("Adding document", doc); },
-  search: async (query: string) => { return []; }
+  addDocument: async (doc: Record<string, unknown>) => { console.log("Adding document", doc); },
+  search: async (_query: string) => { return []; }
 };

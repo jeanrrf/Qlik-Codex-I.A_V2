@@ -118,18 +118,26 @@ export class QlikGranularOptimizer {
 
       // Extrai o código do resultado (remove markdown, etc)
       // Use extractor util to parse structured JSON or fallback to codeblocks
-      let optimizedScript: string;
+      let optimizedScript: string = '';
       try {
-        // eslint-disable-next-line import/no-unresolved
-        const { extractJsonFromText } = await import('../lib/structuredResponse.js');
-        const parsed = extractJsonFromText(response.result);
-        if (parsed && typeof parsed.optimizedScript === 'string') {
-          optimizedScript = String(parsed.optimizedScript);
-        } else if (typeof response.result === 'string') {
-          optimizedScript = this.extractCode(response.result);
-        } else {
-          optimizedScript = String(response.result);
+        // Use extractor util dynamically
+        try {
+          const mod = await import('../lib/structuredResponse.js');
+          if (mod && typeof mod.extractJsonFromText === 'function') {
+            const parsed = mod.extractJsonFromText(response.result);
+            if (parsed && typeof parsed.optimizedScript === 'string') {
+              optimizedScript = String(parsed.optimizedScript);
+            }
+          }
+        } catch (_e) {
+          // Fallback: if no structured JSON, extract code blocks or use raw text
+          if (typeof response.result === 'string') {
+            optimizedScript = this.extractCode(response.result);
+          } else {
+            optimizedScript = String(response.result);
+          }
         }
+        if (!optimizedScript) optimizedScript = typeof response.result === 'string' ? this.extractCode(response.result) : String(response.result);
       } catch (_e) {
         optimizedScript = this.extractCode(response.result);
       }
