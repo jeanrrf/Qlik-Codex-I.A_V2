@@ -275,7 +275,7 @@ export async function optimizeScript(
 
   // Debug: Log parâmetros recebidos
   const originalLines = script.split(/\r?\n/).length;
-  const estimatedTokens = Math.ceil(script.length / 4); // para fins de logging apenas
+  const estimatedTokens = Math.ceil(script.length / 4); // for logging purposes only
   const freeTierLineLimit = lineLimit ?? 200;
   logger.debug("optimizeScript called", {
     mode: "FORCED_ULTRA_EXPERT",
