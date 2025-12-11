@@ -3,9 +3,9 @@
  * Validates embedding generation, storage, and semantic search
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi, beforeAll } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { VectorStore, getVectorStore, resetVectorStore } from "../../src/services/vectorStore";
-import { initSqliteDb } from "../../src/lib/sqliteDb";
+import { MOCK_EMBEDDING_DIMENSION, createMockEmbedding } from "../utils/mockVectorStore";
 
 // Mock config to provide API key
 vi.mock("../../src/lib/config", async () => {
@@ -26,13 +26,9 @@ vi.mock("@google/genai", () => {
       models: {
         embedContent: vi.fn().mockImplementation(async ({ contents }) => {
           const text = contents[0].parts[0].text;
-          // Generate deterministic mock embedding based on text
-          const mockEmbedding = new Array(768).fill(0).map((_, i) => 
-            Math.sin(text.length * i * 0.1) * 0.5 + 0.5
-          );
           return {
             embeddings: [{
-              values: mockEmbedding
+              values: createMockEmbedding(text)
             }]
           };
         })
@@ -66,7 +62,7 @@ describe("VectorStore", () => {
       expect(doc?.content).toBe("This is a test document about Qlik optimization");
       expect(doc?.metadata.category).toBe("test");
       expect(doc?.embedding).toBeDefined();
-      expect(doc?.embedding?.length).toBe(768);
+      expect(doc?.embedding?.length).toBe(MOCK_EMBEDDING_DIMENSION);
     });
 
     it("should add multiple documents in batch", async () => {

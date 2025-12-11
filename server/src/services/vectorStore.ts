@@ -350,7 +350,7 @@ export class VectorStore {
       totalDocuments: total,
       indexedDocuments: indexed,
       cacheHitRate,
-      avgEmbeddingTime: 0 // TODO: Track this
+      avgEmbeddingTime: 0 // Future enhancement: track average embedding generation time
     };
   }
 
