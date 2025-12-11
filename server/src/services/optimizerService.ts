@@ -106,7 +106,7 @@ async function runUltraExpertMode(
       breakingRisk: megaResult.plan.riskLevel as any,
       safeToApply: true,
       mode: 'ultra-expert',
-      notes: truncationInfo?.wasTruncated ? [truncationInfo.warningMessage] : undefined,
+      notes: truncationInfo?.wasTruncated ? truncationInfo.warningMessage : undefined,
       metricsEstimate: {
         loadComplexityBefore: "medium",
         loadComplexityAfter: "low",

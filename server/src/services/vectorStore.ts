@@ -59,7 +59,9 @@ class LRUCache<K, V> {
     if (!this.cache.has(key)) return undefined;
     
     // Move to end (most recent)
-    const value = this.cache.get(key)!;
+    const value = this.cache.get(key);
+    if (value === undefined) return undefined;
+    
     this.cache.delete(key);
     this.cache.set(key, value);
     return value;
@@ -71,7 +73,9 @@ class LRUCache<K, V> {
     } else if (this.cache.size >= this.maxSize) {
       // Delete oldest (first) entry
       const firstKey = this.cache.keys().next().value;
-      this.cache.delete(firstKey);
+      if (firstKey !== undefined) {
+        this.cache.delete(firstKey);
+      }
     }
     this.cache.set(key, value);
   }

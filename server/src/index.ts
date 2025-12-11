@@ -10,7 +10,7 @@ import cookieParser from "cookie-parser";
 import { config } from "./lib/config";
 import { logger } from "./lib/logger";
 import { initFirestore } from "./lib/firestoreDb";
-// import { initSqliteDb, closeSqliteDb } from "./lib/sqliteDb"; // REMOVIDO
+import { initSqliteDb } from "./lib/sqliteDb";
 import { errorHandler } from "./middleware/errorHandler";
 
 import { healthRouter } from "./routes/health.routes";
@@ -22,6 +22,7 @@ import { historyRouter } from "./routes/history.routes";
 import sessionRouter from "./routes/session.routes";
 import authRouter from "./routes/auth.routes";
 import usageRouter from "./routes/usage.routes";
+import { vectorRouter } from "./routes/vector.routes";
 
 const app = express();
 const corsOptions =
@@ -71,6 +72,7 @@ app.use("/api/tools", toolsRouter);
 app.use("/api/history", historyRouter);
 app.use("/api/sessions", sessionRouter);
 app.use("/api/usage", usageRouter);
+app.use("/api/vector", vectorRouter);
 
 if (fs.existsSync(webBuildPath)) {
   app.use(express.static(webBuildPath));
@@ -92,12 +94,35 @@ if (fs.existsSync(webBuildPath)) {
 
 app.use(errorHandler);
 
+// Initialize SQLite Database
+try {
+  initSqliteDb();
+  logger.info("SQLite database initialized successfully");
+} catch (err) {
+  logger.error("Failed to initialize SQLite", err);
+}
+
 // Inicializar Firestore
 try {
   initFirestore();
 } catch (err) {
   logger.error("Failed to initialize Firestore", err);
 }
+
+// Initialize Vector Store (async, non-blocking)
+(async () => {
+  try {
+    if (config.geminiApiKey) {
+      const { indexQlikPatterns } = await import("./services/knowledgeIndexer.js");
+      await indexQlikPatterns();
+      logger.info("Vector store initialized and patterns indexed successfully");
+    } else {
+      logger.warn("Gemini API key not configured - vector store disabled");
+    }
+  } catch (err) {
+    logger.error("Failed to initialize vector store", err);
+  }
+})();
 
 // Graceful shutdown
 process.on("SIGTERM", () => {
