@@ -1,5 +1,5 @@
 import { CompactAuditReport, calculateDiffStats } from "../agents/qlikConsultancyAgent";
-import { QlikMegaOptimizer } from "../agents/qlikMegaOptimizer";
+import { QlikOptimizeAgent } from "../agents/qlikOptimizeAgent";
 import { config } from "../lib/config";
 import { nvidiaProvider } from "../lib/llmProviders/nvidiaProvider";
 import { logger } from "../lib/logger";
@@ -155,13 +155,11 @@ async function runUltraExpertMode(
   logger.info("⚡ MODO ULTRA EXPERT - MEGA OPTIMIZER (Gemini 2.5 Flash Architecture)");
 
   // Instantiate the Mega Optimizer with AbortSignal support
-  const optimizer = new QlikMegaOptimizer(script, { signal: abortSignal });
+  const optimizer = new QlikOptimizeAgent(script, { signal: abortSignal });
   const originalLines = script.split(/\r?\n/).length;
 
   // Run deterministic parser for metadata
   const parsed = parseQlikScript(script);
-  // metrics calculated for future use but not currently needed
-  void calculateQualityMetrics(parsed);
 
   // Run the pipeline
   const megaResult = await optimizer.run();
@@ -334,8 +332,7 @@ ${scriptForPrompt}
       try {
         // eslint-disable-next-line import/no-unresolved
         const { extractJsonFromText } = await import('../lib/structuredResponse.js');
-        const parsed = extractJsonFromText(rawResponse);
-        if (parsed) {
+        const { extractJsonFromText } = await import('../lib/structuredResponse');
           if (typeof parsed.optimizedScript === "string") {
             optimizedScript = parsed.optimizedScript;
           }

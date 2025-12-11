@@ -1,59 +1,54 @@
-# Qlik Codex I.A – Copilot Instructions
+# Qlik Codex I.A — AI Agent Instructions
 
-## Persona & Goals
-- **Role**: Staff+/Principal Engineer. Assertive, objective, autonomous.
-- **Language**: **Portuguese (PT-BR)** for ALL user-facing text (UI, reports, prompts). English for code/comments.
-- **Response Style**: 
-  - **Feature**: Analysis → Plan → Code → Notes.
-  - **Bugfix**: Cause → Fix → Patch → Test.
-  - **Code Only**: Single block, no prose.
+This is a TypeScript monorepo containing a React frontend and an Express backend with AI agents for Qlik script optimization.
 
-## Architecture Overview
-- **Monorepo**: `server/` (Express + TS) + `web/` (React + Vite).
-- **Runtime**: Express serves `web/dist` SPA. API at `/api/*`.
-- **Core Domain**: **AINEX** (AI Next-Generation Expert) pipeline.
-  - **Orchestrator**: `server/src/agents/qlikMegaOptimizer.ts` manages multi-stage optimization.
-  - **Providers**: `server/src/lib/providerOrchestrator.ts` handles Google (Gemini) & NVIDIA rotation.
-  - **Streaming**: `server/src/lib/sseEmitter.ts` pushes real-time events to `web/src/hooks/useOptimizationProgress.ts`.
-- **Database**: SQLite (`server/data/qlik-codex.db`) via `better-sqlite3`.
+## 🏗 Architecture & Core Flow
 
-## Critical Workflows
-- **Dev Start**: `npm run start:dev` (Root) -> Launches Server (3000) & Web (5173).
-- **Build**: `build-all.bat` (Windows) or `npm run build` (Root). **Crucial**: Express serves `web/dist`, so rebuild web before testing production server.
-- **Testing**: `server/run-tests.ps1` (PowerShell) or `npm test` (Server). Uses Vitest.
-  - **Mocking**: Mock LLM providers in `server/test/fixtures`.
-- **Database**: Manual migrations in `server/scripts/`.
+- **Monorepo Structure**:
+  - `server/`: Express backend, AI agents, validators.
+  - `web/`: React + Vite frontend.
+- **Entry Point**: `server/src/index.ts` serves API and static frontend assets.
+- **Main Flow**: `POST /api/scripts/optimize` -> `scriptService` -> `optimizerService` -> `qlikOptimizeAgent` -> `llmClient`.
+- **AI Core**:
+  - `server/src/agents/qlikOptimizeAgent.ts`: Contains the **Super Prompt** and orchestration logic.
+  - `server/src/lib/llmClient.ts`: Handles LLM providers (Google Gemini, Nvidia) with fallback logic.
+  - `server/src/validators/llmResponseSchemas.ts`: Zod schemas for strict JSON validation of LLM outputs.
 
-## Coding Standards & Patterns
+## 🤖 AI Agent Development Rules
 
-### AI & Agents
-- **Orchestration**: ALWAYS use `ProviderOrchestrator`. Never call `llmClient` directly for complex tasks.
-- **Resilience**: `neverRetryProvider: true` is default. Rotate providers on failure (Google -> NVIDIA).
-- **Timeouts**: Respect `TASK_TIMEOUTS` in `qlikMegaOptimizer.ts` (Analysis: 150s, CodeGen: 120s).
-- **Prompts**: Define in `server/src/agents/promptPlan.ts`. MUST be in PT-BR.
+### 1. Prompt Engineering & LLM Integration
+- **Super Prompt**: The master prompt is in `server/src/agents/qlikOptimizeAgent.ts`. **NEVER** modify it without understanding the JSON schema requirements.
+- **Strict JSON**: The LLM **MUST** return valid JSON. The agent enforces this via `LLMSchemaV1`.
+- **Language**: All prompts and AI responses must be in **Portuguese (PT-BR)**.
+- **Fallback**: If the LLM fails or returns invalid JSON, the system falls back to the original script with a "high risk" warning.
 
-### Validation & Security
-- **Strict Validation**: ALWAYS run `qlikValidator.validateQlikScript()` before saving/streaming.
-  - **Prohibited**: `CREATE`, `DROP`, `INSERT`, `UPDATE`, `DELETE`, `GRANT`.
-  - **Hallucinations**: Check `HALLUCINATED_FUNCTIONS` (e.g., `DATEDIFF` -> `Interval`, `CASE WHEN` -> `Pick(Match())`).
-- **Sanitization**: Strip HTML from scripts before processing (`QlikMegaOptimizer.sanitizeScript`).
+### 2. Critical Validation Rules (`validators/qlikValidator.ts`)
+- **SQL Safety**: SQL commands (`CREATE`, `DROP`, `INSERT`, etc.) are **FORBIDDEN** outside of `SQL ... ;` blocks.
+- **Logic Preservation**: The optimizer must **NEVER** alter business logic (joins, where clauses, field names) unless explicitly safe.
+- **Syntax**: Do not invent Qlik syntax. If unsure, keep the original code.
 
-### Real-Time Updates (SSE)
-- **Flow**: Server `sseEmitter.sendToCurrent()` -> Web `useOptimizationProgress`.
-- **Events**: `script_analysis`, `substep`, `truncation_warning`.
-- **Implementation**: When adding events, update BOTH backend emitter and frontend hook.
+### 3. Testing & Quality Assurance
+- **Unit Tests**: Located in `server/test/`. Run with `npm test` (check `package.json` for specific scripts).
+- **Fixtures**: Use `server/test/fixtures/` for testing agent responses (e.g., `malformed.json`, `valid_v1.json`).
+- **Lint/Typecheck**: Always run `npm run lint` and `npm run typecheck` before committing.
 
-### Frontend (React + Vite)
-- **Styling**: Glassmorphism theme. CSS Modules or global `styles.css`.
-- **Hooks**: `useSessionPersistence` for state recovery.
-- **Components**: `ConsultancyDocumentViewer` for reports.
+## 🛠 Developer Workflow
 
-## Common Pitfalls
-- **Fake Progress**: Do NOT simulate progress bars. Use real events from `stepTimingService`.
-- **Syntax Highlighting**: `qlikSyntaxHighlighter.ts` must remove existing HTML tags before re-applying to prevent nesting errors.
-- **Async/Await**: Propagate `AbortSignal` through all agent layers. Handle cancellation in `finally` blocks.
-- **File Paths**: Use absolute paths for tool calls.
+- **Start All**: `npm run start:dev` (root) runs server and web concurrently.
+- **Server Dev**: `cd server && npm run dev` (uses `ts-node-dev`).
+- **Web Dev**: `cd web && npm run dev` (Vite).
+- **Build**: `cd web && npm run build` (required for production serving).
 
-## Project Specifics
-- **Smart Truncation**: Free tier limits lines but cuts at logical boundaries (not mid-statement).
-- **Modes**: `ultra-expert` (rewrite), `analysis` (report only, reverts script).
+## 📂 Key Files & Directories
+
+- `server/src/agents/qlikOptimizeAgent.ts`: **CRITICAL**. Main agent logic and prompt.
+- `server/src/lib/llmClient.ts`: LLM provider configuration and error handling.
+- `server/src/validators/qlikValidator.ts`: Security and syntax validation rules.
+- `server/src/routes/scripts.routes.ts`: Main API endpoint definition.
+- `web/src/api/client.ts`: Frontend API client.
+
+## 🚨 Common Pitfalls
+
+- **Environment Variables**: `GEMINI_API_KEY` is required.
+- **JSON Parsing**: The agent relies on `JSON.parse()`. Ensure prompts explicitly request **pure JSON** without Markdown code blocks.
+- **Risk Assessment**: The `breakingRisk` calculation in `qlikOptimizeAgent.ts` is vital. Do not lower risk thresholds without thorough testing.

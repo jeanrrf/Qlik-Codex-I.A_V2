@@ -62,7 +62,7 @@ interface MegaOptimizerOptions {
   signal?: AbortSignal;
 }
 
-export class QlikMegaOptimizer {
+export class QlikOptimizeAgent {
   private script: string;
   private promptScript: string;
   private scriptHash: string;
@@ -75,7 +75,7 @@ export class QlikMegaOptimizer {
   constructor(script: string, options?: MegaOptimizerOptions) {
     // Sanitize input script to remove any HTML tags if the user pasted formatted code
     // Uses a smart regex to preserve "WHERE Value < 10" but remove "<span...>"
-    this.script = QlikMegaOptimizer.sanitizeScript(script);
+    this.script = QlikOptimizeAgent.sanitizeScript(script);
     const compaction = compactScriptForPrompt(this.script);
     this.promptScript = compaction.compacted;
     this.scriptHash = createHash('sha256').update(this.script).digest('hex').substring(0, 16);
@@ -485,7 +485,7 @@ export class QlikMegaOptimizer {
 
     // Sanitize optimizedScript using the same method as input
     if (typeof codeGen.optimizedScript === 'string') {
-      codeGen.optimizedScript = QlikMegaOptimizer.sanitizeScript(codeGen.optimizedScript as string);
+      codeGen.optimizedScript = QlikOptimizeAgent.sanitizeScript(codeGen.optimizedScript as string);
     }
 
     const totalTime = Date.now() - globalStart;
