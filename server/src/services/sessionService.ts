@@ -1,6 +1,6 @@
 /**
  * Serviço de Gerenciamento de Sessões Ativas
- * Persiste estado de otimizações em andamento no Banco de Dados (Turso/Postgres)
+ * Persiste estado de otimizações em andamento no Banco de Dados Turso (SQLite cloud)
  */
 
 import { DbAdapter } from "../lib/dbAdapter";

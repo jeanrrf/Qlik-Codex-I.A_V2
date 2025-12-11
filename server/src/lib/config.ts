@@ -92,7 +92,7 @@ export const config = {
   // Por padrão usamos o mesmo modelo deepseek-r1 para otimizações rápidas também — pode ser customizado via env
   nvidiaFastModel: process.env.NVIDIA_FAST_MODEL_NAME || "deepseek-ai/deepseek-r1",
   llmProviders,
-  databaseUrl: process.env.DATABASE_URL || "",
+  // Database: usando Turso (SQLite cloud) - veja tursoDb.ts
   version: APP_VERSION,
 
   // Google OAuth Configuration

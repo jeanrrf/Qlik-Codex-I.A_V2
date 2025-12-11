@@ -1,6 +1,6 @@
 /**
  * Turso Database Client - SQLite na Cloud (Cloudflare)
- * Alternativa simples ao Supabase/PostgreSQL
+ * Único banco de dados utilizado pelo Qlik Codex I.A
  */
 
 import type { Client, InValue } from '@libsql/client' assert { "resolution-mode": "import" };

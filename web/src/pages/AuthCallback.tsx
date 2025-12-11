@@ -9,18 +9,33 @@ export function AuthCallback() {
       try {
         const params = new URLSearchParams(window.location.search);
         const token = params.get("token");
+        const success = params.get("success");
+        const error = params.get("error");
+
+        if (error) {
+          console.error("Auth error:", error);
+          // Redirecionar para home com erro
+          window.location.href = "/";
+          return;
+        }
 
         if (token) {
           try {
             localStorage.setItem("qlik-codex-access-token", token);
-          } catch {
-            // ignore storage errors
+          } catch (err) {
+            console.warn("Could not save token to localStorage:", err);
           }
         }
 
-        await revalidate();
+        if (success === "true" || token) {
+          // Aguardar revalidação antes de redirecionar
+          await revalidate();
+        }
+      } catch (err) {
+        console.error("Auth callback error:", err);
       } finally {
-        window.location.href = "/";
+        // Usar replace para evitar loop de navegação
+        window.location.replace("/");
       }
     };
 

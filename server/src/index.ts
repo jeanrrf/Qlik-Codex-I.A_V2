@@ -170,7 +170,6 @@ async function startServer() {
     logger.info('Startup configuration', {
       nodeEnv: config.nodeEnv,
       tursoConfigured: Boolean(process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN),
-      postgresConfigured: Boolean(process.env.DATABASE_URL),
       ownerEmailSet: Boolean(process.env.OWNER_EMAIL),
       viteOwnerEmailSet: Boolean(process.env.VITE_OWNER_EMAIL)
     });
