@@ -80,7 +80,6 @@ export async function formatQlikScript(script: string): Promise<FormatterResult>
     const { text } = await generateStructuredJson(prompt, {
       provider: "google",
       model: config.geminiModel,
-      maxOutputTokens: config.geminiExtendedMaxOutputTokens,
       taskType: "formatting"
     });
 

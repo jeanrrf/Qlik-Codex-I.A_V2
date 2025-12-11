@@ -9,11 +9,20 @@ const llmProvidersEnv = (process.env.LLM_PROVIDERS ?? "google")
   .map((provider) => provider.trim().toLowerCase())
   .filter((provider) => provider.length > 0);
 const llmProviders = llmProvidersEnv.length > 0 ? llmProvidersEnv : ["google"];
-const geminiDefaultMaxOutputTokens = Number(
-  process.env.GEMINI_MAX_OUTPUT_TOKENS_DEFAULT ?? "8192"
+
+// Helper to safely parse positive integer env vars with fallback
+function parsePositiveIntEnvVar(val: string | undefined, fallback: number): number {
+  const n = Number(val);
+  return Number.isFinite(n) && n > 0 && Number.isInteger(n) ? n : fallback;
+}
+
+const geminiDefaultMaxOutputTokens = parsePositiveIntEnvVar(
+  process.env.GEMINI_MAX_OUTPUT_TOKENS_DEFAULT,
+  8192
 );
-const geminiExtendedMaxOutputTokens = Number(
-  process.env.GEMINI_MAX_OUTPUT_TOKENS_EXTENDED ?? "16384"
+const geminiExtendedMaxOutputTokens = parsePositiveIntEnvVar(
+  process.env.GEMINI_MAX_OUTPUT_TOKENS_EXTENDED,
+  16384
 );
 
 export const config = {
