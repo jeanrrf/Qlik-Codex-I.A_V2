@@ -257,6 +257,38 @@ export async function getUserById(userId: string): Promise<User | null> {
 }
 
 /**
+ * Busca sessão por ID
+ */
+export async function getSessionById(sessionId: string): Promise<AuthSession | null> {
+  const db = await getAuthDb();
+
+  try {
+    const session = await db
+      .prepare("SELECT * FROM auth_sessions WHERE id = ? AND expires_at > datetime('now')")
+      .get(sessionId) as Record<string, unknown> | undefined;
+
+    if (!session) {
+      return null;
+    }
+
+    return {
+      id: String(session.id),
+      userId: String(session.user_id),
+      token: String(session.token),
+      refreshToken: session.refresh_token as string | null,
+      expiresAt: String(session.expires_at),
+      createdAt: String(session.created_at),
+      lastActivity: String(session.last_activity ?? ''),
+      ipAddress: session.ip_address as string | null,
+      userAgent: session.user_agent as string | null
+    };
+  } catch (err) {
+    logger.error("Error fetching session by ID", err);
+    return null;
+  }
+}
+
+/**
  * Busca sessão por token
  */
 export async function getSessionByToken(token: string): Promise<AuthSession | null> {

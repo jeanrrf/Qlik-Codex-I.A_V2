@@ -9,7 +9,7 @@ import { logger } from "../lib/logger";
 import {
   verifyToken,
   getUserById,
-  getSessionByToken,
+  getSessionById,
   updateSessionActivity,
   verifyOwnerToken,
   ensureOwnerUser
@@ -98,12 +98,11 @@ export async function requireAuth(
 
     // Buscar sessão e verificar validade
     logger.debug("[AUTH] Buscando sessão no banco...", { sessionId: decoded.sessionId });
-    const session = await getSessionByToken(token);
+    const session = await getSessionById(decoded.sessionId);
     if (!session) {
       logger.warn("[AUTH] Sessão não encontrada no banco", {
         userId: decoded.userId,
-        sessionId: decoded.sessionId,
-        tokenPrefix: token.substring(0, 20)
+        sessionId: decoded.sessionId
       });
       res.status(401).json({
         error: "Session expired",
@@ -168,7 +167,7 @@ export async function optionalAuth(
 
     try {
       const decoded = verifyToken(token);
-      const session = await getSessionByToken(token);
+      const session = await getSessionById(decoded.sessionId);
 
       if (session) {
         const user = await getUserById(decoded.userId);
