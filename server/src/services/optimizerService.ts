@@ -28,6 +28,10 @@ export interface FullOptimizeResult extends OptimizeResult {
   consultancyDocument?: ConsultancyDocument;
   compactAuditReport?: CompactAuditReport; // NOVO: relatório compacto
   roiExecutiveSummary?: string;  // REVENUE FEATURE: ROI summary em texto
+  processedScript?: string;
+  truncationInfo?: SmartTruncationResult | null;
+  originalLineCount?: number;
+  processedLineCount?: number;
   analysisOnly?: {
     parsed: ParsedScript;
     qualityMetrics: ReturnType<typeof calculateQualityMetrics>;
@@ -54,15 +58,27 @@ async function runUltraExpertMode(
   script: string,
   llmOptions?: LLMOptions,
   generateConsultancy = true,
-  isTruncated = false,
-  abortSignal?: AbortSignal
+  truncationInfo: SmartTruncationResult | null = null,
+  abortSignal?: AbortSignal,
+  originalScript?: string
 ): Promise<FullOptimizeResult> {
   checkAborted(abortSignal, 'Ultra Expert mode start');
   logger.info("⚡ MODO ULTRA EXPERT - MEGA OPTIMIZER (Gemini 2.5 Flash Architecture)");
 
   // Instantiate the Mega Optimizer with AbortSignal support
   const optimizer = new QlikMegaOptimizer(script, { signal: abortSignal });
-  const originalLines = script.split(/\r?\n/).length;
+  const processedLines = script.split(/\r?\n/).length;
+  const originalLines = truncationInfo?.originalLines ?? processedLines;
+
+  if (truncationInfo?.wasTruncated) {
+    logger.warn(`✂️ Script truncado: ${originalLines - processedLines} linhas fora do processamento.`);
+    sseEmitter.sendSubStepProgress(
+      "FREE_TIER_GUARD",
+      "SCRIPT_TRUNCATED",
+      `Script truncado para ${processedLines}/${originalLines} linhas (FREE TIER).`,
+      "success"
+    );
+  }
 
   // Run deterministic parser for metadata
   const parsed = parseQlikScript(script);
@@ -76,8 +92,12 @@ async function runUltraExpertMode(
 
   // Map results to FullOptimizeResult
   return {
-    originalScript: script,
+    originalScript: originalScript ?? script,
     optimizedScript: megaResult.optimizedScript,
+    processedScript: script,
+    truncationInfo,
+    originalLineCount: originalLines,
+    processedLineCount: processedLines,
     summary: megaResult.report.executiveSummary || "Optimization completed successfully.",
     explanation: megaResult.report.technicalDetails || "See technical details.",
     documentationMarkdown: megaResult.report.technicalDetails || "",
@@ -86,6 +106,7 @@ async function runUltraExpertMode(
       breakingRisk: megaResult.plan.riskLevel as any,
       safeToApply: true,
       mode: 'ultra-expert',
+      notes: truncationInfo?.wasTruncated ? [truncationInfo.warningMessage] : undefined,
       metricsEstimate: {
         loadComplexityBefore: "medium",
         loadComplexityAfter: "low",
@@ -146,7 +167,7 @@ async function runUltraExpertMode(
       })),
       tips: [],
       fullDocumentation: megaResult.report.technicalDetails,
-      warnings: [],
+      warnings: truncationInfo?.wasTruncated ? [truncationInfo.warningMessage] : [],
       notes: []
     },
 
@@ -156,7 +177,7 @@ async function runUltraExpertMode(
       generatedAt: new Date().toISOString(),
       summary: megaResult.report.executiveSummary,
       metrics: {
-        linesOfCode: originalLines,
+        linesOfCode: processedLines,
         cyclomaticComplexity: 0,
         loadStatements: 0,
         joinStatements: 0,
@@ -254,11 +275,16 @@ export async function optimizeScript(
 
   // Debug: Log parâmetros recebidos
   const originalLines = script.split(/\r?\n/).length;
+  const estimatedTokens = Math.ceil(script.length / 4);
+  const freeTierLineLimit = lineLimit ?? 200;
+  const freeTierTokenLimit = freeTierLineLimit * 50; // limite aproximado baseado em tamanho médio de linha
   logger.debug("optimizeScript called", {
     mode: "FORCED_ULTRA_EXPERT",
     originalLines,
+    estimatedTokens,
     shouldTruncate,
-    lineLimit
+    lineLimit: freeTierLineLimit,
+    tokenLimit: freeTierTokenLimit
   });
 
   // Verifica cancelamento logo no início
@@ -270,15 +296,18 @@ export async function optimizeScript(
   let truncationInfo: SmartTruncationResult | null = null;
 
   // ✨ APLICAR TRUNCAMENTO INTELIGENTE SE NECESSÁRIO (FREE TIER)
-  if (shouldTruncate && lineLimit) {
-    logger.info(`🔒 FREE TIER: Aplicando limite de ${lineLimit} linhas com truncamento inteligente...`);
+  const enforceTruncation = shouldTruncate !== false;
+  const exceedsLimits = originalLines > freeTierLineLimit || estimatedTokens > freeTierTokenLimit;
 
-    truncationInfo = applySmartTruncation(script, lineLimit);
+  if (enforceTruncation && exceedsLimits) {
+    logger.info(`🔒 FREE TIER: Aplicando limite de ${freeTierLineLimit} linhas com truncamento inteligente...`);
+
+    truncationInfo = applySmartTruncation(script, freeTierLineLimit);
     finalScript = truncationInfo.truncatedScript;
 
     if (truncationInfo.wasTruncated) {
       logger.warn(truncationInfo.warningMessage);
-      logger.info(`✂️  Cortado em linha ${truncationInfo.actualLines} (${lineLimit} base + ${truncationInfo.extraLinesAdded} extras)`);
+      logger.info(`✂️  Cortado em linha ${truncationInfo.actualLines} (${freeTierLineLimit} base + ${truncationInfo.extraLinesAdded} extras)`);
 
       // Emite aviso via SSE
       sseEmitter.sendToCurrent({
@@ -291,8 +320,15 @@ export async function optimizeScript(
           message: truncationInfo.warningMessage
         }
       });
+
+      sseEmitter.sendSubStepProgress(
+        "FREE_TIER_GUARD",
+        "TRUNCATION_APPLIED",
+        `FREE TIER: ${truncationInfo.originalLines - truncationInfo.actualLines} linhas ficaram fora da otimização`,
+        "success"
+      );
     } else {
-      logger.info(`✓ Script dentro do limite (${truncationInfo.originalLines} linhas)`);
+      logger.info(`✓ Script dentro do limite (${truncationInfo.originalLines} linhas / ${estimatedTokens} tokens estimados)`);
     }
   }
 
@@ -301,10 +337,11 @@ export async function optimizeScript(
 
   // Always force Ultra Expert Mode for now as it is the new standard
   logger.info("MODO ULTRA EXPERT - Pipeline Avancado");
-  result = await runUltraExpertMode(finalScript, llmOptions, generateConsultancy, truncationInfo?.wasTruncated || false, abortSignal);
+  result = await runUltraExpertMode(finalScript, llmOptions, generateConsultancy, truncationInfo, abortSignal, script);
 
   if (truncationInfo?.wasTruncated) {
     result.summary = `${truncationInfo.warningMessage}\n\n${result.summary}`;
+    result.truncationInfo = truncationInfo;
   }
 
   return result;
