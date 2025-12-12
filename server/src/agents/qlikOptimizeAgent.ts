@@ -8,6 +8,7 @@ import { compactScriptForPrompt } from "../lib/promptCompactor";
 import { ProviderOrchestrator, createOrchestrator } from "../lib/providerOrchestrator";
 import { parseQlikScript } from "../lib/qlikParser";
 import { sseEmitter } from "../lib/sseEmitter";
+import { extractJsonFromText } from "../lib/structuredResponse";
 import type { OptimizationStepId } from "../types/optimization";
 import { AnalysisAndPlanSchema, CodeGenSchema, FinalDeliverySchema } from "../validators/megaOptimizerSchemas";
 
@@ -296,15 +297,12 @@ export class QlikOptimizeAgent {
 
         let parsedResult: Record<string, unknown> = {};
         try {
-          // Use robust extractor util (dynamic import - prefer extensionless to support ts/ts-node)
+          // Use robust extractor util
           let raw: unknown = undefined;
           try {
-            const mod = await import('../lib/structuredResponse.js');
-            if (mod && typeof mod.extractJsonFromText === 'function') {
-              raw = await (mod.extractJsonFromText as (t: string) => unknown)(responseText);
-            }
+            raw = extractJsonFromText(responseText);
           } catch (modErr) {
-            logger.warn('[MegaOptimizer] structuredResponse import failed, falling back to conservative JSON parse', { error: modErr });
+            logger.warn('[MegaOptimizer] structuredResponse extraction failed, falling back to conservative JSON parse', { error: modErr });
             try {
               raw = JSON.parse(responseText);
             } catch (_simpleErr) {

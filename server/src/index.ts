@@ -42,7 +42,6 @@ const webBuildPath = path.resolve(__dirname, "..", "..", "web", "dist");
 const indexHtmlPath = path.join(webBuildPath, "index.html");
 
 app.disable("x-powered-by");
-app.disable("x-powered-by");
 
 // Security Hardening
 app.use(helmet({
@@ -130,6 +129,16 @@ app.use("/api/analytics", analyticsRouter);
 app.use("/api/metrics", metricsRouter);
 
 if (config.serveStaticFrontend && fs.existsSync(webBuildPath)) {
+  logger.info(`Serving static frontend from: ${webBuildPath}`);
+
+  // Debug middleware for assets
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/assets')) {
+      logger.info(`[Static] Request for asset: ${req.path}`);
+    }
+    next();
+  });
+
   // Cache de assets estáticos (gratuito) - melhora performance
   app.use(
     express.static(webBuildPath, {
@@ -147,6 +156,11 @@ if (config.serveStaticFrontend && fs.existsSync(webBuildPath)) {
   app.get("*", (req, res, next) => {
     if (req.path.startsWith("/api")) {
       return next();
+    }
+
+    // Avoid serving index.html for missing assets to prevent MIME type mismatch errors
+    if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff2?|ttf|eot)$/)) {
+      return res.status(404).send("Asset not found");
     }
 
     if (!fs.existsSync(indexHtmlPath)) {

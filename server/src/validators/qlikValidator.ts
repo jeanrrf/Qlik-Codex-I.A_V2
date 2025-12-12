@@ -53,7 +53,6 @@ const NON_QLIK_FUNCTIONS = [
   { name: "def\\s+\\w+\\(", replacement: "Não é Qlik (Python) - use SUB...END SUB" },
   { name: "function\\s+\\w+\\(", replacement: "Não é Qlik (JavaScript) - use SUB...END SUB" },
   { name: "const\\s+\\w+\\s*=", replacement: "Não é Qlik (JavaScript) - use LET ou SET" },
-  { name: "let\\s+\\w+\\s*=", replacement: "Não é Qlik (JavaScript) - use LET (sem tipagem)" },
   { name: "var\\s+\\w+\\s*=", replacement: "Não é Qlik (JavaScript) - use LET ou SET" },
   { name: "import\\s+", replacement: "Não é Qlik (JS/Python) - não há imports, apenas LOAD/CALL" },
   { name: "require\\(", replacement: "Não é Qlik (Node.js) - não suportado" },
