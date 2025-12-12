@@ -21,6 +21,29 @@ import { UserRole } from "../types/auth";
 
 const router = Router();
 
+function resolveFrontendUrl(req: Request): string {
+  const fromEnv = process.env.FRONTEND_URL;
+  if (fromEnv) return fromEnv;
+
+  // Fallback: tentar deduzir do cabeçalho Origin/Referer para evitar redirecionar para localhost em produção
+  const originHeader = req.get("origin") || req.get("referer");
+  if (originHeader) {
+    try {
+      const originUrl = new URL(originHeader);
+      const inferred = `${originUrl.protocol}//${originUrl.host}`;
+      logger.warn("[AUTH] FRONTEND_URL não configurado - usando origem inferida", { inferred });
+      return inferred;
+    } catch {
+      logger.warn("[AUTH] Não foi possível inferir FRONTEND_URL a partir do cabeçalho", {
+        origin: originHeader
+      });
+    }
+  }
+
+  // Último recurso: manter fallback de desenvolvimento
+  return "http://localhost:5173";
+}
+
 function getAuthCookieOptions(expiresInSeconds: number): CookieOptions {
   const isProduction = process.env.NODE_ENV === "production";
 
@@ -105,12 +128,12 @@ router.get(
       res.cookie("auth_token", tokens.accessToken, getAuthCookieOptions(tokens.expiresIn));
 
       // Redirecionar para frontend com sucesso (incluindo token para fallback de localStorage)
-      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+      const frontendUrl = resolveFrontendUrl(req);
       res.redirect(`${frontendUrl}/auth/callback?success=true&token=${tokens.accessToken}`);
     } catch (err) {
       logger.error("Google OAuth callback error", err);
 
-      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+      const frontendUrl = resolveFrontendUrl(req);
       res.redirect(`${frontendUrl}/auth/callback?error=auth_failed`);
     }
   })
