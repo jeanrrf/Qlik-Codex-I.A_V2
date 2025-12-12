@@ -83,11 +83,39 @@ async function generate(prompt: string, options?: ProviderCallOptions): Promise<
     throw new Error("Google provider returned empty text");
   }
 
+  // CAPTURE USAGE METADATA (tokens consumidos)
+  const usage = response.usageMetadata;
+  const tokensConsumed = usage
+    ? {
+      promptTokens: usage.promptTokenCount || 0,
+      completionTokens: usage.candidatesTokenCount || 0,
+      totalTokens: usage.totalTokenCount || 0
+    }
+    : undefined;
+
+  // CAPTURE THINKING CONTENT (Gemini 2.5 Flash Thinking Mode)
+  let thinkingContent: string | undefined;
+  const firstCandidate = response.candidates?.[0];
+  if (firstCandidate?.content?.parts) {
+    const thinkingPart = firstCandidate.content.parts.find((p: unknown) => {
+      if (typeof p === 'object' && p !== null && 'thought' in p) {
+        const part = p as Record<string, unknown>;
+        return typeof part.thought === 'boolean' && part.thought === true && typeof part.text === 'string';
+      }
+      return false;
+    });
+    if (thinkingPart && typeof thinkingPart === 'object' && 'text' in thinkingPart) {
+      thinkingContent = String((thinkingPart as Record<string, unknown>).text);
+    }
+  }
+
   return {
     text: response.text,
     provider: "google",
     metadata: {
-      model: modelToUse
+      model: modelToUse,
+      tokensConsumed,
+      thinkingContent
     }
   };
 }

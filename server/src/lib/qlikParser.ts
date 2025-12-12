@@ -259,6 +259,13 @@ export function parseQlikScript(script: string): ParsedScript {
   };
 }
 
+export function buildParserSummary(parsed: ParsedScript): string {
+  const tableCount = parsed.tables?.length || 0;
+  const joinCount = parsed.joins?.length || 0;
+  const anti = parsed.antiPatterns?.slice(0, 5).map(a => `${a.type}(${a.severity})@${a.line}`).join("; ") || "-";
+  return `Tabelas:${tableCount} Joins:${joinCount} AntiPatterns:${anti}`;
+}
+
 /**
  * Detecta chaves sintéticas potenciais
  */

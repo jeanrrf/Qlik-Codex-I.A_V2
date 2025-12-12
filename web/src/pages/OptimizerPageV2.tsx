@@ -1022,6 +1022,25 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
                             </div>
                           </div>
 
+                          {/* NEW: Metadata badges (tokens, duration, provider) */}
+                          <div className="card-metadata-row">
+                            {stage.tokensConsumed && stage.tokensConsumed.totalTokens > 0 && (
+                              <span className="metadata-badge tokens" title={`Prompt: ${stage.tokensConsumed.promptTokens.toLocaleString()} | Completion: ${stage.tokensConsumed.completionTokens.toLocaleString()}`}>
+                                🪙 {stage.tokensConsumed.totalTokens.toLocaleString()}
+                              </span>
+                            )}
+                            {cardDuration > 0 && (
+                              <span className="metadata-badge duration" title="Tempo decorrido">
+                                ⏱️ {durationLabel}
+                              </span>
+                            )}
+                            {stage.provider && stage.model && (
+                              <span className="metadata-badge provider" title="Provider / Model">
+                                🤖 {stage.provider}/{stage.model}
+                              </span>
+                            )}
+                          </div>
+
                           {isActive && <div className="card-glow-pulse" style={{ borderColor: color }} />}
                         </summary>
 
@@ -1112,6 +1131,19 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
                             ) : (
                               <div className="card-empty-text">Nenhuma tarefa listada para esta etapa.</div>
                             )
+                          )}
+
+                          {/* NEW: Thinking Content Display (Gemini 2.5 Flash Thinking Mode) */}
+                          {stage.thinkingContent && (
+                            <details className="thinking-section">
+                              <summary className="thinking-summary">
+                                <span className="thinking-icon">💭</span>
+                                <span className="thinking-label">Ver raciocínio do modelo (Thinking Mode)</span>
+                              </summary>
+                              <div className="thinking-content">
+                                <pre>{stage.thinkingContent}</pre>
+                              </div>
+                            </details>
                           )}
                         </div>
                       </details>

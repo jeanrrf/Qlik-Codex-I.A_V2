@@ -171,6 +171,7 @@ export interface ProviderAttempt {
   success: boolean;
   error?: string;
   duration: number;
+  metadata?: Record<string, unknown>; // ADDED: capture tokens, thinking, etc
 }
 
 export interface OptimizationProgress {

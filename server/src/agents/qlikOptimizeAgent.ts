@@ -1,31 +1,208 @@
 import { createHash } from "crypto";
 
-import { ZodSchema } from "zod";
+import { z, ZodSchema } from "zod";
 
 import { config } from "../lib/config";
 import { logger } from "../lib/logger";
 import { compactScriptForPrompt } from "../lib/promptCompactor";
 import { ProviderOrchestrator, createOrchestrator } from "../lib/providerOrchestrator";
-import { parseQlikScript } from "../lib/qlikParser";
+import { parseQlikScript, buildParserSummary } from "../lib/qlikParser";
 import { sseEmitter } from "../lib/sseEmitter";
 import { extractJsonFromText } from "../lib/structuredResponse";
 import type { OptimizationStepId } from "../types/optimization";
-import { AnalysisAndPlanSchema, CodeGenSchema, FinalDeliverySchema } from "../validators/megaOptimizerSchemas";
 
-import { buildMegaPrompt, buildParserSummary, MegaTaskId } from "./promptPlan";
 import { QlikGranularOptimizer } from "./qlikGranularOptimizer";
+
+// --- SCHEMAS (Merged from megaOptimizerSchemas.ts) ---
+
+export const DeepAnalysisSchema = z.object({
+  structuralScore: z.number().min(0).max(100).describe("Score de 0 a 100 da estrutura do script"),
+  complexity: z.enum(["Low", "Medium", "High", "Extreme"]).describe("Nível de complexidade geral"),
+  bottlenecks: z.array(z.object({
+    severity: z.enum(["Critical", "High", "Medium", "Low"]),
+    description: z.string(),
+    location: z.string().optional()
+  })).describe("Lista de gargalos de performance identificados"),
+  dataModelRisks: z.array(z.string()).describe("Riscos ao modelo de dados (chaves sintéticas, loops, etc)"),
+  optimizationOpportunities: z.array(z.string()).describe("Oportunidades de otimização (QVDs, Autonumber, etc)"),
+  analysisSummary: z.string().describe("Resumo executivo da análise técnica")
+});
+
+export const StrategicPlanSchema = z.object({
+  strategyName: z.string().describe("Nome da estratégia de otimização adotada"),
+  riskLevel: z.enum(["Low", "Medium", "High"]).describe("Risco geral da aplicação do plano"),
+  planSteps: z.array(z.object({
+    step: z.number(),
+    title: z.string(),
+    details: z.string(),
+    targetBottleneck: z.string().optional().describe("Qual gargalo identificado isso resolve"),
+    estimatedEffort: z.enum(["Low", "Medium", "High"])
+  })).describe("Passos sequenciais do plano de refatoração"),
+  estimatedImprovement: z.object({
+    loadTimeReduction: z.string().describe("Estimativa de redução de tempo de carga (ex: '30%')"),
+    ramUsageReduction: z.string().describe("Estimativa de redução de RAM (ex: '20%')"),
+    maintainabilityScoreAfter: z.number().min(0).max(100).describe("Score de manutenibilidade projetado")
+  })
+});
+
+export const AnalysisAndPlanSchema = z.object({
+  analysis: DeepAnalysisSchema,
+  plan: StrategicPlanSchema
+});
+
+export const CodeGenSchema = z.object({
+  optimizedScript: z.string().describe("The full, executable Qlik Load Script with optimizations applied"),
+  changesApplied: z.array(z.object({
+    category: z.enum(["performance", "readability", "cleanup", "structure", "model_integrity", "maintainability", "security", "logic"]).describe("Category of the change"),
+    area: z.string().describe("Description of what was changed"),
+    impact: z.string().describe("Impact of the change (e.g., 'High performance gain')"),
+    riskLevel: z.enum(["none", "low", "medium", "high"]).describe("Risk level of this change")
+  })).describe("List of specific changes made to the script"),
+  completenessCheck: z.boolean().describe("True if the script is complete and not truncated")
+});
+
+export const FinalDeliverySchema = z.object({
+  validation: z.object({
+    isValid: z.boolean(),
+    issuesFound: z.array(z.string()).max(4).describe("Max 4 critical issues"),
+    safetyScore: z.number()
+  }),
+  documentation: z.object({
+    title: z.string(),
+    diagramMermaid: z.string().describe("Concise Mermaid ER diagram")
+  }),
+  report: z.object({
+    executiveSummary: z.string().max(600).describe("Max 600 chars"),
+    achievedImprovements: z.array(z.string()).max(4).describe("Top 4 improvements"),
+    deploymentChecklist: z.array(z.string()).max(4).describe("Top 4 deploy steps")
+  })
+});
+
+// --- PROMPT PLAN (Merged from promptPlan.ts) ---
+
+export type MegaTaskId = "ANALYSIS_AND_PLAN" | "CODE_GEN" | "FINAL_DELIVERY";
+
+const PERSONA = `Você é o AINEX PRO OPTIMIZER (Qlik Sense), nível sênior.
+Objetivo: otimizar script de carga com máximo desempenho, integridade do modelo e manutenibilidade, em PT-BR, preservando a lógica de negócio.`;
+
+const NEGATIVE_RULES = [
+  "Proibido DDL/DML SQL (CREATE/ALTER/INSERT/UPDATE/DELETE).",
+  "Proibido JOIN dentro de FROM (sintaxe SQL) — use prefixo JOIN em LOAD.",
+  "Não gerar código em Markdown/HTML; saída deve ser texto puro.",
+  "Não alucinar funções não-Qlik (DATEDIFF, GETDATE, CASE WHEN etc.).",
+  "Não usar Set Analysis '{<...>}' no script de carga.",
+  "Sempre preservar nomes de tabelas/chaves; não dropar campos-chave.",
+  "Evitar SELECT * / LOAD *; prefira lista explícita de campos.",
+  "Garantir DROP de tabelas temporárias usadas em RESIDENT/geração intermediária."
+];
+
+const TASK_TEMPLATES: Record<MegaTaskId, string> = {
+  ANALYSIS_AND_PLAN: `TAREFA: ANÁLISE + PLANO (uma única resposta JSON)
+- Audite estrutura (tabelas, joins, riscos: chave sintética, referência circular, cartesiano, LOAD *).
+- Ache gargalos de performance (JOIN sem chave, RESIDENT em cascata, WHERE ausente).
+- Crie plano priorizado (Impacto vs Esforço) com 5-8 passos máximos.
+Limites de saída: máximo 6 bottlenecks, máximo 6 oportunidades, texto total <= 2800 caracteres.
+Formato JSON (sem markdown, sem comentários):
+{
+  "analysis": {
+    "structuralScore": number,
+    "complexity": "Low"|"Medium"|"High"|"Extreme",
+    "bottlenecks": [{ "severity": "Critical"|"High"|"Medium"|"Low", "description": string, "location": string }],
+    "dataModelRisks": string[],
+    "optimizationOpportunities": string[],
+    "analysisSummary": string
+  },
+  "plan": {
+    "strategyName": string,
+    "riskLevel": "Low"|"Medium"|"High",
+    "planSteps": [{ "step": number, "title": string, "details": string, "targetBottleneck": string, "estimatedEffort": "Low"|"Medium"|"High" }],
+    "estimatedImprovement": { "loadTimeReduction": string, "ramUsageReduction": string, "maintainabilityScoreAfter": number }
+  }
+}`,
+  CODE_GEN: `TAREFA: CODE GEN (aplicar plano, preservar lógica)
+- Otimize sem mudar regras de negócio.
+- Use nomenclatura consistente; alinhar AS; remover SELECT/LOAD *; garantir DROP de temporárias.
+- Limites de saída: changesApplied no máximo 8 itens; resposta total <= 2800 caracteres; sem markdown/HTML.
+- Saída deve ser JSON (texto puro, sem markdown):
+{
+  "optimizedScript": "SCRIPT_OTIMIZADO_EM_TEXTO_PURO",
+  "changesApplied": [
+    {
+      "category": "performance" | "readability" | "cleanup" | "structure" | "model_integrity" | "maintainability" | "security" | "logic",
+      "area": "Descrição concisa da área otimizada (ex: joins, RESIDENT, QVD)",
+      "impact": "Impacto da mudança (ex: redução de tempo de carga)",
+      "riskLevel": "low"
+    }
+  ],
+  "completenessCheck": true
+}`,
+  FINAL_DELIVERY: `TAREFA: VALIDAÇÃO + DOC FINAL (JSON conciso)
+- Validar sintaxe (DDL/DML proibido).
+- Doc ER (Mermaid), checklist deploy.
+- Limites: máx 4 issues, 4 checklist items; total <= 1200 chars.
+JSON:
+{
+  "validation": { "isValid": bool, "issuesFound": string[], "safetyScore": number },
+  "documentation": { "title": string, "diagramMermaid": string },
+  "report": { "executiveSummary": string, "achievedImprovements": string[], "deploymentChecklist": string[] }
+}
+`
+};
+
+function buildNegativeSection(): string {
+  return NEGATIVE_RULES.map((r, i) => `${i + 1}. ${r}`).join("\n");
+}
+
+function buildMegaPrompt(task: MegaTaskId, script: string, parserSummary: string, history?: string): string {
+  const taskTemplate = TASK_TEMPLATES[task];
+  const historyBlock = history ? `\n--- HISTÓRICO (Resumo) ---\n${history}\n` : "";
+
+  return `
+${PERSONA}
+
+--- GUARDRAILS (NÃO VIOLAR) ---
+${buildNegativeSection()}
+
+--- CONTEXTO ESTRUTURADO ---
+Parser: ${parserSummary}
+${historyBlock}
+--- SCRIPT ORIGINAL (compactado para economia de tokens) ---
+${script}
+
+--- INSTRUÇÕES DA TAREFA ---
+${taskTemplate}
+
+--- FORMATO OBRIGATÓRIO ---
+- Responder somente o JSON especificado, texto puro, sem markdown/HTML nem fences.
+- Limitar listas a no máximo 8 itens e resposta total a ~2800 caracteres.
+- Se nenhuma mudança for necessária, devolver campos coerentes indicando ausência de alterações.
+- Manter quebras de linha e indentação do script dentro do campo optimizedScript quando aplicável.
+`;
+}
+
+// --- AGENT LOGIC ---
+
 // Performance constants
 const MAX_HISTORY_TOKENS = 500; // Limite de chars para resumo do histórico
 const ANALYSIS_CACHE = new Map<string, { result: Record<string, unknown>; timestamp: number }>();
 const ANALYSIS_CACHE_TTL = 1800000; // 30 minutos
 const ANALYSIS_CACHE_MAX_SIZE = 50;
 
-// Task timeout configuration (in ms) - Otimizado para Kimi K2 + Gemini 2.5
-const TASK_TIMEOUTS: Record<string, number> = {
-  ANALYSIS_AND_PLAN: 150000,  // 2.5 min - análise completa com reasoning
-  CODE_GEN: 120000,            // 2 min - geração de código
-  FINAL_DELIVERY: 90000       // 1.5 min - documentação final
+// Task timeout configuration (in ms) - DYNAMIC based on script size
+// Formula: baseTimeout + (lineCount * lineMultiplier)
+// For 1146 lines: 180s + (1146 * 0.15) ≈ 352s (~6 min) for CODE_GEN
+const TIMEOUT_CONFIG = {
+  ANALYSIS_AND_PLAN: { base: 120000, perLine: 100, min: 90000, max: 480000 },   // 2-8 min
+  CODE_GEN: { base: 180000, perLine: 150, min: 120000, max: 600000 },          // 3-10 min  
+  FINAL_DELIVERY: { base: 60000, perLine: 50, min: 45000, max: 180000 }        // 1-3 min
 };
+
+function calculateDynamicTimeout(task: MegaTaskId, scriptLineCount: number): number {
+  const config = TIMEOUT_CONFIG[task];
+  if (!config) return 120000; // fallback 2 min
+  const computed = config.base + (scriptLineCount * config.perLine);
+  return Math.max(config.min, Math.min(config.max, computed));
+}
 const MAX_TASK_RETRIES = 3;
 const RETRYABLE_TASK_ERROR_PATTERNS = [
   /timeout/i,
@@ -230,7 +407,11 @@ export class QlikOptimizeAgent {
       logger.info(`[MegaOptimizer] Prompt size after trimming: ${estimatedTokens} tokens`, { taskName });
     }
 
-    const timeout = TASK_TIMEOUTS[taskName] || 90000;
+    // DYNAMIC TIMEOUT based on script size
+    const scriptLineCount = this.script.split(/\r?\n/).length;
+    const timeout = calculateDynamicTimeout(taskName, scriptLineCount);
+    logger.info(`[MegaOptimizer] Dynamic timeout for ${taskName}: ${timeout}ms (${scriptLineCount} lines)`, { scriptLineCount, timeout });
+
     const stepId = `mega_${taskName.toLowerCase()}` as OptimizationStepId;
     let lastError: unknown = null;
 
@@ -286,14 +467,41 @@ export class QlikOptimizeAgent {
         const responseText = orchestratorResult.result;
         const successfulProvider = orchestratorResult.attempts.find(a => a.success);
 
+        // CAPTURE METADATA (tokens, thinking)
+        const metadata = successfulProvider?.metadata;
+        const tokensConsumed = metadata?.tokensConsumed as { promptTokens: number; completionTokens: number; totalTokens: number } | undefined;
+        const thinkingContent = metadata?.thinkingContent as string | undefined;
+
         logger.info(`[MegaOptimizer] <<< RECEIVED [${taskName}] via Orchestrator`, {
           responseSizeChars: responseText.length,
           provider: successfulProvider?.provider || 'unknown',
           model: successfulProvider?.model || 'unknown',
           attempts: orchestratorResult.attempts.length,
+          tokensConsumed,
+          hasThinking: Boolean(thinkingContent),
           receivedAt: new Date().toISOString(),
           attempt
         });
+
+        // EMIT TOKEN USAGE via SSE
+        if (tokensConsumed) {
+          sseEmitter.sendToCurrent({
+            type: "token_usage",
+            taskName,
+            provider: successfulProvider?.provider || 'unknown',
+            model: successfulProvider?.model || 'unknown',
+            tokensConsumed
+          });
+        }
+
+        // EMIT THINKING CONTENT via SSE (if Gemini 2.5 Flash Thinking Mode is enabled)
+        if (thinkingContent) {
+          sseEmitter.sendToCurrent({
+            type: "thinking",
+            taskName,
+            thinkingContent
+          });
+        }
 
         let parsedResult: Record<string, unknown> = {};
         try {

@@ -31,6 +31,7 @@ export interface ProviderAttemptResult {
   error?: string;
   duration: number;
   timedOut: boolean;
+  metadata?: Record<string, unknown>; // ADDED: capture tokens, thinking, etc
 }
 
 export class ProviderOrchestrator {
@@ -178,7 +179,8 @@ export class ProviderOrchestrator {
           timestamp: new Date(),
           success: attemptResult.success,
           error: attemptResult.error,
-          duration: attemptResult.duration
+          duration: attemptResult.duration,
+          metadata: attemptResult.metadata // PROPAGATE metadata
         };
 
         stepAttempts.push(attempt);
@@ -372,7 +374,8 @@ export class ProviderOrchestrator {
         provider: providerName,
         model: (result.metadata?.model as string) || modelOverride || "unknown",
         duration,
-        timedOut: false
+        timedOut: false,
+        metadata: result.metadata // PROPAGATE metadata (tokens, thinking)
       };
     } catch (error) {
       const duration = Date.now() - startTime;

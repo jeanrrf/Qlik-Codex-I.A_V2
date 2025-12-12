@@ -35,6 +35,12 @@ export interface OptimizationStage {
 
   currentRunningTime?: number; // Tempo em tempo real da tarefa em execução
 
+  // NOVOS: Metadados de LLM
+  tokensConsumed?: { promptTokens: number; completionTokens: number; totalTokens: number };
+  thinkingContent?: string; // Gemini 2.5 Flash Thinking Mode
+  provider?: string;
+  model?: string;
+
 }
 
 
@@ -722,6 +728,42 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
                 ...prev,
                 errorMessage: providerMsg
               }));
+
+            } else if (event.type === 'token_usage') {
+              // NOVO: Captura tokens consumidos e propaga para a UI
+              console.log('[SSE Frontend] Received token_usage:', event);
+              setProgress(prev => {
+                const newStages = prev.stages.map(stage => {
+                  const stageId = event.taskName; // e.g., "CODE_GEN"
+                  if (stage.id === stageId || (stage.subSteps && stage.subSteps.some(s => s.id.includes(stageId)))) {
+                    return {
+                      ...stage,
+                      tokensConsumed: event.tokensConsumed,
+                      provider: event.provider,
+                      model: event.model
+                    };
+                  }
+                  return stage;
+                });
+                return { ...prev, stages: newStages };
+              });
+
+            } else if (event.type === 'thinking') {
+              // NOVO: Captura thinking content do Gemini 2.5 Flash Thinking Mode
+              console.log('[SSE Frontend] Received thinking:', event.taskName, event.thinkingContent?.substring(0, 100) + '...');
+              setProgress(prev => {
+                const newStages = prev.stages.map(stage => {
+                  const stageId = event.taskName;
+                  if (stage.id === stageId || (stage.subSteps && stage.subSteps.some(s => s.id.includes(stageId)))) {
+                    return {
+                      ...stage,
+                      thinkingContent: event.thinkingContent
+                    };
+                  }
+                  return stage;
+                });
+                return { ...prev, stages: newStages };
+              });
 
             } else if (event.type === 'substep') {
 
