@@ -262,7 +262,7 @@ async function runUltraExpertMode(
  * MODO NVIDIA FAST: Refatoração direta (apenas código)
  * Envia contexto completo em uma única chamada e retorna somente o script otimizado.
  */
-const NVIDIA_FAST_MAX_RETRIES = 2;
+const NVIDIA_FAST_MAX_RETRIES = 1; // Reduzido de 2 para 1 para evitar lentidão
 async function runNvidiaFastMode(
   script: string,
   llmOptions?: LLMOptions,

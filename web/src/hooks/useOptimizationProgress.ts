@@ -132,9 +132,8 @@ const INITIAL_STAGES: OptimizationStage[] = ULTRA_EXPERT_STAGES;
 
 
 
-// Timeout de 3 minutos por tarefa (em milissegundos)
-
-const TASK_TIMEOUT_MS = 5 * 60 * 1000; // 300000ms = 5 minutos
+// Timeout de 4 minutos por tarefa (em milissegundos) - Reduzido para ser mais agressivo
+const TASK_TIMEOUT_MS = 4 * 60 * 1000; // 240000ms = 4 minutos
 
 
 
@@ -513,7 +512,8 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
     abortRef.current = new AbortController();
 
-    // Global Timeout Safeguard (15 min) — abort and fail fast, no auto-restarts
+    // Global Timeout Safeguard (10 min) — abort and fail fast, no auto-restarts
+    // Reduzido de 15 para 10 minutos para evitar processos órfãos
     const globalTimeoutId = setTimeout(() => {
       console.warn("[GLOBAL TIMEOUT] Tempo limite global excedido.");
 
@@ -522,10 +522,10 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
         clearInterval(intervalRef.current);
       }
 
-      setError("Tempo limite global excedido (15 min). A operação foi cancelada.");
-      setProgress(prev => ({ ...prev, status: "error", errorMessage: "Tempo limite global excedido (15 min)." }));
+      setError("Tempo limite global excedido (10 min). A operação foi cancelada.");
+      setProgress(prev => ({ ...prev, status: "error", errorMessage: "Tempo limite global excedido (10 min)." }));
       setIsRunning(false);
-    }, 15 * 60 * 1000);
+    }, 10 * 60 * 1000); // 10 minutos
 
     // Inicia com as stages corretas para este modo
 
@@ -743,7 +743,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
 
 
-                // Configura timeout de 3 minutos para esta tarefa (sem auto-restart)
+                // Configura timeout de 4 minutos para esta tarefa (sem auto-restart)
                 const timeoutId = setTimeout(() => {
                   console.warn(`[TIMEOUT] Tarefa ${taskId} excedeu ${TASK_TIMEOUT_MS / 1000}s!`);
 
@@ -755,7 +755,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
                   }
                   clearTimeout(globalTimeoutId);
 
-                  setError('Timeout: Tarefa excedeu 3 minutos');
+                  setError(`Timeout: Tarefa excedeu ${TASK_TIMEOUT_MS / 1000 / 60} minutos`);
 
                   setProgress(prev => {
 
@@ -777,7 +777,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
                         status: 'timeout' as const,
 
-                        error: 'Timeout: Tarefa excedeu 3 minutos',
+                        error: `Timeout: Tarefa excedeu ${TASK_TIMEOUT_MS / 1000 / 60} minutos`,
 
                         duration: TASK_TIMEOUT_MS,
 
@@ -799,7 +799,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
                     });
 
-                    return { ...prev, stages: newStages, status: 'error' as const, errorMessage: 'Timeout: Tarefa excedeu 3 minutos' };
+                    return { ...prev, stages: newStages, status: 'error' as const, errorMessage: `Timeout: Tarefa excedeu ${TASK_TIMEOUT_MS / 1000 / 60} minutos` };
 
                   });
 
