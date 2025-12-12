@@ -25,8 +25,19 @@ function resolveFrontendUrl(req: Request): string {
   const fromEnv = process.env.FRONTEND_URL;
   if (fromEnv) return fromEnv;
 
-  // Fallback: tentar deduzir do cabeçalho Origin/Referer para evitar redirecionar para localhost em produção
-  const originHeader = req.get("origin") || req.get("referer");
+  // Prefer host information from the incoming request to avoid leaking tokens to third-party referers
+  const forwardedProto = req.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  const forwardedHost = req.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const host = forwardedHost || req.get("host");
+  if (host) {
+    const protocol = forwardedProto || req.protocol || "http";
+    const inferred = `${protocol}://${host}`;
+    logger.warn("[AUTH] FRONTEND_URL não configurado - usando host da requisição", { inferred });
+    return inferred;
+  }
+
+  // Fallback: tentar deduzir do cabeçalho Origin (mas nunca Referer, que pode apontar para o IdP)
+  const originHeader = req.get("origin");
   if (originHeader) {
     try {
       const originUrl = new URL(originHeader);
