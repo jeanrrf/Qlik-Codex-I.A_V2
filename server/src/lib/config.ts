@@ -124,7 +124,7 @@ export const config = {
   analyticsEnabled: (process.env.ANALYTICS_ENABLED || 'false').toLowerCase() === 'true',
 
   // Prompt token safety budget (characters/4 ≈ tokens)
-  maxPromptTokens: Number(process.env.MAX_PROMPT_TOKENS ?? '50000'),
+  maxPromptTokens: Number(process.env.MAX_PROMPT_TOKENS ?? '40000'),
 
 
   // Optimization thresholds for LLM prompts

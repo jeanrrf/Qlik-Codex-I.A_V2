@@ -82,18 +82,18 @@ export const FinalDeliverySchema = z.object({
 
 export type MegaTaskId = "ANALYSIS_AND_PLAN" | "CODE_GEN" | "FINAL_DELIVERY";
 
-const PERSONA = `Você é o AINEX PRO OPTIMIZER (Qlik Sense), nível sênior.
-Objetivo: otimizar script de carga com máximo desempenho, integridade do modelo e manutenibilidade, em PT-BR, preservando a lógica de negócio.`;
+const PERSONA = `Você é o AINEX PRO OPTIMIZER (Qlik Sense), sênior.
+Objetivo: otimizar script de carga com alta performance e integridade, em PT-BR, preservando a lógica de negócio.`;
 
 const NEGATIVE_RULES = [
   "Proibido DDL/DML SQL (CREATE/ALTER/INSERT/UPDATE/DELETE).",
-  "Proibido JOIN dentro de FROM (sintaxe SQL) — use prefixo JOIN em LOAD.",
-  "Não gerar código em Markdown/HTML; saída deve ser texto puro.",
-  "Não alucinar funções não-Qlik (DATEDIFF, GETDATE, CASE WHEN etc.).",
-  "Não usar Set Analysis '{<...>}' no script de carga.",
-  "Sempre preservar nomes de tabelas/chaves; não dropar campos-chave.",
-  "Evitar SELECT * / LOAD *; prefira lista explícita de campos.",
-  "Garantir DROP de tabelas temporárias usadas em RESIDENT/geração intermediária."
+  "Não use JOIN dentro de FROM (SQL); use JOIN prefixado em LOAD.",
+  "Saída sempre texto puro JSON (sem Markdown/HTML).",
+  "Não invente funções não-Qlik (DATEDIFF, GETDATE, CASE WHEN etc.).",
+  "Sem Set Analysis '{<...>}' no script de carga.",
+  "Preserve nomes de tabelas/chaves; não drope campos-chave.",
+  "Evite SELECT */LOAD * — use campos explícitos.",
+  "Dê DROP em temporárias usadas em RESIDENT/intermediárias."
 ];
 
 const TASK_TEMPLATES: Record<MegaTaskId, string> = {
@@ -183,7 +183,7 @@ ${taskTemplate}
 // --- AGENT LOGIC ---
 
 // Performance constants
-const MAX_HISTORY_TOKENS = 500; // Limite de chars para resumo do histórico
+const MAX_HISTORY_TOKENS = 300; // Limite de chars para resumo do histórico (encurta prompt)
 const ANALYSIS_CACHE = new Map<string, { result: Record<string, unknown>; timestamp: number }>();
 const ANALYSIS_CACHE_TTL = 1800000; // 30 minutos
 const ANALYSIS_CACHE_MAX_SIZE = 50;
@@ -265,8 +265,8 @@ export class QlikOptimizeAgent {
 
     // Cria orquestrador com configuração otimizada para MegaOptimizer + Kimi K2
     this.orchestrator = createOrchestrator({
-      maxAttemptsPerStep: 4,
-      providerOrder: ["google", "nvidia"],  // Gemini primeiro, Kimi K2 como fallback
+      maxAttemptsPerStep: 3,
+      providerOrder: ["google", "nvidia"],  // Gemini primeiro, NVIDIA fallback
       neverRetryProvider: true,
       timeoutPerStep: 120000,  // 2 min default por step
       globalTimeout: 420000   // 7 min total (scripts grandes)

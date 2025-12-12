@@ -64,6 +64,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
         console.log("✅ [AuthContext] Estado atualizado - usuário autenticado");
       } else {
         console.log("❌ [AuthContext] Usuário não autenticado");
+        try {
+          localStorage.removeItem(ACCESS_TOKEN_KEY);
+        } catch {
+          // ignore storage errors
+        }
         setState({
           user: null,
           isAuthenticated: false,
@@ -74,6 +79,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     } catch (err) {
       console.error("❌ [AuthContext] Erro na inicialização:", err);
+      try {
+        localStorage.removeItem(ACCESS_TOKEN_KEY);
+      } catch {
+        // ignore storage errors
+      }
       setState({
         user: null,
         isAuthenticated: false,

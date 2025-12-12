@@ -7,8 +7,8 @@ export interface SubStepExecution {
   name: string;
   description?: string;
   status: "pending" | "running" | "success" | "error" | "timeout";
-  startTime?: string;
-  endTime?: string;
+  startTime?: number | string; // Timestamp em ms ou ISO string
+  endTime?: number | string;   // Timestamp em ms ou ISO string
   duration?: number;
   error?: string;
   currentRunningTime?: number; // Tempo em tempo real da tarefa em execução (ms)

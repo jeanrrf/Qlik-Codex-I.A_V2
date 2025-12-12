@@ -5,73 +5,24 @@ import { OptimizeScriptApiResponse, OptimizeMode, LLMProviderName } from "../typ
 import { SubStepExecution } from "../types/api";
 import { useAuth } from "../contexts/AuthContext";
 
-
+// Importar tipos centralizados do pipeline
+import {
+  PipelineStage,
+  PipelineProgress,
+  TASK_TIMEOUT_MS,
+  getStagesForMode as getStagesFromPipeline,
+  resetStagesToPending as resetStagesFromPipeline,
+  calculateOverallProgress as calcProgressFromPipeline,
+  calculateStageStatus as calcStatusFromPipeline,
+} from '../types/pipeline';
 
 // Importar tipos dos componentes de progresso
 
 import type { ScriptAnalysisData } from '../components/ScriptAnalysisInfo';
 
-
-
-export interface OptimizationStage {
-
-  id: string;
-
-  name: string;
-
-  status: "pending" | "running" | "success" | "error" | "skipped" | "timeout";
-
-  startTime?: number;
-
-  endTime?: number;
-
-  message?: string;
-
-  duration?: number;
-
-  subSteps?: SubStepExecution[];
-
-  visible?: boolean; // Nova propriedade para controlar visibilidade
-
-  currentRunningTime?: number; // Tempo em tempo real da tarefa em execução
-
-  // NOVOS: Metadados de LLM
-  tokensConsumed?: { promptTokens: number; completionTokens: number; totalTokens: number };
-  thinkingContent?: string; // Gemini 2.5 Flash Thinking Mode
-  provider?: string;
-  model?: string;
-
-}
-
-
-
-export interface OptimizationProgress {
-
-  /** Etapas do processo */
-
-  stages: OptimizationStage[];
-
-  /** Progresso geral (0-100) */
-
-  overallProgress: number;
-
-  /** Etapa atual */
-
-  currentStageIndex: number;
-
-  /** Tempo total decorrido em ms */
-
-  elapsedTime: number;
-
-  /** Status geral */
-
-  status: "idle" | "running" | "success" | "error";
-
-  /** Mensagem de erro, se houver */
-
-  errorMessage?: string;
-
-}
+// Re-export tipos para retrocompatibilidade
+export type OptimizationStage = PipelineStage;
+export type OptimizationProgress = PipelineProgress;
 
 
 
@@ -87,123 +38,14 @@ interface OptimizationOptions {
 
 }
 
+// Usar funções centralizadas do pipeline
+const getStagesForMode = getStagesFromPipeline;
+const resetStagesToPending = resetStagesFromPipeline;
+const calculateOverallProgress = calcProgressFromPipeline;
+const calculateStageStatus = calcStatusFromPipeline;
 
-
-// Sub-steps para modo ULTRA EXPERT (opt_*)
-const ULTRA_EXPERT_STAGES: OptimizationStage[] = [
-  {
-    id: "ANALYSIS_AND_PLAN",
-    name: "Analysis & Strategy (Fusion)",
-    status: "pending",
-    visible: true,
-    subSteps: [
-      { id: "DEEP_ANALYSIS", name: "Deep Analysis", status: "pending" },
-      { id: "STRATEGIC_PLAN", name: "Strategic Planning", status: "pending" }
-    ]
-  },
-  {
-    id: "CODE_GEN",
-    name: "Code Generation",
-    status: "pending",
-    visible: true,
-    subSteps: [
-      { id: "CODE_GEN", name: "Generating Optimized Qlik Script", status: "pending" }
-    ]
-  },
-  {
-    id: "FINAL_DELIVERY",
-    name: "Final Delivery & Report",
-    status: "pending",
-    visible: true,
-    subSteps: [
-      { id: "FINAL_DELIVERY", name: "Validating, Documenting & Reporting", status: "pending" }
-    ]
-  }
-];
-
-
-
-// Default para backward compatibility
-
-const NVIDIA_FAST_STAGES: OptimizationStage[] = [
-  {
-    id: "NVIDIA_FAST",
-    name: "NVIDIA Fast Refactor",
-    status: "pending",
-    visible: true
-  }
-];
-
-const INITIAL_STAGES: OptimizationStage[] = ULTRA_EXPERT_STAGES;
-
-
-
-// Timeout de 3 minutos por tarefa (em milissegundos)
-
-const TASK_TIMEOUT_MS = 5 * 60 * 1000; // 300000ms = 5 minutos
-
-
-
-function getStagesForMode(mode: OptimizeMode): OptimizationStage[] {
-  if (mode === "nvidia-fast") {
-    return NVIDIA_FAST_STAGES.map(s => ({ ...s, visible: true }));
-  }
-  return ULTRA_EXPERT_STAGES.map(s => ({ ...s, visible: true }));
-}
-
-
-
-/** Utilitário: Reseta stages para status pending */
-
-function resetStagesToPending(stages: OptimizationStage[]): OptimizationStage[] {
-
-  return stages.map(s => ({
-
-    ...s,
-
-    status: "pending" as const,
-
-    subSteps: s.subSteps?.map(sub => ({ ...sub, status: "pending" as const }))
-
-  }));
-
-}
-
-
-
-/** Utilitário: Calcula progresso geral baseado em stages completas */
-
-function calculateOverallProgress(stages: OptimizationStage[]): number {
-
-  const completedCount = stages.filter(s => s.status === "success").length;
-
-  return Math.round((completedCount / stages.length) * 100);
-
-}
-
-
-
-/** Utilitário: Determina status da stage baseado nos substeps */
-
-function calculateStageStatus(subSteps: SubStepExecution[]): 'pending' | 'running' | 'success' | 'error' | 'skipped' {
-
-  const allCompleted = subSteps.every(s => s.status === 'success');
-
-  const hasError = subSteps.some(s => s.status === 'error');
-
-  const hasRunning = subSteps.some(s => s.status === 'running');
-
-
-
-  if (hasError) return 'error';
-
-  if (allCompleted) return 'success';
-
-  if (hasRunning) return 'running';
-
-  return 'pending';
-
-}
+// Initial stages usa as definições centralizadas
+const INITIAL_STAGES = getStagesForMode('ultra-expert');
 
 
 
@@ -944,17 +786,18 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
                 };
               });
 
+
             } else if (event.type === 'complete') {
 
               // Processamento final
 
               const data: OptimizeScriptApiResponse = event.result;
 
+              // Vamos atualizar stages e só finalizar quando todas as etapas estiverem concluídas
+              let isFullyComplete = false;
+              let finalElapsed = 0;
 
-
-              // Atualiza os sub-steps com dados reais da API
-
-              if (data.analysis?.steps) {
+              setProgress(prev => {
 
                 interface AnalysisStep {
 
@@ -978,63 +821,65 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
                   status: string;
 
+                  startTime?: number;
+
+                  endTime?: number;
+
+                  duration?: number;
+
+                  error?: string;
+
                 }
 
 
 
-                const optStep = data.analysis.steps.find((s: AnalysisStep) => s.stepId === "opt_main");
+                // Copia defensiva das stages
+                const updatedStages = prev.stages.map(stage => ({
+
+                  ...stage,
+
+                  subSteps: stage.subSteps?.map(sub => ({ ...sub }))
+
+                }));
 
 
 
-                if (optStep?.subSteps && Array.isArray(optStep.subSteps)) {
+                // Atualiza os sub-steps com dados reais da API, se existirem
+                if (data.analysis?.steps) {
 
-                  setProgress(prev => {
-
-                    const newStages = prev.stages.map(stage => ({
-
-                      ...stage,
-
-                      subSteps: stage.subSteps?.map(sub => ({ ...sub }))
-
-                    }));
+                  const optStep = data.analysis.steps.find((s: AnalysisStep) => s.stepId === "opt_main");
 
 
 
-                    // Para cada sub-step real retornado pela API
+                  if (optStep?.subSteps && Array.isArray(optStep.subSteps)) {
 
                     optStep.subSteps.forEach((realSub: AnalysisSubStep) => {
 
-                      // Encontra a etapa pai que contém este sub-step
+                      for (const stage of updatedStages) {
 
-                      for (const stage of newStages) {
+                        if (!stage.subSteps) continue;
 
-                        if (stage.subSteps) {
+                        const subIdx = stage.subSteps.findIndex(s => s.id === realSub.id);
 
-                          const subIdx = stage.subSteps.findIndex(s => s.id === realSub.id);
+                        if (subIdx !== -1) {
 
-                          if (subIdx !== -1) {
+                          stage.subSteps[subIdx] = {
 
-                            // Atualiza com dados reais
+                            ...stage.subSteps[subIdx],
 
-                            stage.subSteps[subIdx] = {
+                            status: realSub.status || "success",
 
-                              ...stage.subSteps[subIdx],
+                            startTime: realSub.startTime,
 
-                              status: realSub.status || "success",
+                            endTime: realSub.endTime,
 
-                              startTime: realSub.startTime,
+                            duration: realSub.duration,
 
-                              endTime: realSub.endTime,
+                            error: realSub.error
 
-                              duration: realSub.duration,
+                          };
 
-                              error: realSub.error
-
-                            };
-
-                            break;
-
-                          }
+                          break;
 
                         }
 
@@ -1042,71 +887,81 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
                     });
 
-
-
-                    // Atualiza status e duração das etapas pai baseado nos sub-steps
-
-                    newStages.forEach(stage => {
-
-                      if (stage.subSteps && stage.subSteps.length > 0) {
-
-                        stage.status = calculateStageStatus(stage.subSteps);
-
-                        if (stage.status === "success") {
-
-                          stage.duration = stage.subSteps.reduce((acc, sub) => acc + (sub.duration || 0), 0);
-
-                        }
-
-                      }
-
-                    });
-
-
-
-                    return { ...prev, stages: newStages, overallProgress: calculateOverallProgress(newStages) };
-
-                  });
+                  }
 
                 }
 
+
+
+                // Recalcula status/duração das stages baseado nos sub-steps atualizados
+                updatedStages.forEach(stage => {
+
+                  if (stage.subSteps && stage.subSteps.length > 0) {
+
+                    stage.status = calculateStageStatus(stage.subSteps);
+
+                    if (stage.status === "success") {
+
+                      stage.duration = stage.subSteps.reduce((acc, sub) => acc + (sub.duration || 0), 0);
+
+                    }
+
+                  }
+
+                });
+
+
+
+                const overall = calculateOverallProgress(updatedStages);
+
+                isFullyComplete = overall === 100;
+
+                if (isFullyComplete) {
+
+                  finalElapsed = Date.now() - startTimeRef.current;
+
+                }
+
+
+
+                return {
+
+                  ...prev,
+
+                  stages: updatedStages,
+
+                  overallProgress: overall,
+
+                  status: isFullyComplete ? "success" : prev.status,
+
+                  elapsedTime: isFullyComplete ? finalElapsed : prev.elapsedTime
+
+                };
+
+              });
+
+
+
+              // Só congela o timer e marca como concluído quando todas as etapas terminaram
+              if (isFullyComplete) {
+
+                if (intervalRef.current) {
+
+                  clearInterval(intervalRef.current);
+
+                }
+
+                clearTimeout(globalTimeoutId);
+
+                setResult(data);
+
+                setIsRunning(false);
+
+
+
+                return data;
+
               }
-
-
-
-              // Finaliza tudo com sucesso
-
-              setProgress(prev => ({
-
-                ...prev,
-
-                status: "success",
-
-                overallProgress: 100,
-
-                elapsedTime: Date.now() - startTimeRef.current,
-
-                stages: prev.stages.map(s => ({ ...s, status: "success" }))
-
-              }));
-
-
-
-              if (intervalRef.current) {
-
-                clearInterval(intervalRef.current);
-
-              }
-
-              clearTimeout(globalTimeoutId);
-
-              setResult(data);
-
-              setIsRunning(false);
-
-
-
-              return data;
 
             } else if (event.type === 'error') {
 

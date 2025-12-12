@@ -30,6 +30,10 @@ import { highlightQlikCode } from "../lib/qlikSyntaxHighlighter";
 import QuotaDisplay from "../components/QuotaDisplay/QuotaDisplay";
 import { getQuotas, UsageQuotaCheck } from "../api/usage";
 
+// Pipeline Components - Refatorados
+import { PipelineContainer, PipelineKPIs } from "../components/Pipeline";
+import type { PipelineProgress } from "../types/pipeline";
+
 type OptimizerPageProps = Record<string, never>;
 
 // Icons
@@ -919,271 +923,23 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
             </div>
           )}
 
-          {/* Pipeline Progress - REAL */}
-          <div className="pipeline-card">
-            <div className="pipeline-header">
-              <h2>⚡ Pipeline de Otimização</h2>
-              <span className={`mode-badge ${mode}`}>
-                {modeInfo[mode].icon} {modeInfo[mode].title}
-              </span>
-            </div>
+          {/* Pipeline Progress - REFATORADO */}
+          <PipelineContainer
+            progress={optimization.progress as unknown as PipelineProgress}
+            mode={mode}
+            title="⚡ Pipeline de Otimização"
+            modeInfo={{
+              title: modeInfo[mode].title,
+              icon: modeInfo[mode].icon,
+            }}
+          />
 
-            {/* Cards Superiores com Subtasks Integradas */}
-            {(() => {
-              const visibleStages = (optimization.progress?.stages || []).filter(stage => stage.visible !== false);
-              const stageCount = visibleStages.length;
-              return (
-                <div className={`stage-cards-row stages-${stageCount}`}>
-                  {visibleStages.map((stage, index) => {
-                    const colorConfig = [
-                      { hex: '#00f2ff', rgb: '0, 242, 255' },
-                      { hex: '#00ff9d', rgb: '0, 255, 157' },
-                      { hex: '#ffb800', rgb: '255, 184, 0' },
-                      { hex: '#ff6b6b', rgb: '255, 107, 107' }
-                    ];
-                    const theme = colorConfig[index % colorConfig.length];
-                    const color = theme.hex;
-                    const rgb = theme.rgb;
-
-                    const icons = [<Icons.Search key="s" />, <Icons.Zap key="z" />, <Icons.Shield key="sh" />, <Icons.CheckCircle key="c" />];
-                    const icon = icons[index % icons.length];
-
-                    const subSteps = stage?.subSteps || [];
-                    const completedSubSteps = subSteps.filter(s => s.status === "success").length;
-                    const totalSubSteps = subSteps.length;
-                    const progressPercent = totalSubSteps > 0 ? Math.round((completedSubSteps / totalSubSteps) * 100) : 0;
-                    const hasSubSteps = totalSubSteps > 0;
-                    const isComplete = stage?.status === "success" || (totalSubSteps > 0 && subSteps.every(s => s.status === "success"));
-                    const isActive = stage?.status === "running" || subSteps.some(s => s.status === "running");
-                    const hasError = stage?.status === "error" || subSteps.some(s => s.status === "error");
-                    const cardDuration = subSteps.length > 0
-                      ? subSteps.reduce((sum, sub) => sum + (sub.duration || 0) + ((sub.status === 'running' && sub.currentRunningTime) ? sub.currentRunningTime : 0), 0)
-                      : (stage?.duration || 0) + ((stage?.status === 'running' && stage?.currentRunningTime) ? stage.currentRunningTime : 0);
-                    const isNvidiaFast = stage.id === "NVIDIA_FAST";
-                    const statusLabel = stage.status === "running"
-                      ? "Executando"
-                      : stage.status === "success"
-                        ? "Concluído"
-                        : stage.status === "error"
-                          ? "Erro"
-                          : "Aguardando";
-                    const durationLabel = cardDuration ? formatDuration(cardDuration) : "--";
-
-                    return (
-                      <details
-                        key={stage.id}
-                        className={`stage-card-v3 ${isActive ? 'active' : ''} ${isComplete ? 'complete' : ''} ${hasError ? 'error' : ''}`}
-                        open={true}
-                        style={{
-                          '--card-color': color,
-                          '--card-color-rgb': rgb
-                        } as React.CSSProperties}
-                      >
-                        <summary className="card-summary">
-                          <div className="card-top-accent" />
-
-                          <div className="card-top-row">
-                            <div className="card-icon-box" style={{ color: color }}>
-                              {icon}
-                            </div>
-
-                            <div className="card-text-block">
-                              <h3 className="card-title-main">{stage.name}</h3>
-                              <p className="card-desc">{totalSubSteps} tarefas</p>
-                            </div>
-
-                            <div className="card-status-badge-container">
-                              {isActive ? (
-                                <span className="status-pill active" style={{ color: color, borderColor: color }}>
-                                  EXEC
-                                </span>
-                              ) : isComplete ? (
-                                <span className="status-pill complete">✓</span>
-                              ) : hasError ? (
-                                <span className="status-pill error">!</span>
-                              ) : (
-                                <span className="status-pill pending">...</span>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="card-progress-area">
-                            <div className="card-progress-track">
-                              <div
-                                className="card-progress-bar"
-                                style={{
-                                  width: `${progressPercent}%`
-                                }}
-                              />
-                            </div>
-                            <div className="card-progress-labels">
-                              <span className="card-steps-count">{completedSubSteps}/{totalSubSteps}</span>
-                              <span className="card-percent-value">{progressPercent}%</span>
-                            </div>
-                          </div>
-
-                          {/* NEW: Metadata badges (tokens, duration, provider) */}
-                          <div className="card-metadata-row">
-                            {stage.tokensConsumed && stage.tokensConsumed.totalTokens > 0 && (
-                              <span className="metadata-badge tokens" title={`Prompt: ${stage.tokensConsumed.promptTokens.toLocaleString()} | Completion: ${stage.tokensConsumed.completionTokens.toLocaleString()}`}>
-                                🪙 {stage.tokensConsumed.totalTokens.toLocaleString()}
-                              </span>
-                            )}
-                            {cardDuration > 0 && (
-                              <span className="metadata-badge duration" title="Tempo decorrido">
-                                ⏱️ {durationLabel}
-                              </span>
-                            )}
-                            {stage.provider && stage.model && (
-                              <span className="metadata-badge provider" title="Provider / Model">
-                                🤖 {stage.provider}/{stage.model}
-                              </span>
-                            )}
-                          </div>
-
-                          {isActive && <div className="card-glow-pulse" style={{ borderColor: color }} />}
-                        </summary>
-
-                        {/* SUBTASKS DENTRO DO CARD */}
-                        <div className={`card-substeps ${isNvidiaFast ? 'nvidia-expanded' : ''}`}>
-                          {hasSubSteps ? (
-                            subSteps.map((subStep) => {
-                              const isRunning = subStep.status === "running";
-                              const runningTime = isRunning && subStep.currentRunningTime ? subStep.currentRunningTime : 0;
-                              const isNearTimeout = runningTime > 150000;
-
-                              return (
-                                <div key={subStep.id} className={`substep-item ${subStep.status} ${isNearTimeout ? 'warning-timeout' : ''}`}>
-                                  <div className="substep-indicator">
-                                    {isRunning ? (
-                                      <Spinner size={10} />
-                                    ) : subStep.status === "success" ? (
-                                      <Icons.Check />
-                                    ) : subStep.status === "error" ? (
-                                      <Icons.X />
-                                    ) : (
-                                      <div className="substep-dot" />
-                                    )}
-                                  </div>
-                                  <span className="substep-name">{subStep.name}</span>
-                                  {isRunning && runningTime > 0 && (
-                                    <span className={`substep-time ${isNearTimeout ? 'warning' : ''}`}>
-                                      🕐 {formatDuration(runningTime)}
-                                    </span>
-                                  )}
-                                  {subStep.duration && subStep.status === "success" && (
-                                    <span className="substep-duration">{formatDuration(subStep.duration)}</span>
-                                  )}
-                                </div>
-                              );
-                            })
-                          ) : (
-                            isNvidiaFast ? (
-                              <div className="nvidia-fast-empty">
-                                <div className="nvidia-fast-tags">
-                                  <span className="nvidia-chip primary">Execução GPU</span>
-                                  <span className="nvidia-chip muted">Sem relatório textual</span>
-                                  <span className={`nvidia-chip status ${stage.status}`}>
-                                    {statusLabel}
-                                  </span>
-                                </div>
-                                <p className="nvidia-fast-desc">
-                                  Otimizador NVIDIA Fast retorna apenas o script refatorado direto da GPU, ideal para respostas rápidas.
-                                </p>
-                                <div className="nvidia-fast-grid">
-                                  <div className="nvidia-fast-stat">
-                                    <span>Saída</span>
-                                    <strong>Script otimizado</strong>
-                                  </div>
-                                  <div className="nvidia-fast-stat">
-                                    <span>Relatório</span>
-                                    <strong>Não gera</strong>
-                                  </div>
-                                  <div className="nvidia-fast-stat">
-                                    <span>Tempo</span>
-                                    <strong>
-                                      {stage.status === 'running' && <span className="running-clock-icon">⏱️</span>}
-                                      {durationLabel}
-                                    </strong>
-                                  </div>
-                                </div>
-                                <div className="nvidia-fast-meta">
-                                  <div className="nvidia-fast-section">
-                                    <span className="nvidia-fast-label">Modelos GPU</span>
-                                    <strong className="nvidia-fast-value">Fila NVIDIA Fast</strong>
-                                    <p className="nvidia-fast-note">Execução dedicada em GPU; nomes de modelo aparecem conforme retorno do backend.</p>
-                                  </div>
-                                  <div className="nvidia-fast-section">
-                                    <span className="nvidia-fast-label">Modo de entrega</span>
-                                    <strong className="nvidia-fast-value">Script refatorado</strong>
-                                    <p className="nvidia-fast-note">Entrega focada no código final, sem relatório textual para reduzir latência.</p>
-                                  </div>
-                                  <div className="nvidia-fast-section">
-                                    <span className="nvidia-fast-label">Uso recomendado</span>
-                                    <div className="nvidia-fast-pill-row">
-                                      <span className="nvidia-chip muted">Respostas rápidas</span>
-                                      <span className="nvidia-chip muted">Reexecução frequente</span>
-                                      <span className="nvidia-chip muted">Ajustes pontuais</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="card-empty-text">Nenhuma tarefa listada para esta etapa.</div>
-                            )
-                          )}
-
-                          {/* NEW: Thinking Content Display (Gemini 2.5 Flash Thinking Mode) */}
-                          {stage.thinkingContent && (
-                            <details className="thinking-section">
-                              <summary className="thinking-summary">
-                                <span className="thinking-icon">💭</span>
-                                <span className="thinking-label">Ver raciocínio do modelo (Thinking Mode)</span>
-                              </summary>
-                              <div className="thinking-content">
-                                <pre>{stage.thinkingContent}</pre>
-                              </div>
-                            </details>
-                          )}
-                        </div>
-                      </details>
-                    );
-                  })}
-                </div>
-              );
-            })()}
-
-            {/* Real KPIs */}
-            {
-              (optimization.progress.status === "success" || result) && (
-                <>
-                  <div className="pipeline-kpis">
-                    <div className="kpi">
-                      <span className="kpi-label">⏱️ Tempo Total</span>
-                      <span className="kpi-value">{formatDuration(optimization.progress.elapsedTime)}</span>
-                    </div>
-                    <div className="kpi">
-                      <span className="kpi-label">Etapas</span>
-                      <span className="kpi-value">
-                        {(optimization.progress?.stages || []).filter(s => s.visible !== false && s.status === "success").length}/
-                        {(optimization.progress?.stages || []).filter(s => s.visible !== false).length}
-                      </span>
-                    </div>
-                    {result && (
-                      <div className="kpi">
-                        <span className="kpi-label">Mudanças</span>
-                        <span className="kpi-value">{result.analysis.changes.length}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="ainex-training-note">
-                    <span className="ainex-training-note-badge">AINEX ENGINE</span>
-                    <span>Modelo treinado em milhares de scripts Qlik de produ??o para entregar recomenda??es em n?vel PRO.</span>
-                  </div>
-                </>
-              )
-            }
-          </div>
+          {/* Pipeline KPIs */}
+          <PipelineKPIs
+            progress={optimization.progress as unknown as PipelineProgress}
+            result={result}
+            showAinexNote={true}
+          />
 
 
         </main>

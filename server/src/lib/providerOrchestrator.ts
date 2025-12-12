@@ -103,8 +103,9 @@ export class ProviderOrchestrator {
 
     // Plano fixo de fallback por modelo.
     const attemptPlan: Array<{ provider: "google" | "nvidia"; model?: string; label: string }> = [
-      { provider: "google", model: config.geminiModel, label: "Gemini 2.5 Flash" },
       { provider: "google", model: config.geminiFallbackModel, label: "Gemini 2.5 Flash-Light" },
+      { provider: "google", model: config.geminiModel, label: "Gemini 2.5 Flash" },
+      { provider: "nvidia", model: config.nvidiaFastModel, label: "NVIDIA Fast" },
       { provider: "nvidia", model: config.nvidiaFallbackModel, label: "NVIDIA 500B fallback" },
       { provider: "nvidia", model: config.nvidiaTertiaryModel, label: "Mistral 123B (tertiary)" }
     ];

@@ -1,0 +1,873 @@
+/* web/src/components/Pipeline/Pipeline.css */
+/* CSS Modular para componentes do Pipeline de Otimização */
+
+/* ═══════════════════════════════════════════════════════════════
+   VARIÁVEIS CSS
+   ═══════════════════════════════════════════════════════════════ */
+
+.pipeline-container {
+  --pipeline-bg: rgba(10, 14, 23, 0.85);
+  --pipeline-border: rgba(0, 242, 255, 0.15);
+  --pipeline-radius: 16px;
+  --card-bg: rgba(15, 20, 30, 0.9);
+  --card-border: rgba(255, 255, 255, 0.08);
+  --text-primary: #fff;
+  --text-secondary: #a0aec0;
+  --text-muted: #718096;
+  --success-color: #00ff9d;
+  --error-color: #ff6b6b;
+  --warning-color: #ffb800;
+  --nvidia-green: #76b900;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PIPELINE CONTAINER
+   ═══════════════════════════════════════════════════════════════ */
+
+.pipeline-container {
+  background: var(--pipeline-bg);
+  border: 1px solid var(--pipeline-border);
+  border-radius: var(--pipeline-radius);
+  padding: 24px;
+  backdrop-filter: blur(20px);
+}
+
+.pipeline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pipeline-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.pipeline-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pipeline-mode-badge.ultra-expert {
+  background: rgba(0, 242, 255, 0.15);
+  color: #00f2ff;
+  border: 1px solid rgba(0, 242, 255, 0.3);
+}
+
+.pipeline-mode-badge.nvidia-fast {
+  background: rgba(118, 185, 0, 0.15);
+  color: #76b900;
+  border: 1px solid rgba(118, 185, 0, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   STAGES GRID
+   ═══════════════════════════════════════════════════════════════ */
+
+.pipeline-stages-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.pipeline-stages-grid.stages-1 {
+  grid-template-columns: 1fr;
+}
+
+.pipeline-stages-grid.stages-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.pipeline-stages-grid.stages-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.pipeline-stages-grid.stages-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 1024px) {
+
+  .pipeline-stages-grid.stages-3,
+  .pipeline-stages-grid.stages-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .pipeline-stages-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   STAGE CARD
+   ═══════════════════════════════════════════════════════════════ */
+
+.stage-card {
+  --card-color: #00f2ff;
+  --card-color-rgb: 0, 242, 255;
+
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.stage-card:hover {
+  border-color: rgba(var(--card-color-rgb), 0.3);
+  box-shadow: 0 4px 20px rgba(var(--card-color-rgb), 0.1);
+}
+
+.stage-card.active {
+  border-color: rgba(var(--card-color-rgb), 0.5);
+  box-shadow: 0 0 30px rgba(var(--card-color-rgb), 0.15);
+}
+
+.stage-card.complete {
+  border-color: rgba(0, 255, 157, 0.3);
+}
+
+.stage-card.error {
+  border-color: rgba(255, 107, 107, 0.4);
+  box-shadow: 0 0 20px rgba(255, 107, 107, 0.1);
+}
+
+/* Summary (header clicável) */
+.stage-card-summary {
+  list-style: none;
+  padding: 16px;
+  cursor: pointer;
+  position: relative;
+}
+
+.stage-card-summary::-webkit-details-marker {
+  display: none;
+}
+
+.stage-card-summary::marker {
+  display: none;
+}
+
+/* Acento superior */
+.stage-card-accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--card-color) 0%, transparent 100%);
+  opacity: 0.8;
+}
+
+.stage-card.active .stage-card-accent {
+  opacity: 1;
+  animation: accentPulse 2s ease-in-out infinite;
+}
+
+@keyframes accentPulse {
+
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Header Row */
+.stage-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.stage-card-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--card-color-rgb), 0.1);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.stage-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.stage-card-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+  line-height: 1.3;
+}
+
+.stage-card-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Status Badge */
+.stage-card-status {
+  flex-shrink: 0;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.pending {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+}
+
+.status-badge.active {
+  background: rgba(var(--card-color-rgb), 0.15);
+  border: 1px solid;
+  animation: badgePulse 1.5s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.status-badge.complete {
+  background: rgba(0, 255, 157, 0.15);
+  color: var(--success-color);
+}
+
+.status-badge.error {
+  background: rgba(255, 107, 107, 0.15);
+  color: var(--error-color);
+}
+
+/* Progress Bar */
+.stage-card-progress {
+  margin-bottom: 10px;
+}
+
+.progress-track {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--card-color), rgba(var(--card-color-rgb), 0.6));
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.stage-card.complete .progress-bar {
+  background: linear-gradient(90deg, var(--success-color), rgba(0, 255, 157, 0.6));
+}
+
+.progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.progress-count,
+.progress-percent {
+  font-weight: 500;
+}
+
+/* Metadata Badges */
+.stage-card-metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.metadata-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+}
+
+.metadata-badge.tokens {
+  color: #ffd700;
+}
+
+.metadata-badge.duration {
+  color: var(--card-color);
+}
+
+.metadata-badge.provider {
+  color: #a78bfa;
+}
+
+/* Glow Effect (Active) */
+.stage-card-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  pointer-events: none;
+  border: 2px solid transparent;
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgba(var(--card-color-rgb), 0.2);
+  }
+
+  50% {
+    box-shadow: 0 0 25px rgba(var(--card-color-rgb), 0.4);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   STAGE CARD CONTENT (Expandido)
+   ═══════════════════════════════════════════════════════════════ */
+
+.stage-card-content {
+  padding: 0 16px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.stage-card-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SUBTASKS LIST
+   ═══════════════════════════════════════════════════════════════ */
+
+.subtasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+}
+
+.subtask-item {
+  --subtask-color: #00f2ff;
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border-left: 3px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.subtask-item.pending {
+  border-left-color: rgba(255, 255, 255, 0.1);
+}
+
+.subtask-item.running {
+  border-left-color: var(--subtask-color);
+  background: rgba(var(--card-color-rgb), 0.05);
+}
+
+.subtask-item.success {
+  border-left-color: var(--success-color);
+}
+
+.subtask-item.error,
+.subtask-item.timeout {
+  border-left-color: var(--error-color);
+  background: rgba(255, 107, 107, 0.05);
+}
+
+.subtask-item.warning-timeout {
+  background: rgba(255, 184, 0, 0.08);
+  border-left-color: var(--warning-color);
+}
+
+/* Indicador */
+.subtask-indicator {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.subtask-dot {
+  width: 8px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+}
+
+.subtask-item.pending .subtask-dot {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.subtask-spinner {
+  animation: spin 1s linear infinite;
+  color: var(--subtask-color);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.subtask-item.success .subtask-indicator {
+  color: var(--success-color);
+}
+
+.subtask-item.error .subtask-indicator,
+.subtask-item.timeout .subtask-indicator {
+  color: var(--error-color);
+}
+
+/* Nome */
+.subtask-name {
+  flex: 1;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subtask-item.running .subtask-name {
+  color: var(--text-primary);
+}
+
+.subtask-item.success .subtask-name {
+  color: var(--text-primary);
+}
+
+/* Tempo em execução */
+.subtask-running-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  color: var(--subtask-color);
+  font-weight: 500;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.subtask-running-time.warning {
+  color: var(--warning-color);
+  animation: warningPulse 0.8s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes warningPulse {
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+}
+
+/* Duração final */
+.subtask-duration {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Erro */
+.subtask-error {
+  font-size: 0.75rem;
+  cursor: help;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   NVIDIA FAST PANEL
+   ═══════════════════════════════════════════════════════════════ */
+
+.nvidia-fast-panel {
+  padding: 16px 0;
+}
+
+.nvidia-fast-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.nvidia-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.nvidia-chip.primary {
+  background: rgba(118, 185, 0, 0.2);
+  color: var(--nvidia-green);
+}
+
+.nvidia-chip.muted {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+}
+
+.nvidia-chip.status {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.nvidia-chip.status.running {
+  background: rgba(0, 242, 255, 0.15);
+  color: #00f2ff;
+}
+
+.nvidia-chip.status.success {
+  background: rgba(0, 255, 157, 0.15);
+  color: var(--success-color);
+}
+
+.nvidia-chip.status.error {
+  background: rgba(255, 107, 107, 0.15);
+  color: var(--error-color);
+}
+
+.nvidia-fast-description {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+}
+
+.nvidia-fast-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 480px) {
+  .nvidia-fast-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.nvidia-fast-stat {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 12px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.nvidia-fast-stat .stat-label {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.nvidia-fast-stat .stat-value {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.running-indicator {
+  animation: blink 1s ease-in-out infinite;
+}
+
+@keyframes blink {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.nvidia-fast-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 16px;
+}
+
+.nvidia-detail-section {
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+}
+
+.nvidia-detail-section .detail-label {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.nvidia-detail-section .detail-value {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--nvidia-green);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.nvidia-detail-section .detail-note {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.nvidia-use-cases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   THINKING SECTION
+   ═══════════════════════════════════════════════════════════════ */
+
+.thinking-section {
+  margin-top: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.thinking-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.thinking-summary:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.thinking-icon {
+  font-size: 1rem;
+}
+
+.thinking-content {
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.thinking-content pre {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: 'Monaco', 'Menlo', monospace;
+  line-height: 1.5;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PIPELINE KPIs
+   ═══════════════════════════════════════════════════════════════ */
+
+.pipeline-kpis-container {
+  margin-top: 20px;
+}
+
+.pipeline-kpis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.kpi-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 80px;
+  padding: 8px 16px;
+}
+
+.kpi-icon {
+  font-size: 1.2rem;
+}
+
+.kpi-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.kpi-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.kpi-value.risk-none,
+.kpi-value.risk-low {
+  color: var(--success-color);
+}
+
+.kpi-value.risk-medium {
+  color: var(--warning-color);
+}
+
+.kpi-value.risk-high {
+  color: var(--error-color);
+}
+
+/* AINEX Note */
+.ainex-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(0, 242, 255, 0.05) 0%, rgba(0, 255, 157, 0.03) 100%);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 242, 255, 0.1);
+}
+
+.ainex-badge {
+  display: inline-flex;
+  padding: 4px 8px;
+  background: linear-gradient(135deg, #00f2ff 0%, #00ff9d 100%);
+  color: #0a0e17;
+  font-size: 0.65rem;
+  font-weight: 700;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.ainex-text {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE ADJUSTMENTS
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .pipeline-container {
+    padding: 16px;
+  }
+
+  .pipeline-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .stage-card-header {
+    flex-wrap: wrap;
+  }
+
+  .pipeline-kpis {
+    justify-content: center;
+  }
+
+  .ainex-note {
+    flex-direction: column;
+    text-align: center;
+  }
+}

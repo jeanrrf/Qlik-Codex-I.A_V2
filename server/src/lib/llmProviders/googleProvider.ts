@@ -69,7 +69,7 @@ async function generate(prompt: string, options?: ProviderCallOptions): Promise<
       ],
       config: {
         responseMimeType: "application/json",
-        maxOutputTokens: 65536,
+        maxOutputTokens: 32768,
         temperature: 0.1,
       }
     }),

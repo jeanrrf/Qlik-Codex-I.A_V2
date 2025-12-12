@@ -175,8 +175,7 @@ async function callNvidiaWithModel(
         messages: [
           {
             role: "system",
-            content:
-              "Você é o QLIK CODEX I.A, um otimizador especialista de scripts Qlik. Responda APENAS com o JSON solicitado, sem explicações adicionais fora da estrutura JSON."
+            content: "Responda somente com o JSON pedido no prompt do usuário, sem Markdown, sem comentários."
           },
           { role: "user", content: prompt }
         ],
