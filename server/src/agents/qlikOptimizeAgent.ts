@@ -1,5 +1,3 @@
-import { createHash } from "crypto";
-
 import { ZodSchema } from "zod";
 
 import { config } from "../lib/config";
@@ -15,17 +13,14 @@ import { buildMegaPrompt, buildParserSummary, MegaTaskId } from "./promptPlan";
 import { QlikGranularOptimizer } from "./qlikGranularOptimizer";
 // Performance constants
 const MAX_HISTORY_TOKENS = 500; // Limite de chars para resumo do histórico
-const ANALYSIS_CACHE = new Map<string, { result: Record<string, unknown>; timestamp: number }>();
-const ANALYSIS_CACHE_TTL = 1800000; // 30 minutos
-const ANALYSIS_CACHE_MAX_SIZE = 50;
 
-// Task timeout configuration (in ms) - Otimizado para Kimi K2 + Gemini 2.5
+// Task timeout configuration (in ms) - Otimizado para Gemini 2.5
 const TASK_TIMEOUTS: Record<string, number> = {
-  ANALYSIS_AND_PLAN: 150000,  // 2.5 min - análise completa com reasoning
-  CODE_GEN: 120000,            // 2 min - geração de código
-  FINAL_DELIVERY: 90000       // 1.5 min - documentação final
+  ANALYSIS_AND_PLAN: 120000,  // 2 min - análise completa com reasoning
+  CODE_GEN: 90000,            // 1.5 min - geração de código
+  FINAL_DELIVERY: 60000       // 1 min - documentação final
 };
-const MAX_TASK_RETRIES = 3;
+const MAX_TASK_RETRIES = 2; // Reduzido de 3 para 2 para evitar lentidão
 const RETRYABLE_TASK_ERROR_PATTERNS = [
   /timeout/i,
   /json/i,
@@ -65,7 +60,6 @@ interface MegaOptimizerOptions {
 export class QlikOptimizeAgent {
   private script: string;
   private promptScript: string;
-  private scriptHash: string;
   private compactHistory: string = ""; // Resumo compacto em vez de histórico completo
   private taskTimes: Record<string, number> = {};
   private orchestrator: ProviderOrchestrator;
@@ -78,14 +72,13 @@ export class QlikOptimizeAgent {
     this.script = QlikOptimizeAgent.sanitizeScript(script);
     const compaction = compactScriptForPrompt(this.script);
     this.promptScript = compaction.compacted;
-    this.scriptHash = createHash('sha256').update(this.script).digest('hex').substring(0, 16);
     this.abortSignal = options?.signal;
     const parsed = parseQlikScript(this.script);
     this.parserSummary = buildParserSummary(parsed);
 
     logger.info("[MegaOptimizer] Script compactado para prompt", compaction.stats);
 
-    // Cria orquestrador com configuração otimizada para MegaOptimizer + Kimi K2
+    // Cria orquestrador com configuração otimizada para MegaOptimizer
     this.orchestrator = createOrchestrator({
       maxAttemptsPerStep: 4,
       providerOrder: ["google", "nvidia"],  // Gemini primeiro, Kimi K2 como fallback
@@ -139,38 +132,6 @@ export class QlikOptimizeAgent {
     }
 
     return summary.substring(0, maxLen);
-  }
-
-  /**
-   * Verifica cache de análise por hash do script
-   */
-  private getCachedAnalysis(): Record<string, unknown> | null {
-    const cached = ANALYSIS_CACHE.get(this.scriptHash);
-    if (!cached) return null;
-
-    const age = Date.now() - cached.timestamp;
-    if (age > ANALYSIS_CACHE_TTL) {
-      ANALYSIS_CACHE.delete(this.scriptHash);
-      return null;
-    }
-
-    logger.info(`[MegaOptimizer] CACHE HIT para análise`, { hash: this.scriptHash, age: `${Math.round(age / 1000)}s` });
-    return cached.result;
-  }
-
-  /**
-   * Armazena análise no cache
-   */
-  private setCachedAnalysis(result: Record<string, unknown>): void {
-    // Limpa cache se muito grande
-    if (ANALYSIS_CACHE.size >= ANALYSIS_CACHE_MAX_SIZE) {
-      const oldestKey = Array.from(ANALYSIS_CACHE.entries())
-        .sort(([, a], [, b]) => a.timestamp - b.timestamp)[0]?.[0];
-      if (oldestKey) ANALYSIS_CACHE.delete(oldestKey);
-    }
-
-    ANALYSIS_CACHE.set(this.scriptHash, { result, timestamp: Date.now() });
-    logger.info(`[MegaOptimizer] Análise cacheada`, { hash: this.scriptHash });
   }
 
   /**
@@ -448,31 +409,11 @@ export class QlikOptimizeAgent {
       throw new Error("Otimização abortada pelo usuário antes de iniciar");
     }
 
-    // OTIMIZAÇÃO: Verificar cache de análise antes de chamar LLM
-    let analysisAndPlan = this.getCachedAnalysis();
-
-    if (analysisAndPlan) {
-      logger.info("[MegaOptimizer] Usando análise do CACHE - economizando ~30s de LLM");
-
-      // Emitir SSE para UI saber que veio do cache
-      sseEmitter.sendToCurrent({
-        type: "substep",
-        substep: {
-          id: "ANALYSIS_AND_PLAN",
-          name: "Análise recuperada do cache",
-          status: "success",
-          duration: 0,
-          endTime: new Date().toISOString()
-        }
-      });
-    } else {
-      // 1 & 2. Analysis & Plan (Fused for Speed)
-      logger.info("[MegaOptimizer] Running Fused Task: ANALYSIS_AND_PLAN");
-      analysisAndPlan = await this.executeTask("ANALYSIS_AND_PLAN", AnalysisAndPlanSchema);
-
-      // Cachear resultado para próximas execuções com mesmo script
-      this.setCachedAnalysis(analysisAndPlan);
-    }
+    // DESABILITADO: Cache removido para evitar inconsistências e bugs
+    // O cache pode causar estados desatualizados e execuções fantasmas
+    // 1 & 2. Analysis & Plan (Fused for Speed)
+    logger.info("[MegaOptimizer] Running Fused Task: ANALYSIS_AND_PLAN");
+    const analysisAndPlan = await this.executeTask("ANALYSIS_AND_PLAN", AnalysisAndPlanSchema);
 
     // Verifica abort após análise
     if (this.abortSignal?.aborted) {
@@ -516,6 +457,11 @@ export class QlikOptimizeAgent {
 
     const codeGen = await this.executeTask("CODE_GEN", CodeGenSchema);
 
+    // Verifica abort após CODE_GEN
+    if (this.abortSignal?.aborted) {
+      throw new Error("Otimização abortada após geração de código");
+    }
+
     // Emitir evento de transição para Final Delivery
     sseEmitter.sendToCurrent({
       type: "substep",
@@ -529,7 +475,12 @@ export class QlikOptimizeAgent {
 
     const delivery = await this.executeTask("FINAL_DELIVERY", FinalDeliverySchema);
 
-    logger.info(`[MegaOptimizer] Tarefas sequenciais concluídas`);
+    // Verifica abort após FINAL_DELIVERY
+    if (this.abortSignal?.aborted) {
+      throw new Error("Otimização abortada após validação final");
+    }
+
+    logger.info(`[MegaOptimizer] ✅ Todas as tarefas concluídas com sucesso`);
 
     // Sanitize optimizedScript using the same method as input
     if (typeof codeGen.optimizedScript === 'string') {

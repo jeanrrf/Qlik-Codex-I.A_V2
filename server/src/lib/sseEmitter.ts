@@ -96,11 +96,19 @@ export class SSEEmitter {
     // Verifica se o cliente ainda está conectado antes de enviar
     if (!this.isCurrentClientConnected()) {
       logger.warn('[SSE] Client disconnected, aborting send');
+      this.currentClient = null; // Limpa referência
       return;
     }
 
     const message = `data: ${JSON.stringify(data)}\n\n`;
     try {
+      // Verifica novamente antes de escrever (double-check para race conditions)
+      if (this.currentClient.writableEnded || this.currentClient.destroyed) {
+        logger.warn('[SSE] Client closed during send, aborting');
+        this.currentClient = null;
+        return;
+      }
+      
       this.currentClient.write(message);
       const typeName = (data as Record<string, unknown>)['type'] as string | undefined;
       logger.debug('[SSE] Sent to current client', { type: typeName });

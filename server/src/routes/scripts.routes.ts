@@ -132,7 +132,14 @@ router.post(
 
       // Envia resultado final via SSE
       res.write(`data: ${JSON.stringify({ type: 'complete', result: response })}\n\n`);
+      
+      // 🔴 CRÍTICO: Limpa o cliente atual IMEDIATAMENTE para parar envio de SSE
+      sseEmitter.setCurrentClient(null);
+      
+      // Finaliza a resposta
       res.end();
+
+      logger.info("[SSE] ✅ Optimization completed successfully and response sent");
 
       // ✅ Registra uso após sucesso (FREE TIER quota tracking)
       if (req.user?.id) {
@@ -151,12 +158,14 @@ router.post(
         }
       }
 
-      // Limpa o cliente atual
-      sseEmitter.setCurrentClient(null);
+      logger.info("[SSE] Cleanup completed after successful optimization");
 
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
       logger.error("[SSE] Optimization error", { error: String(error) });
+
+      // 🔴 CRÍTICO: Limpa o cliente atual IMEDIATAMENTE em caso de erro
+      sseEmitter.setCurrentClient(null);
 
       // Determine HTTP status based on error severity
       const isFatal = /JSON\s+Parse\s+Error|Schema\s+Validation\s+Error|ABORTED|TIMEOUT|FALLBACK\s+ACIONADO/i.test(errMsg);
@@ -168,8 +177,7 @@ router.post(
       res.write(`data: ${JSON.stringify({ type: 'error', error: String(error) })}\n\n`);
       res.end();
 
-      // Limpa o cliente atual
-      sseEmitter.setCurrentClient(null);
+      logger.info("[SSE] Error response sent and cleanup completed");
     }
   })
 );
