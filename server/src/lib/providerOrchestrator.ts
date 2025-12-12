@@ -67,22 +67,22 @@ export class ProviderOrchestrator {
     const usedProviders = new Set<string>();
     let attemptCount = 0;
 
-    // Ajusta timeout baseado no tamanho do prompt (heurística otimizada para Kimi K2)
+    // Ajusta timeout baseado no tamanho do prompt (heurística otimizada para Gemini 2.5 + NVIDIA)
     const estimatedTokens = Math.ceil(prompt.length / 4);
     let adjustedTimeout = timeout;
 
     if (estimatedTokens > 50000) {
       // Prompts muito grandes (>50k tokens) → aumenta timeout significativamente
-      adjustedTimeout = Math.min(timeout * 2, 300000); // Max 5 min
+      adjustedTimeout = Math.min(timeout * 2.5, 420000); // Max 7 min para prompts enormes
       logger.info(`🕐 Timeout ajustado: ${timeout}ms → ${adjustedTimeout}ms (prompt grande: ${estimatedTokens.toLocaleString()} tokens)`);
     } else if (estimatedTokens > 25000) {
       // Prompts grandes (25-50k tokens) → aumenta timeout moderadamente
-      adjustedTimeout = Math.min(timeout * 1.5, 240000); // Max 4 min
+      adjustedTimeout = Math.min(timeout * 1.8, 360000); // Max 6 min
       logger.info(`🕐 Timeout ajustado: ${timeout}ms → ${adjustedTimeout}ms (prompt médio-grande: ${estimatedTokens.toLocaleString()} tokens)`);
     } else if (estimatedTokens < 10000) {
-      // Prompts pequenos (<10k tokens) → pode reduzir um pouco
-      adjustedTimeout = Math.max(timeout * 0.8, 60000); // Min 60s
-      logger.info(`🕐 Timeout otimizado: ${timeout}ms → ${adjustedTimeout}ms (prompt compacto: ${estimatedTokens.toLocaleString()} tokens)`);
+      // Prompts pequenos (<10k tokens) → mantém timeout base
+      adjustedTimeout = Math.max(timeout, 90000); // Min 90s
+      logger.info(`🕐 Timeout mantido: ${adjustedTimeout}ms (prompt compacto: ${estimatedTokens.toLocaleString()} tokens)`);
     }
 
     logger.info("Iniciando rotação de provedores", {

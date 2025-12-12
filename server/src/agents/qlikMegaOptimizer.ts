@@ -13,11 +13,11 @@ const ANALYSIS_CACHE = new Map<string, { result: any; timestamp: number }>();
 const ANALYSIS_CACHE_TTL = 1800000; // 30 minutos
 const ANALYSIS_CACHE_MAX_SIZE = 50;
 
-// Task timeout configuration (in ms) - Otimizado para Kimi K2 + Gemini 2.5
+// Task timeout configuration (in ms) - Otimizado para Gemini 2.5 + NVIDIA com rotação
 const TASK_TIMEOUTS: Record<string, number> = {
-  ANALYSIS_AND_PLAN: 150000,  // 2.5 min - análise completa com reasoning
-  CODE_GEN: 120000,            // 2 min - geração de código
-  FINAL_DELIVERY: 90000       // 1.5 min - documentação final
+  ANALYSIS_AND_PLAN: 300000,   // 5 min - análise completa com reasoning (aumentado para scripts grandes)
+  CODE_GEN: 180000,            // 3 min - geração de código
+  FINAL_DELIVERY: 120000       // 2 min - documentação final
 };
 
 interface MegaOptimizerResult {
