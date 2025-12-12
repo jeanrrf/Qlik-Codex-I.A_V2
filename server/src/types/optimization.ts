@@ -327,8 +327,8 @@ export const DEFAULT_ROTATION_CONFIG: ProviderRotationConfig = {
   maxAttemptsPerStep: 4,
   providerOrder: ["google", "nvidia"],
   neverRetryProvider: true,
-  timeoutPerStep: 180000, // 3 minutos por tarefa (180000ms)
-  globalTimeout: 900000, // 15 minutos total (900000ms)
+  timeoutPerStep: 300000, // 5 minutos por tarefa (300000ms) - aumentado para suportar scripts grandes
+  globalTimeout: 1200000, // 20 minutos total (1200000ms) - aumentado para suportar múltiplas tentativas
 };
 
 export interface LLMOptions {

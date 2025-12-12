@@ -135,9 +135,9 @@ const INITIAL_STAGES: OptimizationStage[] = ULTRA_EXPERT_STAGES;
 
 
 
-// Timeout de 3 minutos por tarefa (em milissegundos)
-
-const TASK_TIMEOUT_MS = 5 * 60 * 1000; // 300000ms = 5 minutos
+// Timeout de 6 minutos por tarefa (em milissegundos)
+// Alinhado com backend que pode ter até 300s (5min) + overhead de rede
+const TASK_TIMEOUT_MS = 6 * 60 * 1000; // 360000ms = 6 minutos
 
 
 
@@ -717,11 +717,11 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
 
 
-                // Configura timeout de 3 minutos para esta tarefa
+                // Configura timeout de 6 minutos para esta tarefa
 
                 const timeoutId = setTimeout(() => {
 
-                  console.warn(`[TIMEOUT] Tarefa ${taskId} excedeu 3 minutos!`);
+                  console.warn(`[TIMEOUT] Tarefa ${taskId} excedeu ${Math.round(TASK_TIMEOUT_MS / 60000)} minutos!`);
 
                   setProgress(prev => {
 
@@ -743,7 +743,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
                         status: 'timeout' as any,
 
-                        error: 'Timeout: Tarefa excedeu 3 minutos',
+                        error: `Timeout: Tarefa excedeu ${Math.round(TASK_TIMEOUT_MS / 60000)} minutos`,
 
                         duration: TASK_TIMEOUT_MS,
 
@@ -1038,6 +1038,11 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
               return data;
 
             } else if (event.type === 'error') {
+
+              // Limpa TODOS os timeouts de tarefas quando recebe erro do backend
+              taskTimeoutRefs.current.forEach(timeoutId => clearTimeout(timeoutId));
+              taskTimeoutRefs.current.clear();
+              taskStartTimeRef.current.clear();
 
               setError(event.error || 'Erro no backend');
 
