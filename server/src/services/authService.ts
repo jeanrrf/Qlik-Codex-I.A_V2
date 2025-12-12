@@ -7,6 +7,7 @@
 import { OAuth2Client } from "google-auth-library";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
+import { performance } from "node:perf_hooks";
 
 import { config } from "../lib/config";
 import { logger } from "../lib/logger";
@@ -31,8 +32,18 @@ let googleClient: OAuth2Client | null = null;
 // TursoSqliteWrapper matches simplified structure.
 
 async function getAuthDb() {
+  const start = performance.now();
   await initTursoDb();
-  return new TursoSqliteWrapper(getTursoDb());
+  const wrapper = new TursoSqliteWrapper(getTursoDb());
+  const duration = performance.now() - start;
+
+  if (duration > 300) {
+    logger.warn("[AUTH] Turso init+wrapper lento", { durationMs: Math.round(duration) });
+  } else {
+    logger.debug("[AUTH] Turso init+wrapper ok", { durationMs: Math.round(duration) });
+  }
+
+  return wrapper;
 }
 
 function getGoogleClient(): OAuth2Client {
@@ -161,7 +172,11 @@ export async function createAuthSession(
   ipAddress?: string,
   userAgent?: string
 ): Promise<{ session: AuthSession; tokens: AuthTokens }> {
+  const t0 = performance.now();
+  const dbStart = performance.now();
   const db = await getAuthDb();
+  const dbReadyMs = performance.now() - dbStart;
+
   const now = new Date().toISOString();
   const sessionId = uuidv4();
 
@@ -184,6 +199,7 @@ export async function createAuthSession(
   const expiresAt = new Date(Date.now() + sessionDurationMs).toISOString();
 
   try {
+    const insertStart = performance.now();
     await db.prepare(`
       INSERT INTO auth_sessions (id, user_id, token, refresh_token, expires_at, created_at, last_activity, ip_address, user_agent)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -198,6 +214,15 @@ export async function createAuthSession(
       ipAddress || null,
       userAgent || null
     );
+    const insertMs = performance.now() - insertStart;
+    const totalMs = performance.now() - t0;
+
+    logger.info("[AUTH] Tempo de criação de sessão", {
+      dbReadyMs: Math.round(dbReadyMs),
+      insertMs: Math.round(insertMs),
+      totalMs: Math.round(totalMs),
+      userId: user.id
+    });
 
     const session: AuthSession = {
       id: sessionId,
