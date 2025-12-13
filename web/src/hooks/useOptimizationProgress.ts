@@ -619,6 +619,50 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
               }));
               setLiveMessage(warningMsg);
 
+            } else if (event.type === 'step_progress') {
+              // Backend sending coarse-grained progress (e.g., NVIDIA Fast)
+              const stepId: string = event.stepId || event.name || 'unknown';
+              const status = event.status as 'pending' | 'running' | 'success' | 'error' | 'timeout' | 'skipped' | undefined;
+              const duration = typeof event.duration === 'string' && event.duration.endsWith('ms')
+                ? Number(event.duration.replace('ms', ''))
+                : (typeof event.duration === 'number' ? event.duration : undefined);
+
+              const mapStepToStage = (id: string): string | null => {
+                if (id === 'nvidia_fast' || id === 'NVIDIA_FAST') return 'NVIDIA_FAST';
+                if (id.toLowerCase().includes('analysis')) return 'ANALYSIS_AND_PLAN';
+                if (id.toLowerCase().includes('code')) return 'CODE_GEN';
+                if (id.toLowerCase().includes('final') || id.toLowerCase().includes('delivery')) return 'FINAL_DELIVERY';
+                return null;
+              };
+
+              const targetStageId = mapStepToStage(stepId);
+              if (targetStageId) {
+                setProgress(prev => {
+                  const newStages = prev.stages.map(stage => {
+                    if (stage.id !== targetStageId) return stage;
+                    return {
+                      ...stage,
+                      status: status || stage.status,
+                      duration: duration ?? stage.duration,
+                      endTime: (status === 'success' || status === 'error' || status === 'timeout') ? Date.now() : stage.endTime,
+                      subSteps: stage.subSteps?.map(sub => ({
+                        ...sub,
+                        status: status === 'success' ? 'success' : sub.status,
+                        endTime: status === 'success' ? Date.now() : sub.endTime,
+                        duration: status === 'success' && sub.duration ? sub.duration : sub.duration
+                      }))
+                    };
+                  });
+
+                  return {
+                    ...prev,
+                    stages: newStages,
+                    overallProgress: calculateOverallProgress(newStages),
+                    currentStageIndex: newStages.findIndex(s => s.status === 'running')
+                  };
+                });
+              }
+
             } else if (event.type === 'substep') {
 
               // Atualiza substep em tempo real
@@ -818,14 +862,28 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
               let finalElapsed = 0;
 
               setProgress(prev => {
-                // Determina se a otimização foi bem-sucedida
-                const isOptimizationSuccess = !!(data.optimizedScript || data.response?.optimizedScript);
-
-                // Copia defensiva das stages
-                const updatedStages = prev.stages.map(stage => ({
+                // Força conclusão para modos sem granularidade (ex.: NVIDIA Fast)
+                const needsForce = prev.stages.every(s => s.status !== 'success');
+                const baseStages = needsForce ? prev.stages.map(stage => ({
+                  ...stage,
+                  status: 'success' as const,
+                  endTime: Date.now(),
+                  duration: stage.duration ?? (stage.currentRunningTime || 0),
+                  subSteps: stage.subSteps?.map(sub => ({
+                    ...sub,
+                    status: 'success' as const,
+                    endTime: Date.now(),
+                    duration: sub.duration ?? sub.currentRunningTime
+                  }))
+                })) : prev.stages.map(stage => ({
                   ...stage,
                   subSteps: stage.subSteps?.map(sub => ({ ...sub }))
                 }));
+
+                // Determina se a otimização foi bem-sucedida
+                const isOptimizationSuccess = !!(data.optimizedScript || data.response?.optimizedScript);
+
+                const updatedStages = [...baseStages];
 
                 // Se otimização foi sucesso, força TODAS as stages e subtasks para success
                 // Isso resolve o problema de IDs dinâmicos que não fazem match com o backend
@@ -883,29 +941,21 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
 
                 const overall = calculateOverallProgress(updatedStages);
+                const finalStages = overall === 100 ? updatedStages : baseStages;
+                const finalOverall = overall === 100 ? overall : calculateOverallProgress(finalStages);
 
-                isFullyComplete = overall === 100;
+                isFullyComplete = finalOverall === 100;
 
                 if (isFullyComplete) {
-
                   finalElapsed = Date.now() - startTimeRef.current;
-
                 }
 
-
-
                 return {
-
                   ...prev,
-
-                  stages: updatedStages,
-
-                  overallProgress: overall,
-
-                  status: isFullyComplete ? "success" : prev.status,
-
+                  stages: finalStages,
+                  overallProgress: finalOverall,
+                  status: "success",
                   elapsedTime: isFullyComplete ? finalElapsed : prev.elapsedTime
-
                 };
 
               });
@@ -934,6 +984,15 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
                 return data;
 
               }
+
+              // Mesmo se não 100% (ex.: mapeamento dinâmico), garanta que o resultado chegue à UI
+              if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+              }
+              setResult(data);
+              setIsRunning(false);
+              clearTimeout(globalTimeoutId);
+              return data;
 
             } else if (event.type === 'error') {
 
