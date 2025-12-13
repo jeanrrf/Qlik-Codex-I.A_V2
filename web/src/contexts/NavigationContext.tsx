@@ -1,6 +1,6 @@
 import React, { createContext, useContext, ReactNode } from "react";
 
-type View = "landing" | "optimizer" | "profile" | "analytics";
+export type View = "landing" | "optimizer" | "profile" | "analytics";
 
 interface NavigationContextType {
   navigateTo: (view: View) => void;
@@ -11,21 +11,30 @@ interface NavigationContextType {
 
 const NavigationContext = createContext<NavigationContextType | undefined>(undefined);
 
+interface NavigationProviderProps {
+  children: ReactNode;
+  navigateTo: (view: View) => void;
+  navigateBack: (fallback?: View) => void;
+  currentView: View;
+  lastView: View | null;
+}
+
 export function NavigationProvider({
   children,
   navigateTo,
   navigateBack,
   currentView,
   lastView
-}: {
-  children: ReactNode;
-  navigateTo: (view: View) => void;
-  navigateBack: (fallback?: View) => void;
-  currentView: View;
-  lastView: View | null;
-}) {
+}: NavigationProviderProps) {
   return (
-    <NavigationContext.Provider value={{ navigateTo, navigateBack, currentView, lastView }}>
+    <NavigationContext.Provider
+      value={{
+        navigateTo,
+        navigateBack,
+        currentView,
+        lastView,
+      }}
+    >
       {children}
     </NavigationContext.Provider>
   );

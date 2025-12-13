@@ -22,11 +22,11 @@ interface SessionMeta {
 interface SessionPersistenceOptions {
   sessionId?: string;
   mode: OptimizeMode;
-  script: string;
   llmProvider?: LLMProviderName;
   llmModel?: string;
   progress: OptimizationProgress;
   isRunning: boolean;
+  status?: 'paused' | 'running' | 'completed' | 'error';
 }
 
 /**
@@ -116,11 +116,9 @@ export function useSessionPersistence() {
   const saveSession = useCallback(async (options: SessionPersistenceOptions): Promise<void> => {
     const sessionId = options.sessionId || sessionIdRef.current;
 
-    // Scripts NÃO são enviados para backend por segurança
     const sessionData = {
       sessionId,
       mode: options.mode,
-      // script: REMOVIDO - não persistimos scripts no servidor
       llmProvider: options.llmProvider,
       llmModel: options.llmModel,
       progressData: options.progress,

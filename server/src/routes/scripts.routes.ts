@@ -81,52 +81,52 @@ router.post(
       // Cast result para ter acesso a todas as propriedades (tipo seguro)
       const fullResult = result as Record<string, unknown> & Partial<OptimizeScriptApiResponse>;
 
+      const baseAnalysis = fullResult.analysis ? {
+        ...fullResult.analysis
+      } : {
+        changes: [],
+        breakingRisk: "none" as const,
+        safeToApply: true,
+        mode: payload.mode,
+        metricsEstimate: {
+          loadComplexityBefore: "low" as const,
+          loadComplexityAfter: "low" as const,
+          maintainabilityBefore: "low" as const,
+          maintainabilityAfter: "low" as const
+        },
+        steps: []
+      };
+
       const response: OptimizeScriptApiResponse = {
+        // Mantém todos os campos retornados pelo serviço (consultoria, ROI, RAG, diffStats, etc.)
+        ...(fullResult as OptimizeScriptApiResponse),
         status: "done",
-        originalScript: fullResult.originalScript || "",
-        optimizedScript: fullResult.optimizedScript || "",
-        summary: fullResult.summary || "",
-        documentationMarkdown: fullResult.documentationMarkdown || "",
-        explanation: fullResult.explanation,
-        consultancyDocument: fullResult.consultancyDocument,
-        analysisOnly: fullResult.analysisOnly,
-        review: fullResult.review,
-        // Adiciona análise com sub-etapas se existirem
-        analysis: fullResult.analysis ? {
-          ...fullResult.analysis,
-          // Adiciona step de "Otimização" com todas as sub-etapas rastreadas
-          steps: [{
-            stepId: "opt_main",
-            stepNumber: 0,
-            stepName: "Processo de Otimização",
-            category: "performance",
-            status: "success",
-            subSteps: completedSubSteps.map((s) => ({
-              id: s.id,
-              name: s.name,
-              description: s.description,
-              status: s.status,
-              startTime: s.startTime?.toISOString(),
-              endTime: s.endTime?.toISOString(),
-              duration: s.duration,
-              error: s.error
-            })),
-            metadata: {
-              totalDuration: completedSubSteps.reduce((sum, s) => sum + (s.duration || 0), 0)
+        // Adiciona step de "Otimização" com todas as sub-etapas rastreadas
+        analysis: {
+          ...baseAnalysis,
+          steps: [
+            ...(baseAnalysis.steps || []),
+            {
+              stepId: "opt_main",
+              stepNumber: 0,
+              stepName: "Processo de Otimização",
+              category: "performance",
+              status: "success",
+              subSteps: completedSubSteps.map((s) => ({
+                id: s.id,
+                name: s.name,
+                description: s.description,
+                status: s.status,
+                startTime: s.startTime?.toISOString(),
+                endTime: s.endTime?.toISOString(),
+                duration: s.duration,
+                error: s.error
+              })),
+              metadata: {
+                totalDuration: completedSubSteps.reduce((sum, s) => sum + (s.duration || 0), 0)
+              }
             }
-          }]
-        } : {
-          changes: [],
-          breakingRisk: "none" as const,
-          safeToApply: true,
-          mode: payload.mode,
-          metricsEstimate: {
-            loadComplexityBefore: "low" as const,
-            loadComplexityAfter: "low" as const,
-            maintainabilityBefore: "low" as const,
-            maintainabilityAfter: "low" as const
-          },
-          steps: []
+          ]
         }
       };
 

@@ -3,7 +3,6 @@ import { useState, useCallback, useRef } from "react";
 import { OptimizeScriptApiResponse, OptimizeMode, LLMProviderName } from "../types/api";
 
 import { SubStepExecution } from "../types/api";
-import { useAuth } from "../contexts/AuthContext";
 
 // Importar tipos centralizados do pipeline
 import {
@@ -18,7 +17,7 @@ import {
 
 // Importar tipos dos componentes de progresso
 
-import type { ScriptAnalysisData } from '../components/ScriptAnalysisInfo';
+import type { ScriptAnalysisData } from '../types/ui';
 
 // Re-export tipos para retrocompatibilidade
 export type OptimizationStage = PipelineStage;
@@ -126,8 +125,6 @@ export interface UseOptimizationProgressReturn {
  */
 
 export function useOptimizationProgress(): UseOptimizationProgressReturn {
-
-  const { accessToken } = useAuth();
 
   const [currentMode, setCurrentMode] = useState<OptimizeMode>("ultra-expert");
 
@@ -459,8 +456,6 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
     try {
 
-      const authHeaders = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
-
       const response = await fetch("/api/scripts/optimize", {
 
         method: "POST",
@@ -470,7 +465,6 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
           "Content-Type": "application/json",
 
           "Accept": "text/event-stream",
-          ...authHeaders
 
         },
 
@@ -968,14 +962,13 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
           } catch (parseErr) {
 
-            console.error("[SSE] Parse error:", parseErr, "JSON:", jsonStr);
+            console.error("[SSE] Parse error (trailing)", parseErr, "JSON:", jsonStr);
 
           }
 
         }
 
       }
-
 
 
       throw new Error("Stream finalizado sem evento 'complete'");
@@ -1045,7 +1038,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
     }
 
-  }, [accessToken, updateStage, reset]);
+  }, [updateStage, reset]);
 
 
 
@@ -1136,4 +1129,3 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
   };
 
 }
-

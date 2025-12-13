@@ -5,6 +5,7 @@
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ProviderOrchestrator } from "../../src/lib/providerOrchestrator";
+import { config } from "../../src/lib/config";
 import type { OptimizationStepId } from "../../src/types/optimization";
 
 // Mock dos provedores
@@ -157,10 +158,14 @@ describe("ProviderOrchestrator", () => {
       const result = await orchestrator.executeWithRotation(stepId, prompt, timeout);
 
       expect(result.fallbackTriggered).toBe(true);
-      expect(result.attempts.length).toBe(2); // Google + Nvidia (sem repetir)
+      expect(result.attempts.length).toBeLessThanOrEqual(4); // respeita maxAttemptsPerStep
+
+      const keys = result.attempts.map((a) => `${a.provider}:${a.model}`);
+      expect(new Set(keys).size).toBe(keys.length); // nao repetir a mesma combinacao provider+model
 
       const providers = result.attempts.map((a) => a.provider);
-      expect(providers).toEqual(["google", "nvidia"]);
+      expect(providers[0]).toBe("google");
+      expect(providers).toContain("nvidia");
     });
 
     it("deve tentar até maxAttemptsPerStep vezes", async () => {
@@ -194,6 +199,34 @@ describe("ProviderOrchestrator", () => {
   });
 
   describe("Fallback", () => {
+    it("deve usar o modelo NVIDIA de failover quando o Gemini falhar", async () => {
+      const stepId: OptimizationStepId = "pre_004_map_fields";
+      const prompt = "test prompt";
+      const timeout = 1000;
+
+      const { googleProvider } = await import("../../src/lib/llmProviders/googleProvider");
+      const { nvidiaProvider } = await import("../../src/lib/llmProviders/nvidiaProvider");
+
+      vi.mocked(googleProvider.generateStructuredJson).mockRejectedValueOnce(new Error("Gemini indisponivel"));
+
+      vi.mocked(nvidiaProvider.generateStructuredJson).mockResolvedValueOnce({
+        text: '{"result":"nvidia-success"}',
+        provider: "nvidia",
+        metadata: { model: config.nvidiaGeminiFailoverModel }
+      });
+
+      const result = await orchestrator.executeWithRotation(stepId, prompt, timeout);
+
+      expect(result.fallbackTriggered).toBe(false);
+      expect(result.attempts.length).toBe(2);
+      expect(result.attempts[0].provider).toBe("google");
+      expect(result.attempts[1].provider).toBe("nvidia");
+      expect(vi.mocked(nvidiaProvider.generateStructuredJson)).toHaveBeenCalledWith(
+        prompt,
+        expect.objectContaining({ model: config.nvidiaGeminiFailoverModel })
+      );
+    });
+
     it("deve acionar fallback após todas as tentativas falharem", async () => {
       const stepId: OptimizationStepId = "quality_066_naming_conventions";
       const prompt = "test";

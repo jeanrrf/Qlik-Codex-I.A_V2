@@ -77,6 +77,7 @@ export class ProviderOrchestrator {
     const usedProviders = new Set<string>();
     const usedProviderModels = new Set<string>();
     let attemptCount = 0;
+    let geminiFailed = false;
 
     // Ajusta timeout pelo tamanho do prompt (heurística).
     const estimatedTokens = Math.ceil(prompt.length / 4);
@@ -103,15 +104,18 @@ export class ProviderOrchestrator {
 
     // Plano fixo de fallback por modelo.
     const attemptPlan: Array<{ provider: "google" | "nvidia"; model?: string; label: string }> = [
-      { provider: "google", model: config.geminiFallbackModel, label: "Gemini 2.5 Flash-Light" },
-      { provider: "google", model: config.geminiModel, label: "Gemini 2.5 Flash" },
-      { provider: "nvidia", model: config.nvidiaFastModel, label: "NVIDIA Fast" },
-      { provider: "nvidia", model: config.nvidiaFallbackModel, label: "NVIDIA 500B fallback" },
-      { provider: "nvidia", model: config.nvidiaTertiaryModel, label: "Mistral 123B (tertiary)" }
+      { provider: "google", model: config.geminiModel, label: "Gemini (primario)" },
+      { provider: "nvidia", model: config.nvidiaModel, label: "NVIDIA" }
     ];
 
     for (const plan of attemptPlan) {
       ensureNotAborted();
+
+      // Fallback especifico: se o Gemini falhou nesta etapa, nao faz sentido repetir chamadas Google aqui.
+      if (geminiFailed && plan.provider === "google") {
+        logger.warn("Pulando Google (Gemini) apos falha anterior nesta etapa", { stepId, model: plan.model, label: plan.label });
+        continue;
+      }
 
       const attemptKey = `${plan.provider}:${plan.model ?? "default"}`;
 
@@ -203,6 +207,10 @@ export class ProviderOrchestrator {
           };
         }
 
+        if (plan.provider === "google") {
+          geminiFailed = true;
+        }
+
         const failIcon = attemptResult.timedOut ? "[timeout]" : "[falha]";
         logger.warn(`${failIcon} Provedor falhou, tentando proximo`, {
           stepId,
@@ -219,6 +227,10 @@ export class ProviderOrchestrator {
 
         if (errorMessage === "ABORTED" || errorMessage.includes("aborted by signal")) {
           throw new Error("ABORTED");
+        }
+
+        if (plan.provider === "google") {
+          geminiFailed = true;
         }
 
         logger.error("Erro critico ao chamar provedor", {
@@ -521,3 +533,4 @@ export function createOrchestrator(
 }
 
 export const defaultOrchestrator = new ProviderOrchestrator();
+export const providerOrchestrator = defaultOrchestrator;

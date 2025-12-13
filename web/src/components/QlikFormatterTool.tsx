@@ -1,6 +1,6 @@
 ﻿import React, { useState, useRef } from "react";
 
-import { requestQlikFormatterStream } from "../lib/apiClient";
+import { requestQlikFormatterStream } from "../api/client";
 
 type FormatterSource = "ainex" | "fallback";
 

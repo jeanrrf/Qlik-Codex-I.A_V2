@@ -14,3 +14,16 @@ export interface UploadedFilePayload {
   content: string;
   meta: UploadedFileMeta;
 }
+
+export interface ScriptAnalysisData {
+  fileType: 'qvd' | 'qvs' | 'txt' | 'unknown';
+  size: 'small' | 'medium' | 'large' | 'xlarge';
+  complexity: 'low' | 'medium' | 'high' | 'critical';
+  lines: number;
+  estimatedTokens: number;
+  qvdOperations?: {
+    reads: number;
+    writes: number;
+  } | null;
+  strategy: 'full' | 'optimized';
+}

@@ -110,6 +110,8 @@ export interface RAGConfig {
   searchTimeoutMs: number;
   /** Embedding model */
   embeddingModel: string;
+  /** Embedding provider ('google' | 'nvidia') */
+  embeddingProvider: 'google' | 'nvidia';
   /** Dimensões do embedding */
   embeddingDimensions: number;
 }

@@ -157,7 +157,7 @@ async function callNvidiaWithModel(
 
   logger.info("NVIDIA API: Tentando modelo", { model: modelName });
 
-  // Ajuste de parâmetros para Mistral vs outros
+  // Ajuste de parâmetros para Mistral vs outros (alinhar com exemplo oficial NVIDIA/OpenAI client)
   const isMistral = modelName.toLowerCase().includes("mistral");
   const maxTokens = isMistral ? 8192 : 16384; // Mistral pode ter limites diferentes
 
@@ -173,16 +173,13 @@ async function callNvidiaWithModel(
       body: JSON.stringify({
         model: modelName,
         messages: [
-          {
-            role: "system",
-            content: "Responda somente com o JSON pedido no prompt do usuário, sem Markdown, sem comentários."
-          },
           { role: "user", content: prompt }
         ],
         temperature: 0.15,
         top_p: 0.95,
         max_tokens: maxTokens,
-        stream: false
+        stream: false,
+        seed: 42
       }),
       signal
     }),
@@ -277,7 +274,45 @@ export const nvidiaProvider: LLMProvider = {
       throw error;
     }
   },
-  getEmbedding: async (_text: string): Promise<number[]> => {
-    throw new Error("Embedding generation not supported by Nvidia provider yet.");
+  getEmbedding: async (text: string): Promise<number[]> => {
+    if (!config.nvidiaApiKey) {
+      throw new Error("NVIDIA_API_KEY não configurada");
+    }
+
+    const model = config.nvidiaEmbeddingModel;
+    const endpoint = `${NVIDIA_BASE_URL}/embeddings`;
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${config.nvidiaApiKey}`
+        },
+        body: JSON.stringify({
+          input: [text],
+          model: model,
+          encoding_format: "float"
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`NVIDIA Embedding API error: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+
+      const data = (await response.json()) as { data: Array<{ embedding: number[] }> };
+
+      if (!data.data || data.data.length === 0) {
+        throw new Error("NVIDIA Embedding API returned no data");
+      }
+
+      return data.data[0].embedding;
+    } catch (error) {
+      logger.error("NVIDIA embedding generation failed", {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
   }
 };

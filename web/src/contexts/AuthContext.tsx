@@ -35,25 +35,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
    * Função utilitária para validar sessão usando cookies HttpOnly
    */
   const revalidate = async () => {
-    console.log("🔄 [AuthContext] Revalidate: Iniciando...");
+    // console.log(" [AuthContext] Revalidate: Iniciando...");
     try {
       let storedToken: string | undefined;
       try {
         storedToken = localStorage.getItem(ACCESS_TOKEN_KEY) || undefined;
-        console.log("📦 [AuthContext] Token do localStorage:", !!storedToken);
+        // console.log(" [AuthContext] Token do localStorage:", !!storedToken);
       } catch {
-        console.warn("⚠️ [AuthContext] Erro ao acessar localStorage");
+        // console.warn(" [AuthContext] Erro ao acessar localStorage");
         storedToken = undefined;
       }
 
-      console.log("🌐 [AuthContext] Verificando status de autenticação...");
+      // console.log(" [AuthContext] Verificando status de autenticação...");
       const status = await checkAuthStatus(storedToken);
-      console.log("✅ [AuthContext] Status recebido:", status);
+      // console.log(" [AuthContext] Status recebido:", status);
 
       if (status.authenticated && status.user) {
-        console.log("👤 [AuthContext] Usuário autenticado, buscando dados completos...");
+        // console.log(" [AuthContext] Usuário autenticado, buscando dados completos...");
         const userData = await getCurrentUser(storedToken);
-        console.log("✅ [AuthContext] Dados do usuário recebidos:", userData.user?.email);
+        // console.log(" [AuthContext] Dados do usuário recebidos:", userData.user?.email);
         setState({
           user: userData.user as User,
           isAuthenticated: true,
@@ -61,9 +61,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
           error: null,
           accessToken: storedToken || "cookie"
         });
-        console.log("✅ [AuthContext] Estado atualizado - usuário autenticado");
+        // console.log(" [AuthContext] Estado atualizado - usuário autenticado");
       } else {
-        console.log("❌ [AuthContext] Usuário não autenticado");
+        // console.log(" [AuthContext] Usuário não autenticado");
         try {
           localStorage.removeItem(ACCESS_TOKEN_KEY);
         } catch {
@@ -78,7 +78,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         });
       }
     } catch (err) {
-      console.error("❌ [AuthContext] Erro na inicialização:", err);
+      console.error(" [AuthContext] Erro na inicialização:", err);
       try {
         localStorage.removeItem(ACCESS_TOKEN_KEY);
       } catch {
@@ -179,7 +179,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         accessToken: null
       });
     } catch (err) {
-      console.error("Logout error:", err);
+      console.error("[AuthContext] Logout error:", err);
       // Forçar logout local mesmo se API falhar
       setState({
         user: null,

@@ -60,9 +60,7 @@ export default function AnalyticsDashboard() {
   useEffect(() => {
     if (!isOwner() || activeTab !== 'realtime' || !realtimeEnabled) return;
 
-    const url = accessToken
-      ? `/api/analytics/realtime?token=${accessToken}`
-      : '/api/analytics/realtime';
+    const url = '/api/analytics/realtime';
 
     const eventSource = new EventSource(url, {
       withCredentials: true
@@ -92,7 +90,9 @@ export default function AnalyticsDashboard() {
 
   async function loadSummary() {
     try {
-      const data = await apiClient.get<AnalyticsSummary>('/api/analytics/summary');
+      const data = await apiClient.get<AnalyticsSummary>('/api/analytics/summary', {
+        bustCache: true
+      });
       setSummary(data);
       setLoading(false);
     } catch (err: unknown) {

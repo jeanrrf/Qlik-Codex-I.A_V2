@@ -5,7 +5,7 @@
 import type { Client, InArgs } from "@libsql/client" assert { "resolution-mode": "import" };
 
 import { logger } from "./logger";
-import { getTursoDb, initTursoDb } from "./tursoDb";
+import { closeTursoDb, getTursoDb, initTursoDb } from "./tursoDb";
 
 /**
  * Inicializa banco de dados (Turso)
@@ -26,7 +26,12 @@ export function getDb() {
  * Fecha conexão do banco
  */
 export async function closeDb() {
-  logger.info("Turso connection closed");
+  try {
+    await closeTursoDb();
+    logger.info("Turso connection closed");
+  } catch (err) {
+    logger.error("Failed to close Turso connection", err);
+  }
 }
 
 /**

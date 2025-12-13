@@ -54,6 +54,20 @@ export async function initTursoDb(): Promise<Client> {
 }
 
 
+/**
+ * Fecha cliente Turso, se existir.
+ */
+export async function closeTursoDb(): Promise<void> {
+  if (!tursoClient) return;
+  try {
+    await tursoClient.close();
+  } catch (err) {
+    logger.error('Turso close error', { error: err });
+  } finally {
+    tursoClient = null;
+  }
+}
+
 
 /**
  * Obtém cliente Turso

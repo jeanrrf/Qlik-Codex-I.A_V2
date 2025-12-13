@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { config } from '../lib/config';
 import { googleProvider } from '../lib/llmProviders/googleProvider';
+import { nvidiaProvider } from '../lib/llmProviders/nvidiaProvider';
 import { logger } from '../lib/logger';
 import { getTursoDb } from '../lib/tursoDb';
 import type {
@@ -15,13 +16,18 @@ import type {
   FeedbackType
 } from '../types/rag';
 
+type RAGAvailability = {
+  enabled: boolean;
+  reason?: string;
+};
+
 /**
  * VectorRAGService
  * Sistema de RAG focado em aprendizado por reforço de otimizações
  * 
  * Arquitetura:
  * 1. Armazena histórico de otimizações bem-sucedidas
- * 2. Usa embeddings (Google text-embedding-004) para busca semântica
+ * 2. Usa embeddings (Google text-embedding-004 ou NVIDIA nv-embed-v1) para busca semântica
  * 3. Sistema de recompensa: approve = +10 score, reject = descarta
  * 4. Injeta contexto RAG no prompt para melhorar futuras otimizações
  */
@@ -30,15 +36,41 @@ class VectorRAGService {
   private initialized = false;
 
   constructor() {
+    const provider = (config.rag?.embeddingProvider || 'google').toLowerCase();
+
     this.ragConfig = {
-      enabled: process.env.RAG_ENABLED === 'true',
-      maxExamples: parseInt(process.env.RAG_MAX_EXAMPLES || '3', 10),
-      similarityThreshold: parseFloat(process.env.RAG_SIMILARITY_THRESHOLD || '0.7'),
-      minRewardScore: parseInt(process.env.RAG_MIN_REWARD_SCORE || '5', 10),
-      searchTimeoutMs: parseInt(process.env.RAG_SEARCH_TIMEOUT_MS || '200', 10),
-      embeddingModel: 'text-embedding-004',
-      embeddingDimensions: 768
+      enabled: config.rag.enabled,
+      maxExamples: config.rag.maxExamples,
+      similarityThreshold: config.rag.similarityThreshold,
+      minRewardScore: config.rag.minRewardScore,
+      searchTimeoutMs: config.rag.searchTimeoutMs,
+      embeddingModel: config.rag.embeddingModel,
+      embeddingProvider: provider as 'google' | 'nvidia',
+      embeddingDimensions: config.rag.embeddingDimensions
     };
+  }
+
+  getAvailability(): RAGAvailability {
+    if (!this.ragConfig.enabled) {
+      return { enabled: false, reason: 'RAG disabled via configuration' };
+    }
+
+    if (this.ragConfig.embeddingProvider === 'nvidia' && !config.nvidiaApiKey) {
+      return { enabled: false, reason: 'Missing NVIDIA_API_KEY for RAG embeddings' };
+    }
+
+    if (this.ragConfig.embeddingProvider === 'google' && !config.geminiApiKey) {
+      return { enabled: false, reason: 'Missing GEMINI_API_KEY for RAG embeddings' };
+    }
+
+    return { enabled: true };
+  }
+
+  /**
+   * Verifica se RAG esta habilitado e configurado
+   */
+  isEnabled(): boolean {
+    return this.getAvailability().enabled;
   }
 
   /**
@@ -47,8 +79,17 @@ class VectorRAGService {
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
+    const availability = this.getAvailability();
+    if (!availability.enabled) {
+      logger.info('[RAG] Skipping initialization (disabled)', availability);
+      return;
+    }
+
     try {
-      logger.info('[RAG] Initializing vector tables in Turso DB');
+      logger.info('[RAG] Initializing vector tables in Turso DB', {
+        provider: this.ragConfig.embeddingProvider,
+        dimensions: this.ragConfig.embeddingDimensions
+      });
 
       const db = getTursoDb();
       // Tabela principal de otimizações com embeddings
@@ -68,7 +109,7 @@ class VectorRAGService {
           breaking_risk TEXT NOT NULL,
           optimization_tags TEXT, -- JSON array
           user_id TEXT,
-          embedding BLOB NOT NULL, -- Embedding vetorial (768D)
+          embedding BLOB NOT NULL, -- Embedding vetorial (768D ou 1024D)
           original_snippet TEXT NOT NULL,
           optimized_snippet TEXT NOT NULL,
           changes_summary TEXT NOT NULL,
@@ -130,21 +171,21 @@ class VectorRAGService {
   }
 
   /**
-   * Verifica se RAG está habilitado
-   */
-  isEnabled(): boolean {
-    return this.ragConfig.enabled && config.geminiApiKey !== undefined;
-  }
-
-  /**
-   * Gera embedding do script usando Google text-embedding-004
+   * Gera embedding do script usando o provider configurado
    */
   private async generateEmbedding(text: string): Promise<number[]> {
     try {
-      const embedding = await googleProvider.getEmbedding(text);
+      let embedding: number[];
+
+      if (this.ragConfig.embeddingProvider === 'nvidia') {
+        embedding = await nvidiaProvider.getEmbedding(text);
+      } else {
+        embedding = await googleProvider.getEmbedding(text);
+      }
 
       if (embedding.length !== this.ragConfig.embeddingDimensions) {
         logger.warn('[RAG] Embedding dimension mismatch', {
+          provider: this.ragConfig.embeddingProvider,
           expected: this.ragConfig.embeddingDimensions,
           received: embedding.length
         });
@@ -152,7 +193,10 @@ class VectorRAGService {
 
       return embedding;
     } catch (error) {
-      logger.error('[RAG] Failed to generate embedding', { error });
+      logger.error('[RAG] Failed to generate embedding', {
+        provider: this.ragConfig.embeddingProvider,
+        error
+      });
       throw error;
     }
   }
@@ -434,6 +478,12 @@ class VectorRAGService {
     userId?: string,
     comment?: string
   ): Promise<void> {
+    const availability = this.getAvailability();
+    if (!availability.enabled) {
+      logger.info('[RAG] Feedback ignored (RAG disabled)', availability);
+      return;
+    }
+
     await this.initialize();
 
     try {
@@ -486,6 +536,20 @@ class VectorRAGService {
    * Retorna estatísticas do sistema RAG
    */
   async getStats(): Promise<RAGStats> {
+    const availability = this.getAvailability();
+    if (!availability.enabled) {
+      logger.info('[RAG] Stats requested but RAG disabled', availability);
+      return {
+        totalDocuments: 0,
+        approvedDocuments: 0,
+        rejectedDocuments: 0,
+        pendingDocuments: 0,
+        avgRewardScore: 0,
+        avgSearchLatencyMs: 0,
+        cacheHitRate: 0
+      };
+    }
+
     await this.initialize();
 
     try {
@@ -521,6 +585,12 @@ class VectorRAGService {
    * Limpa documentos rejeitados antigos (garbage collection)
    */
   async cleanupRejected(olderThanDays = 30): Promise<number> {
+    const availability = this.getAvailability();
+    if (!availability.enabled) {
+      logger.info('[RAG] Cleanup skipped (RAG disabled)', availability);
+      return 0;
+    }
+
     await this.initialize();
 
     try {

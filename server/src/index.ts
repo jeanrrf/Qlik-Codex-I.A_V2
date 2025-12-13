@@ -15,6 +15,7 @@ import { logger } from "./lib/logger";
 import { errorHandler } from "./middleware/errorHandler";
 import { analyticsRouter } from "./routes/analytics.routes";
 import authRouter from "./routes/auth.routes";
+import contactRouter from "./routes/contact.routes";
 import { healthRouter } from "./routes/health.routes";
 import { metricsRouter } from "./routes/metrics.routes";
 import ragRouter from "./routes/rag.routes";
@@ -122,6 +123,7 @@ app.get("/", (_req, res) => {
 
 app.use("/health", healthRouter);
 app.use("/api/auth", authRouter);
+app.use("/api/contact", contactRouter);
 app.use("/api/scripts", scriptsRouter);
 app.use("/api/validate", validationRouter);
 app.use("/api/tools", toolsRouter);
@@ -189,6 +191,20 @@ async function startServer() {
       tursoConfigured: Boolean(process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN),
       ownerEmailSet: Boolean(process.env.OWNER_EMAIL),
       viteOwnerEmailSet: Boolean(process.env.VITE_OWNER_EMAIL)
+    });
+
+    const maskedNvidiaKey = config.nvidiaApiKey
+      ? `${config.nvidiaApiKey.slice(0, 6)}***${config.nvidiaApiKey.slice(-4)}`
+      : null;
+
+    logger.info('NVIDIA model configuration', {
+      chatModel: config.nvidiaModel,
+      embeddingModel: config.nvidiaEmbeddingModel,
+      ragEmbeddingModel: config.rag.embeddingModel,
+      ragEmbeddingProvider: config.rag.embeddingProvider,
+      apiKeyMasked: maskedNvidiaKey,
+      apiKeySource: config.nvidiaApiKeySource,
+      dotenvOverride: config.dotenvOverride
     });
 
     // Quick validations / hints

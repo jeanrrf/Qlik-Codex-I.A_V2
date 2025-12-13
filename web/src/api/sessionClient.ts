@@ -10,7 +10,6 @@ export interface SessionData {
   sessionId: string;
   userId?: string;
   mode: OptimizeMode;
-  script: string;
   llmProvider?: LLMProviderName;
   llmModel?: string;
   progressData: ProgressData;

@@ -1,11 +1,17 @@
 import { v4 as uuidv4 } from "uuid";
 
 import { analyticsEmitter } from "../lib/analyticsEmitter";
+import { config } from "../lib/config";
 import { DbAdapter } from "../lib/dbAdapter";
 import { logger } from "../lib/logger";
 
-// Force restart for schema recreation
-const db = new DbAdapter();
+let db: DbAdapter | null = null;
+const getDb = (): DbAdapter => {
+  if (!db) {
+    db = new DbAdapter();
+  }
+  return db;
+};
 
 const EVENT_TABLE_INIT = `
 CREATE TABLE IF NOT EXISTS analytics_events (
@@ -28,9 +34,14 @@ CREATE TABLE IF NOT EXISTS analytics_events (
 `;
 
 async function ensureAnalyticsTable(): Promise<void> {
+  if (!config.analyticsEnabled) {
+    logger.info("[Analytics] Skipping table init (ANALYTICS_ENABLED=false)");
+    return;
+  }
+
   try {
     // 1. Ensure table exists (basic structure)
-    await db.exec(EVENT_TABLE_INIT);
+    await getDb().exec(EVENT_TABLE_INIT);
 
     // 2. Robust migration: Try to add columns if they are missing (idempotent via catch)
     // This handles cases where the table was created with an older schema
@@ -51,7 +62,7 @@ async function ensureAnalyticsTable(): Promise<void> {
 
     for (const sql of migrations) {
       try {
-        await db.exec(sql);
+        await getDb().exec(sql);
       } catch (err) {
         // Ignore "duplicate column name" error (code varies by driver, checking message safe enough)
         // Libsql/SQLite usually throws "duplicate column name: ..."
@@ -64,19 +75,23 @@ async function ensureAnalyticsTable(): Promise<void> {
     }
 
     // 3. Create indices
-    await db.exec("CREATE INDEX IF NOT EXISTS idx_analytics_events_timestamp ON analytics_events(timestamp DESC)");
-    await db.exec("CREATE INDEX IF NOT EXISTS idx_analytics_events_type ON analytics_events(type)");
-    await db.exec("CREATE INDEX IF NOT EXISTS idx_analytics_events_owner ON analytics_events(is_owner)");
-    await db.exec("CREATE INDEX IF NOT EXISTS idx_analytics_events_session ON analytics_events(session_id)");
+    await getDb().exec("CREATE INDEX IF NOT EXISTS idx_analytics_events_timestamp ON analytics_events(timestamp DESC)");
+    await getDb().exec("CREATE INDEX IF NOT EXISTS idx_analytics_events_type ON analytics_events(type)");
+    await getDb().exec("CREATE INDEX IF NOT EXISTS idx_analytics_events_owner ON analytics_events(is_owner)");
+    await getDb().exec("CREATE INDEX IF NOT EXISTS idx_analytics_events_session ON analytics_events(session_id)");
   } catch (err) {
     logger.error("Failed to ensure analytics schema", err);
     throw err;
   }
 }
 
-ensureAnalyticsTable().catch((err) => {
-  logger.error("Analytics table initialization failure", err);
-});
+if (config.analyticsEnabled) {
+  ensureAnalyticsTable().catch((err) => {
+    logger.error("Analytics table initialization failure", err);
+  });
+} else {
+  logger.info("[Analytics] Disabled; schema init not executed");
+}
 
 type AnalyticsEventType = "visit" | "pageview" | "event" | "session";
 
@@ -133,7 +148,7 @@ async function insertEvent(payload: AnalyticsEventPayload): Promise<InsertedEven
   const metadataJson = payload.metadata ? JSON.stringify(payload.metadata) : null;
   const isOwnerValue = payload.isOwner ? 1 : 0;
 
-  await db.run(
+  await getDb().run(
     `
     INSERT INTO analytics_events (
       id,
@@ -304,22 +319,22 @@ export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
     recentRecordsRaw,
     totalOptimizationsResultRaw
   ] = await Promise.all([
-    db.get("SELECT COUNT(*) as count FROM analytics_events WHERE type = ?", ["visit"]),
-    db.get("SELECT COUNT(*) as count FROM analytics_events WHERE type = ?", ["event"]),
-    db.get("SELECT COUNT(*) as count FROM analytics_events WHERE type = ?", ["session"]),
-    db.get("SELECT COUNT(DISTINCT user_id) as count FROM analytics_events WHERE user_id IS NOT NULL"),
-    db.get("SELECT COUNT(*) as count FROM analytics_events WHERE type = ? AND is_owner = 1", ["visit"]),
-    db.get("SELECT COUNT(*) as count FROM analytics_events WHERE type = ? AND is_owner = 1", ["event"]),
-    db.all("SELECT page, COUNT(*) as count FROM analytics_events WHERE type = ? AND page IS NOT NULL GROUP BY page ORDER BY count DESC LIMIT 5", ["pageview"]),
-    db.all("SELECT COALESCE(event_type, event_label, 'evento') as eventType, COUNT(*) as count FROM analytics_events WHERE type = ? GROUP BY eventType ORDER BY count DESC LIMIT 5", ["event"]),
-    db.all(
+    getDb().get("SELECT COUNT(*) as count FROM analytics_events WHERE type = ?", ["visit"]),
+    getDb().get("SELECT COUNT(*) as count FROM analytics_events WHERE type = ?", ["event"]),
+    getDb().get("SELECT COUNT(*) as count FROM analytics_events WHERE type = ?", ["session"]),
+    getDb().get("SELECT COUNT(DISTINCT user_id) as count FROM analytics_events WHERE user_id IS NOT NULL"),
+    getDb().get("SELECT COUNT(*) as count FROM analytics_events WHERE type = ? AND is_owner = 1", ["visit"]),
+    getDb().get("SELECT COUNT(*) as count FROM analytics_events WHERE type = ? AND is_owner = 1", ["event"]),
+    getDb().all("SELECT page, COUNT(*) as count FROM analytics_events WHERE type = ? AND page IS NOT NULL GROUP BY page ORDER BY count DESC LIMIT 5", ["pageview"]),
+    getDb().all("SELECT COALESCE(event_type, event_label, 'evento') as eventType, COUNT(*) as count FROM analytics_events WHERE type = ? GROUP BY eventType ORDER BY count DESC LIMIT 5", ["event"]),
+    getDb().all(
       `SELECT type, page, event_type, event_category, landing_page, timestamp, is_owner, details
        FROM analytics_events
        WHERE type IN ('pageview', 'event', 'session')
        ORDER BY timestamp DESC
        LIMIT 20`
     ),
-    db.get("SELECT COUNT(*) as count FROM optimization_history")
+    getDb().get("SELECT COUNT(*) as count FROM optimization_history")
   ]);
 
   const visitsResult = visitsResultRaw as { count: number } | null;
@@ -388,11 +403,11 @@ export async function cleanupAnalyticsRecords(days: number): Promise<number> {
   cutoff.setDate(cutoff.getDate() - days);
   const cutoffIso = cutoff.toISOString();
 
-  const countResult = (await db.get(
+  const countResult = (await getDb().get(
     "SELECT COUNT(*) as count FROM analytics_events WHERE timestamp < ?",
     [cutoffIso]
   )) as { count: number } | null;
 
-  await db.run("DELETE FROM analytics_events WHERE timestamp < ?", [cutoffIso]);
+  await getDb().run("DELETE FROM analytics_events WHERE timestamp < ?", [cutoffIso]);
   return countResult?.count ?? 0;
 }

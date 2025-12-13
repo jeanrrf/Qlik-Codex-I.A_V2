@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Response } from "express";
 import { z } from "zod";
 
 import { logger } from "../lib/logger";
@@ -9,6 +9,18 @@ import { UserRole } from "../types/auth";
 
 export const router = Router();
 
+const ensureRagAvailable = (res: Response): boolean => {
+  const availability = vectorRAGService.getAvailability();
+  if (!availability.enabled) {
+    res.status(503).json({
+      success: false,
+      message: availability.reason || "RAG desabilitado no servidor"
+    });
+    return false;
+  }
+  return true;
+};
+
 /**
  * POST /api/rag/feedback
  * Registra feedback do usuário (approve/reject) sobre uma otimização
@@ -17,6 +29,8 @@ router.post(
   "/feedback",
   requireAuth,
   asyncHandler(async (req: AuthRequest, res) => {
+    if (!ensureRagAvailable(res)) return;
+
     const schema = z.object({
       optimizationId: z.string().uuid(),
       feedbackType: z.enum(['approve', 'reject']),
@@ -53,6 +67,8 @@ router.get(
   "/stats",
   requireAuth,
   asyncHandler(async (req: AuthRequest, res) => {
+    if (!ensureRagAvailable(res)) return;
+
     logger.info('[RAG] Fetching stats', { userId: req.user?.id });
 
     const stats = await vectorRAGService.getStats();
@@ -73,6 +89,8 @@ router.post(
   requireAuth,
   requireRole(UserRole.OWNER),
   asyncHandler(async (req: AuthRequest, res) => {
+    if (!ensureRagAvailable(res)) return;
+
     const schema = z.object({
       olderThanDays: z.number().int().min(1).max(365).default(30)
     });

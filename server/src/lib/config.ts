@@ -1,8 +1,12 @@
 import dotenv from "dotenv";
 
-dotenv.config();
+import packageJson from "../../package.json" assert { type: "json" };
 
-const APP_VERSION = "0.1.0";
+// Em desenvolvimento, forçamos .env a sobrescrever variáveis já carregadas (evita chave antiga cacheada no terminal/VSCode)
+const shouldOverrideEnv = process.env.DOTENV_OVERRIDE === 'true' || (process.env.NODE_ENV ?? 'development') !== 'production';
+dotenv.config({ override: shouldOverrideEnv });
+
+const APP_VERSION = typeof packageJson.version === "string" ? packageJson.version : "0.0.0";
 const rawPort = Number(process.env.PORT ?? "3000");
 const rawMaxInputChars = Number(process.env.MAX_INPUT_CHARS ?? "0");
 const maxInputChars = Number.isFinite(rawMaxInputChars) ? rawMaxInputChars : 0;
@@ -18,6 +22,10 @@ const llmProvidersEnv = (process.env.LLM_PROVIDERS ?? "google")
   .map((provider) => provider.trim().toLowerCase())
   .filter((provider) => provider.length > 0);
 const llmProviders = llmProvidersEnv.length > 0 ? llmProvidersEnv : ["google"];
+
+// NVIDIA single-source configuration
+const nvidiaChatModel = process.env.NVIDIA_CHAT_MODEL || "mistralai/devstral-2-123b-instruct-2512";
+const nvidiaEmbeddingModel = process.env.NVIDIA_EMBEDDING_MODEL || "nvidia/nv-embed-v1";
 
 const MAX_BROWSER_AUTH_DAYS = 400;
 const rawAuthSessionDurationDays = Number(
@@ -82,15 +90,24 @@ export const config = {
   // Fallback para Gemini (agora 2.5 Flash-Light / 2.0 Flash-Lite)
   geminiFallbackModel: process.env.GEMINI_FALLBACK_MODEL_NAME || "gemini-2.0-flash-lite-preview-02-05",
   nvidiaApiKey: process.env.NVIDIA_API_KEY || "",
-  // Default NVIDIA model used for optimizations. Switched to DeepSeek R1 per request.
-  nvidiaModel: process.env.NVIDIA_MODEL_NAME || "deepseek-ai/deepseek-r1",
-  // Fallback NVIDIA (modelo ~500B, agora Qwen 3 Coder 480B na NIM)
-  nvidiaFallbackModel: process.env.NVIDIA_FALLBACK_MODEL_NAME || "qwen/qwen3-coder-480b-a35b-instruct",
-  // Tertiary Fallback (Mistral)
-  nvidiaTertiaryModel: process.env.NVIDIA_TERTIARY_MODEL_NAME || "mistralai/devstral-2-123b-instruct-2512",
-  // Modo rápido NVIDIA (modelo >100B por padrão; ajuste via env para variantes mais leves/rápidas)
-  // Por padrão usamos o mesmo modelo deepseek-r1 para otimizações rápidas também — pode ser customizado via env
-  nvidiaFastModel: process.env.NVIDIA_FAST_MODEL_NAME || "deepseek-ai/deepseek-r1",
+  // NVIDIA centralized models
+  nvidiaChatModel,
+  nvidiaModel: nvidiaChatModel,
+  nvidiaFastModel: nvidiaChatModel,
+  nvidiaGeminiFailoverModel: nvidiaChatModel,
+  nvidiaFallbackModel: nvidiaChatModel,
+  nvidiaTertiaryModel: nvidiaChatModel,
+  nvidiaEmbeddingModel,
+  dotenvOverride: shouldOverrideEnv,
+  // Diagnóstico: origem da chave NVIDIA
+  nvidiaApiKeySource: (() => {
+    if (process.env.NVIDIA_API_KEY) {
+      // Se override = true, veio do .env mesmo que já houvesse variável
+      if (shouldOverrideEnv) return "dotenv";
+      return "process_env";
+    }
+    return "none";
+  })(),
   llmProviders,
   // Database: usando Turso (SQLite cloud) - veja tursoDb.ts
   version: APP_VERSION,
@@ -169,7 +186,8 @@ export const config = {
     similarityThreshold: Number(process.env.RAG_SIMILARITY_THRESHOLD ?? '0.7'),
     minRewardScore: Number(process.env.RAG_MIN_REWARD_SCORE ?? '5'),
     searchTimeoutMs: Number(process.env.RAG_SEARCH_TIMEOUT_MS ?? '200'),
-    embeddingModel: process.env.RAG_EMBEDDING_MODEL || 'text-embedding-004',
-    embeddingDimensions: Number(process.env.RAG_EMBEDDING_DIMENSIONS ?? '768')
+    embeddingProvider: (process.env.RAG_EMBEDDING_PROVIDER || 'google').toLowerCase(),
+    embeddingModel: process.env.RAG_EMBEDDING_MODEL || (process.env.RAG_EMBEDDING_PROVIDER === 'nvidia' ? nvidiaEmbeddingModel : 'text-embedding-004'),
+    embeddingDimensions: Number(process.env.RAG_EMBEDDING_DIMENSIONS ?? (process.env.RAG_EMBEDDING_PROVIDER === 'nvidia' ? '1024' : '768'))
   }
 };

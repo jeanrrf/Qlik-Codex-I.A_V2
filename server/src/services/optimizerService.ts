@@ -1,4 +1,4 @@
-import { CompactAuditReport, calculateDiffStats } from "../agents/qlikConsultancyAgent";
+import { CompactAuditReport, calculateDiffStats, runConsultancyAgent } from "../agents/qlikConsultancyAgent";
 import { QlikOptimizeAgent } from "../agents/qlikOptimizeAgent";
 import { config } from "../lib/config";
 import { nvidiaProvider } from "../lib/llmProviders/nvidiaProvider";
@@ -337,6 +337,22 @@ async function runUltraExpertMode(
     }
   }
 
+  // ========== GERAÇÃO DE RELATÓRIO DE CONSULTORIA ==========
+  if (_generateConsultancy) {
+    try {
+      logger.info("Generating consultancy document...");
+      const consultancyDoc = await runConsultancyAgent(result, {
+        generateTimeline: true,
+        generateMarkers: true,
+        generateTips: true
+      });
+      result.consultancyDocument = consultancyDoc;
+      logger.info("Consultancy document generated successfully");
+    } catch (error) {
+      logger.warn("Failed to generate consultancy document", { error });
+    }
+  }
+
   result.ragContext = ragContext;
   return result;
 }
@@ -344,6 +360,7 @@ async function runUltraExpertMode(
 /**
  * MODO NVIDIA FAST: Refatoração direta (apenas código)
  * Envia contexto completo em uma única chamada e retorna somente o script otimizado.
+ * Usa providerOrchestrator com fallback automático entre modelos NVIDIA.
  */
 const NVIDIA_FAST_MAX_RETRIES = 3;
 async function runNvidiaFastMode(
@@ -357,7 +374,9 @@ async function runNvidiaFastMode(
     throw new Error("NVIDIA provider indisponível (configure NVIDIA_API_KEY)");
   }
 
-  const model = llmOptions?.model || config.nvidiaFastModel;
+  // Usa modelo NVIDIA centralizado (sem fallback para evitar confusão de permissões)
+  const fallbackModels = [llmOptions?.model || config.nvidiaModel];
+  const model = fallbackModels[0];
 
   const compaction = compactScriptForPrompt(script);
   logger.info("[NVIDIA FAST] Script compactado para prompt", compaction.stats);
@@ -397,11 +416,18 @@ ${scriptForPrompt}
 
   for (let attempt = 1; attempt <= NVIDIA_FAST_MAX_RETRIES; attempt++) {
     try {
-      const response = await nvidiaProvider.generateStructuredJson(prompt, { model, signal: abortSignal });
+      // Rotate through fallback models on each attempt
+      const currentModel = fallbackModels[Math.min(attempt - 1, fallbackModels.length - 1)];
+      logger.info(`[NVIDIA FAST] Attempt ${attempt} using model: ${currentModel}`);
+
+      const rawResult = await nvidiaProvider.generateStructuredJson(
+        prompt,
+        { model: currentModel, signal: abortSignal }
+      );
 
       checkAborted(abortSignal, "NVIDIA Fast mode after LLM");
 
-      let rawResponse = response.text.trim();
+      let rawResponse = (rawResult.text ?? '').trim();
       // Remove markdown code blocks if present
       rawResponse = rawResponse.replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "").trim();
 
@@ -475,7 +501,7 @@ ${scriptForPrompt}
       // Calculate diff stats
       const diffStats = calculateDiffStats(script, optimizedScript);
 
-      return {
+      const result: FullOptimizeResult = {
         originalScript: script,
         optimizedScript,
         summary,
@@ -504,6 +530,20 @@ ${scriptForPrompt}
           }
         }
       };
+
+      // Gera documento de consultoria leve para permitir visualização do código
+      try {
+        const consultancyDoc = await runConsultancyAgent(result, {
+          generateTimeline: false,
+          generateMarkers: false, // Markers são caros, desativa para manter "Fast"
+          generateTips: false
+        });
+        result.consultancyDocument = consultancyDoc;
+      } catch (docErr) {
+        logger.warn("[NVIDIA FAST] Failed to generate lightweight consultancy doc", { error: docErr });
+      }
+
+      return result;
     } catch (error) {
       lastError = error;
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -716,7 +756,5 @@ function createOptimizerService() {
 }
 
 export const optimizerService = createOptimizerService();
-
-
 
 

@@ -33,6 +33,7 @@ export const OptimizationFeedback: React.FC<OptimizationFeedbackProps> = ({
         const response = await fetch('/api/rag/feedback', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({
             optimizationId,
             feedbackType: type,

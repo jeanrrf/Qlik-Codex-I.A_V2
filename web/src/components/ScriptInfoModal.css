@@ -26,18 +26,17 @@
 }
 
 .script-info-modal {
-  background: linear-gradient(145deg, rgba(15, 20, 35, 0.98), rgba(25, 30, 45, 0.98));
-  border: 1px solid rgba(0, 242, 255, 0.2);
-  border-radius: 12px;
-  padding: 16px;
+  background: var(--glass-panel);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: 24px;
   max-width: 480px;
   width: 90%;
   max-height: 90vh;
   overflow-y: auto;
   position: relative;
-  box-shadow:
-    0 20px 60px rgba(0, 0, 0, 0.5),
-    0 0 40px rgba(0, 242, 255, 0.15);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   animation: slideUp 0.3s ease-out;
 }
 
@@ -127,10 +126,10 @@
 }
 
 .info-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
   transition: all 0.3s;
   position: relative;
   overflow: hidden;
@@ -143,16 +142,14 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg,
-      rgba(0, 242, 255, 0.5),
-      rgba(0, 255, 157, 0.5));
+  background: linear-gradient(90deg, var(--primary), var(--success));
   opacity: 0;
   transition: opacity 0.3s;
 }
 
 .info-card:hover {
   background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(0, 242, 255, 0.3);
+  border-color: var(--glass-border-hover);
   transform: translateY(-2px);
 }
 
@@ -185,10 +182,10 @@
 }
 
 .info-value {
-  font-size: 16px;
+  font-size: 1.1rem;
   font-weight: 700;
-  color: #00f2ff;
-  margin-bottom: 2px;
+  color: var(--text-main);
+  margin-bottom: 4px;
   font-family: 'JetBrains Mono', monospace;
 }
 
@@ -237,21 +234,22 @@
 }
 
 .btn-primary-action {
-  background: linear-gradient(135deg, #00f2ff, #00b8ff);
+  background: var(--primary);
   border: none;
-  border-radius: 6px;
-  padding: 8px 20px;
-  font-size: 13px;
+  border-radius: var(--radius-sm);
+  padding: 10px 24px;
+  font-size: 0.9rem;
   font-weight: 600;
   color: #000;
   cursor: pointer;
   transition: all 0.3s;
-  box-shadow: 0 4px 15px rgba(0, 242, 255, 0.3);
+  box-shadow: 0 4px 15px var(--primary-dim);
 }
 
 .btn-primary-action:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 242, 255, 0.5);
+  box-shadow: 0 6px 20px var(--primary-glow);
+  background: #fff;
 }
 
 .btn-primary-action:active {
@@ -267,28 +265,30 @@
   }
 
   .modal-content-grid {
-    grid-template-columns: 1fr 1fr; /* Keep 2 columns even on small screens if possible, or stack if too small */
+    grid-template-columns: 1fr 1fr;
+    /* Keep 2 columns even on small screens if possible, or stack if too small */
   }
-  
+
   /* Fallback for very small screens */
   @media (max-width: 360px) {
     .modal-content-grid {
-        grid-template-columns: 1fr;
+      grid-template-columns: 1fr;
     }
   }
 
   .complexity-card {
     grid-column: span 2;
   }
-  
+
   @media (max-width: 360px) {
     .complexity-card {
-        grid-column: span 1;
+      grid-column: span 1;
     }
-}
+  }
 
   .modal-footer {
-    flex-direction: row; /* Try to keep row if possible */
+    flex-direction: row;
+    /* Try to keep row if possible */
     gap: 12px;
   }
 

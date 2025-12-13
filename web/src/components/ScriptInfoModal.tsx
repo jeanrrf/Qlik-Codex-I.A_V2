@@ -1,11 +1,12 @@
 // web/src/components/ScriptInfoModal.tsx
 import React from "react";
 import "./ScriptInfoModal.css";
+import { ScriptComplexityMetrics } from "../lib/scriptAnalysis";
 
 export interface ScriptInfo {
   lines: number;
   size: number;
-  complexity: 'low' | 'medium' | 'high' | 'critical';
+  complexity: ScriptComplexityMetrics['complexity'];
   estimatedTokens?: number;
   fileName?: string;
   fileType?: string;
