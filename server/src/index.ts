@@ -42,6 +42,9 @@ const corsOptions = {
     // Verifica lista explicita
     if (config.corsOrigins.includes(origin)) return callback(null, true);
 
+    // Hardcoded allow for custom domain (safety net)
+    if (origin === "https://sentinnellcodex.vercel.app") return callback(null, true);
+
     // Permite subdomínios da Vercel dinamicamente (*.vercel.app)
     if (origin.endsWith(".vercel.app")) return callback(null, true);
 

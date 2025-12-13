@@ -2,16 +2,37 @@
  * Authentication API Client
  */
 
-const API_BASE = ""; // Use relative path to leverage Vite proxy (dev) and Vercel rewrites (prod)
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
 const JSON_HEADERS = { "Content-Type": "application/json" } as const;
 
-function buildHeaders(token?: string): Record<string, string> {
-  if (!token) return { ...JSON_HEADERS };
-  return {
-    ...JSON_HEADERS,
-    Authorization: `Bearer ${token}`
-  };
+function buildHeaders(token?: string, isGet = false): Record<string, string> {
+  const headers: Record<string, string> = isGet ? {} : { ...JSON_HEADERS };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
 }
+
+function resolveUrl(endpoint: string): string {
+  // Remove leading slash from endpoint if API_BASE ends with slash, or ensure slash if not
+  // But here API_BASE is likely "/api" or "https://..."
+  // If API_BASE is "/api", and endpoint is "/auth/status", we want "/api/auth/status"
+  // If API_BASE is empty, we want "/api/auth/status" (legacy)
+
+  // Simplest way:
+  // If API_BASE is "/api", we assume endpoints passed here are relative to /api like "/auth/status"
+  // But the existing code passes "/api/auth/status".
+  // So we need to be careful.
+
+  // Let's strip "/api" prefix from endpoint if it exists, to avoid duplication
+  const cleanEndpoint = endpoint.startsWith("/api/") ? endpoint.substring(4) : endpoint;
+
+  // Ensure API_BASE doesn't end with slash
+  const base = API_BASE.endsWith("/") ? API_BASE.slice(0, -1) : API_BASE;
+
+  return `${base}${cleanEndpoint.startsWith("/") ? cleanEndpoint : "/" + cleanEndpoint}`;
+}
+
 
 export interface GoogleAuthResponse {
   authUrl: string;
@@ -57,9 +78,9 @@ export interface TokenLoginResponse {
  * Inicia fluxo de autenticação Google
  */
 export async function getGoogleAuthUrl(token?: string): Promise<string> {
-  const response = await fetch(`${API_BASE}/api/auth/google`, {
+  const response = await fetch(resolveUrl("/auth/google"), {
     credentials: "include",
-    headers: buildHeaders(token)
+    headers: buildHeaders(token, true)
   });
 
   if (!response.ok) {
@@ -74,9 +95,9 @@ export async function getGoogleAuthUrl(token?: string): Promise<string> {
  * Verifica status de autenticação
  */
 export async function checkAuthStatus(token?: string): Promise<AuthStatusResponse> {
-  const response = await fetch(`${API_BASE}/api/auth/status`, {
+  const response = await fetch(resolveUrl("/auth/status"), {
     credentials: "include",
-    headers: buildHeaders(token)
+    headers: buildHeaders(token, true)
   });
 
   if (!response.ok) {
@@ -90,9 +111,9 @@ export async function checkAuthStatus(token?: string): Promise<AuthStatusRespons
  * Busca dados do usuário autenticado
  */
 export async function getCurrentUser(token?: string): Promise<UserResponse> {
-  const response = await fetch(`${API_BASE}/api/auth/me`, {
+  const response = await fetch(resolveUrl("/auth/me"), {
     credentials: "include",
-    headers: buildHeaders(token)
+    headers: buildHeaders(token, true)
   });
 
   if (!response.ok) {
@@ -106,7 +127,7 @@ export async function getCurrentUser(token?: string): Promise<UserResponse> {
  * Login com owner token (bypass OAuth)
  */
 export async function loginWithToken(token: string): Promise<TokenLoginResponse> {
-  const response = await fetch(`${API_BASE}/api/auth/token`, {
+  const response = await fetch(resolveUrl("/auth/token"), {
     method: "POST",
     headers: JSON_HEADERS,
     credentials: "include",
@@ -125,7 +146,7 @@ export async function loginWithToken(token: string): Promise<TokenLoginResponse>
  * Logout (encerra sessão)
  */
 export async function logout(): Promise<void> {
-  const response = await fetch(`${API_BASE}/api/auth/logout`, {
+  const response = await fetch(resolveUrl("/auth/logout"), {
     method: "POST",
     credentials: "include"
   });
@@ -139,7 +160,7 @@ export async function logout(): Promise<void> {
  * Logout de todas as sessões
  */
 export async function logoutAll(): Promise<void> {
-  const response = await fetch(`${API_BASE}/api/auth/logout-all`, {
+  const response = await fetch(resolveUrl("/auth/logout-all"), {
     method: "POST",
     credentials: "include"
   });
