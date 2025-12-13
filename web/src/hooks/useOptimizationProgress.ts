@@ -4,7 +4,7 @@ import { OptimizeScriptApiResponse, OptimizeMode, LLMProviderName, StepExecution
 
 import { SubStepExecution } from "../types/api";
 
-import { getAuthHeaders } from "../api/client";
+import { getAuthHeaders, resolveApiUrl } from "../api/client";
 
 // Importar tipos centralizados do pipeline
 import {
@@ -463,7 +463,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
     try {
 
-      const response = await fetch("/api/scripts/optimize", {
+      const response = await fetch(resolveApiUrl("/scripts/optimize"), {
 
         method: "POST",
 
@@ -477,7 +477,9 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
         body: JSON.stringify({
 
-          script: options.script,
+          script: btoa(unescape(encodeURIComponent(options.script))),
+
+          encoding: "base64",
 
           mode: options.mode,
 

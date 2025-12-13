@@ -4,9 +4,7 @@
 
 import type { OptimizeMode, LLMProviderName } from "../types/api";
 import type { PipelineProgress } from "../types/pipeline";
-import { getAuthHeaders } from "./client";
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://qlik-codex-i-a-v2.onrender.com/api";
+import { getAuthHeaders, resolveApiUrl } from "./client";
 
 export interface SessionData {
   sessionId: string;
@@ -29,7 +27,7 @@ export interface ActiveSession extends SessionData {
  * Salva ou atualiza uma sessão no backend
  */
 export async function saveSession(session: SessionData): Promise<{ success: boolean; sessionId: string }> {
-  const response = await fetch(`${API_BASE}/sessions/save`, {
+  const response = await fetch(resolveApiUrl("/sessions/save"), {
     method: "POST",
     headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
     credentials: "include",
@@ -47,7 +45,7 @@ export async function saveSession(session: SessionData): Promise<{ success: bool
  * Recupera uma sessão específica
  */
 export async function getSession(sessionId: string): Promise<ActiveSession | null> {
-  const response = await fetch(`${API_BASE}/sessions/${sessionId}`, {
+  const response = await fetch(resolveApiUrl(`/sessions/${sessionId}`), {
     headers: getAuthHeaders(),
     credentials: "include"
   });
@@ -67,8 +65,8 @@ export async function getSession(sessionId: string): Promise<ActiveSession | nul
  * Lista sessões ativas do usuário
  */
 export async function getUserSessions(userId?: string): Promise<ActiveSession[]> {
-  const url = userId ? `${API_BASE}/sessions/user/${userId}` : `${API_BASE}/sessions/user/`;
-  const response = await fetch(url, {
+  const url = userId ? `/sessions/user/${userId}` : `/sessions/user/`;
+  const response = await fetch(resolveApiUrl(url), {
     headers: getAuthHeaders(),
     credentials: "include"
   });
@@ -88,7 +86,7 @@ export async function updateSessionStatus(
   sessionId: string,
   status: SessionData["status"]
 ): Promise<{ success: boolean }> {
-  const response = await fetch(`${API_BASE}/sessions/${sessionId}/status`, {
+  const response = await fetch(resolveApiUrl(`/sessions/${sessionId}/status`), {
     method: "PATCH",
     headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
     credentials: "include",
@@ -106,7 +104,7 @@ export async function updateSessionStatus(
  * Remove uma sessão
  */
 export async function deleteSession(sessionId: string): Promise<{ success: boolean }> {
-  const response = await fetch(`${API_BASE}/sessions/${sessionId}`, {
+  const response = await fetch(resolveApiUrl(`/sessions/${sessionId}`), {
     method: "DELETE",
     headers: getAuthHeaders(),
     credentials: "include"
