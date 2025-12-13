@@ -19,7 +19,8 @@ export const optimizeScriptSchema = z
     userId: z.string().optional(),
     // ✨ FREE TIER: Campos de truncamento inteligente (adicionados pelo middleware authMiddleware)
     applySmartTruncation: z.boolean().optional(),
-    lineLimit: z.number().positive().optional()
+    lineLimit: z.number().positive().optional(),
+    encoding: z.enum(["base64"]).optional()
   })
   .refine(
     (data) => !data.llmModel || data.llmProvider === "nvidia" || data.mode === "nvidia-fast",

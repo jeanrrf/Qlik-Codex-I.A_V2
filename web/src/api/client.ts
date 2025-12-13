@@ -21,11 +21,12 @@ export async function optimizeScript(
   mode: OptimizeMode,
   options?: OptimizeOptions
 ): Promise<OptimizeScriptApiResponse> {
-  const payload: OptimizeScriptRequestBody = {
-    script,
+  const payload: OptimizeScriptRequestBody & { encoding?: string } = {
+    script: btoa(unescape(encodeURIComponent(script))),
     mode,
     llmProvider: options?.llmProvider,
-    llmModel: options?.llmModel
+    llmModel: options?.llmModel,
+    encoding: "base64"
   };
 
   const resp = await fetch("/api/scripts/optimize", {

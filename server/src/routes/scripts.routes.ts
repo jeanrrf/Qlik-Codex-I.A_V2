@@ -30,6 +30,16 @@ router.post(
     const applySmartTruncation = req.body.applySmartTruncation;
     const lineLimit = req.body.lineLimit;
 
+    // WAF FIX: Decode Base64 script if encoded (prevents 403 Forbidden on Cloudflare/Vercel)
+    if (req.body.encoding === "base64" && typeof req.body.script === "string") {
+      try {
+        req.body.script = Buffer.from(req.body.script, "base64").toString("utf-8");
+        logger.debug("[WAF] Script decoded from Base64");
+      } catch (err) {
+        logger.warn("[WAF] Failed to decode Base64 script", err);
+      }
+    }
+
     const payload = optimizeScriptSchema.parse(req.body);
 
     // ✨ FREE TIER FIX: Restaura campos de truncamento após parse
