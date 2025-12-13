@@ -28,9 +28,19 @@ export function getAuthHeaders(): Record<string, string> {
 
 export function resolveApiUrl(endpoint: string): string {
   if (endpoint.startsWith("http://") || endpoint.startsWith("https://")) return endpoint;
+
+  // Remove leading slash from endpoint if API_BASE ends with slash, or ensure slash if not
+  // But here API_BASE is likely "/api" or "https://..."
+  // If API_BASE is "/api", and endpoint is "/auth/status", we want "/api/auth/status"
+  // If API_BASE is empty, we want "/api/auth/status" (legacy)
+
+  // Let's strip "/api" prefix from endpoint if it exists, to avoid duplication
+  const cleanEndpoint = endpoint.startsWith("/api/") ? endpoint.substring(4) : endpoint;
+
+  // Ensure API_BASE doesn't end with slash
   const base = API_BASE.endsWith("/") ? API_BASE.slice(0, -1) : API_BASE;
-  const path = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
-  return `${base}${path}`;
+
+  return `${base}${cleanEndpoint.startsWith("/") ? cleanEndpoint : "/" + cleanEndpoint}`;
 }
 
 interface OptimizeOptions {

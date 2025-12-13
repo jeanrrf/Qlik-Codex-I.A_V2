@@ -90,7 +90,7 @@ export default function AnalyticsDashboard() {
 
   async function loadSummary() {
     try {
-      const data = await apiClient.get<AnalyticsSummary>('/api/analytics/summary', {
+      const data = await apiClient.get<AnalyticsSummary>('/analytics/summary', {
         bustCache: true
       });
       setSummary(data);
