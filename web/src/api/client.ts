@@ -8,6 +8,20 @@ import {
 } from "../types/api";
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
+const ACCESS_TOKEN_KEY = "qlik-codex-access-token";
+
+export function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { ...JSON_HEADERS };
+  try {
+    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+  } catch {
+    // ignore storage errors
+  }
+  return headers;
+}
 
 interface OptimizeOptions {
   llmProvider?: LLMProviderName;
@@ -31,7 +45,7 @@ export async function optimizeScript(
 
   const resp = await fetch("/api/scripts/optimize", {
     method: "POST",
-    headers: { ...JSON_HEADERS },
+    headers: getAuthHeaders(),
     credentials: "include",
     body: JSON.stringify(payload)
   });
@@ -57,7 +71,7 @@ export async function requestQlikFormatter(
 ): Promise<QlikFormatterResponse> {
   const resp = await fetch("/api/tools/qlik-formatter", {
     method: "POST",
-    headers: { ...JSON_HEADERS },
+    headers: getAuthHeaders(),
     credentials: "include",
     body: JSON.stringify(body)
   });
@@ -83,7 +97,7 @@ export async function requestQlikFormatterStream(
 ): Promise<QlikFormatterResponse> {
   const resp = await fetch("/api/tools/qlik-formatter/stream", {
     method: "POST",
-    headers: { ...JSON_HEADERS },
+    headers: getAuthHeaders(),
     credentials: "include",
     body: JSON.stringify(body)
   });
@@ -153,7 +167,7 @@ export async function requestQlikFormatterStream(
 export const apiClient = {
   async get<T>(endpoint: string, options?: { bustCache?: boolean }): Promise<T> {
     const headers: Record<string, string> = {
-      ...JSON_HEADERS,
+      ...getAuthHeaders(),
       "Cache-Control": "no-store",
       Pragma: "no-cache",
     };
@@ -179,7 +193,7 @@ export const apiClient = {
   async post<T>(endpoint: string, data: unknown): Promise<T> {
     const response = await fetch(endpoint, {
       method: "POST",
-      headers: { ...JSON_HEADERS },
+      headers: getAuthHeaders(),
       credentials: "include",
       body: JSON.stringify(data)
     });
@@ -194,7 +208,7 @@ export const apiClient = {
   async delete<T>(endpoint: string, data?: unknown): Promise<T> {
     const response = await fetch(endpoint, {
       method: "DELETE",
-      headers: { ...JSON_HEADERS },
+      headers: getAuthHeaders(),
       credentials: "include",
       body: data ? JSON.stringify(data) : undefined
     });

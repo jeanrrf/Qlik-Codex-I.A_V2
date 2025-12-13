@@ -4,6 +4,7 @@
 
 import type { OptimizeMode, LLMProviderName } from "../types/api";
 import type { PipelineProgress } from "../types/pipeline";
+import { getAuthHeaders } from "./client";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
 
@@ -30,7 +31,7 @@ export interface ActiveSession extends SessionData {
 export async function saveSession(session: SessionData): Promise<{ success: boolean; sessionId: string }> {
   const response = await fetch(`${API_BASE}/sessions/save`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify(session)
   });
@@ -47,6 +48,7 @@ export async function saveSession(session: SessionData): Promise<{ success: bool
  */
 export async function getSession(sessionId: string): Promise<ActiveSession | null> {
   const response = await fetch(`${API_BASE}/sessions/${sessionId}`, {
+    headers: getAuthHeaders(),
     credentials: "include"
   });
 
@@ -67,6 +69,7 @@ export async function getSession(sessionId: string): Promise<ActiveSession | nul
 export async function getUserSessions(userId?: string): Promise<ActiveSession[]> {
   const url = userId ? `${API_BASE}/sessions/user/${userId}` : `${API_BASE}/sessions/user/`;
   const response = await fetch(url, {
+    headers: getAuthHeaders(),
     credentials: "include"
   });
 
@@ -87,7 +90,7 @@ export async function updateSessionStatus(
 ): Promise<{ success: boolean }> {
   const response = await fetch(`${API_BASE}/sessions/${sessionId}/status`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify({ status })
   });
@@ -105,6 +108,7 @@ export async function updateSessionStatus(
 export async function deleteSession(sessionId: string): Promise<{ success: boolean }> {
   const response = await fetch(`${API_BASE}/sessions/${sessionId}`, {
     method: "DELETE",
+    headers: getAuthHeaders(),
     credentials: "include"
   });
 

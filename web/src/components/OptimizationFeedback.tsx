@@ -1,5 +1,6 @@
 // web/src/components/OptimizationFeedback.tsx
 import React, { useState } from 'react';
+import { getAuthHeaders } from '../api/client';
 import './OptimizationFeedback.css';
 
 export interface OptimizationFeedbackProps {
@@ -32,7 +33,7 @@ export const OptimizationFeedback: React.FC<OptimizationFeedbackProps> = ({
         // Default implementation: call API directly
         const response = await fetch('/api/rag/feedback', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({
             optimizationId,

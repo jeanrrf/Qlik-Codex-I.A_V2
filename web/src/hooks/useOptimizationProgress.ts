@@ -4,6 +4,8 @@ import { OptimizeScriptApiResponse, OptimizeMode, LLMProviderName, StepExecution
 
 import { SubStepExecution } from "../types/api";
 
+import { getAuthHeaders } from "../api/client";
+
 // Importar tipos centralizados do pipeline
 import {
   PipelineStage,
@@ -466,7 +468,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
         method: "POST",
 
         headers: {
-
+          ...getAuthHeaders(),
           "Content-Type": "application/json",
 
           "Accept": "text/event-stream",
