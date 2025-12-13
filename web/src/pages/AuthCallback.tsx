@@ -6,74 +6,57 @@ export function AuthCallback() {
   const [status, setStatus] = useState("Processando autenticação...");
 
   useEffect(() => {
-    let redirectTimeout: ReturnType<typeof setTimeout>;
+    let redirectTimeout: ReturnType<typeof setTimeout> | undefined;
     let hasRedirected = false;
 
     const safeRedirect = () => {
-      if (!hasRedirected) {
-        hasRedirected = true;
-        console.log("🔄 Redirecionando para home...");
-        window.location.replace("/");
-      }
+      if (hasRedirected) return;
+      hasRedirected = true;
+      window.location.replace("/");
     };
 
     const handleAuth = async () => {
       try {
-        console.log("🔐 AuthCallback: Iniciando processamento...");
         const params = new URLSearchParams(window.location.search);
         const token = params.get("token");
         const success = params.get("success");
         const error = params.get("error");
 
-        console.log("📋 Parâmetros:", { token: !!token, success, error });
-
         if (error) {
-          console.error("❌ Auth error:", error);
           setStatus("Erro na autenticação");
-          setTimeout(safeRedirect, 1000);
+          setTimeout(safeRedirect, 800);
           return;
         }
 
         if (token) {
-          console.log("💾 Salvando token no localStorage...");
           try {
             localStorage.setItem("qlik-codex-access-token", token);
-            console.log("✅ Token salvo com sucesso");
-          } catch (err) {
-            console.warn("⚠️ Could not save token to localStorage:", err);
+          } catch {
+            // ignore storage errors
           }
         }
 
         if (success === "true" || token) {
           setStatus("Validando sessão...");
-          console.log("🔄 Iniciando revalidação...");
 
-          // Timeout de segurança: redirecionar após 5 segundos independente do resultado
           redirectTimeout = setTimeout(() => {
-            console.warn("⏰ Timeout na revalidação - redirecionando...");
             safeRedirect();
           }, 5000);
 
           try {
             await Promise.race([
               revalidate(),
-              new Promise((_, reject) =>
-                setTimeout(() => reject(new Error("Revalidate timeout")), 4000)
-              )
+              new Promise((_, reject) => setTimeout(() => reject(new Error("Revalidate timeout")), 4000))
             ]);
-            console.log("✅ Revalidação concluída");
-          } catch (err) {
-            console.warn("⚠️ Revalidate error (continuando):", err);
+          } catch {
+            // ignore revalidate errors and proceed
           }
         }
 
         setStatus("Redirecionando...");
-        console.log("✅ Auth processado - redirecionando");
-      } catch (err) {
-        console.error("❌ Auth callback error:", err);
+      } catch {
         setStatus("Erro - redirecionando...");
       } finally {
-        // Garantir redirecionamento após pequeno delay
         if (!hasRedirected) {
           setTimeout(safeRedirect, 500);
         }
@@ -82,7 +65,6 @@ export function AuthCallback() {
 
     handleAuth();
 
-    // Cleanup
     return () => {
       if (redirectTimeout) clearTimeout(redirectTimeout);
     };
@@ -101,15 +83,17 @@ export function AuthCallback() {
       }}
     >
       <div style={{ textAlign: "center", maxWidth: "400px", padding: "2rem" }}>
-        <div style={{
-          width: "50px",
-          height: "50px",
-          border: "3px solid rgba(0, 242, 255, 0.3)",
-          borderTopColor: "#00f2ff",
-          borderRadius: "50%",
-          margin: "0 auto 1.5rem",
-          animation: "spin 1s linear infinite"
-        }}></div>
+        <div
+          style={{
+            width: "50px",
+            height: "50px",
+            border: "3px solid rgba(0, 242, 255, 0.3)",
+            borderTopColor: "#00f2ff",
+            borderRadius: "50%",
+            margin: "0 auto 1.5rem",
+            animation: "spin 1s linear infinite"
+          }}
+        />
         <style>{`
           @keyframes spin {
             to { transform: rotate(360deg); }

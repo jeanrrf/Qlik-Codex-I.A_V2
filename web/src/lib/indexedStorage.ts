@@ -73,7 +73,7 @@ export async function loadLatestSnapshot(userId?: string | null): Promise<Snapsh
   const request = index.openCursor(range, "prev"); // latest updatedAt if sorted? index default not sorted; we will sort manually
 
   return new Promise((resolve, reject) => {
-    const results: any[] = [];
+    const results: SnapshotPayload[] = [];
     request.onsuccess = (event) => {
       const cursor = (event.target as IDBRequest<IDBCursorWithValue | null>).result;
       if (cursor) {

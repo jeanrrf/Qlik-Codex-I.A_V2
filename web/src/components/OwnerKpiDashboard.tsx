@@ -16,7 +16,7 @@ export function OwnerKpiDashboard() {
   useEffect(() => {
     const loadOwnerKpis = async () => {
       try {
-        const data = await apiClient.get<any>('/api/analytics/summary', { bustCache: true });
+        const data = await apiClient.get<OwnerStats>('/api/analytics/summary', { bustCache: true });
         setStats({
           ownerVisits: data.ownerVisits ?? 0,
           ownerEvents: data.ownerEvents ?? 0,

@@ -103,6 +103,7 @@ export interface OptimizeScriptRequestBody {
 export interface OptimizeScriptApiResponse extends OptimizeResult {
   status: "done";
   progress?: OptimizationProgress;
+  response?: OptimizeResult;
 }
 
 export interface QlikFormatterRequestBody {

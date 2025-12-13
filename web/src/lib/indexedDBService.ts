@@ -3,7 +3,7 @@
  * Fallback para quando o backend não estiver disponível
  */
 
-import type { ProgressData } from "../types/api";
+import type { PipelineProgress } from "../types/pipeline";
 
 const DB_NAME = "QlikCodexIA";
 const DB_VERSION = 1;
@@ -59,10 +59,10 @@ async function getDB(): Promise<IDBDatabase> {
 export interface LocalSessionData {
   sessionId: string;
   mode: string;
-  // REMOVIDO: script não é mais persistido localmente
+  script?: string;
   llmProvider?: string;
   llmModel?: string;
-  progressData: ProgressData;
+  progressData: PipelineProgress;
   status: string;
   createdAt: string;
   updatedAt: string;

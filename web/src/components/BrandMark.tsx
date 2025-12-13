@@ -88,7 +88,7 @@ export const BrandMark: React.FC<BrandMarkProps> = ({
     <div className={classes} onClick={onClick} aria-label={title || "Qlik Codex I.A"} {...accessibleProps}>
       {variant !== "wordmark" && <BrandGlyph size={size} />}
       {variant !== "icon" && (
-        <div className="brand-wordmark" aria-hidden={variant === "icon"}>
+        <div className="brand-wordmark" aria-hidden={(variant as string) === "icon"}>
           <span className="brand-wordmark__title">Qlik Codex I.A</span>
           {showBeta && <span className="brand-wordmark__beta">BETA</span>}
         </div>

@@ -1,11 +1,11 @@
 import React from 'react';
 import { Icons } from './Icons';
 import { analyzeScriptComplexity } from '../lib/scriptAnalysis';
-import { ScriptAnalysisData } from '../types/ui';
+import { ScriptAnalysisData, UploadedFileMeta } from '../types/ui';
 
 interface ScriptAnalysisCardProps {
   script: string;
-  uploadMeta: any;
+  uploadMeta: UploadedFileMeta | null;
   optimization: {
     scriptAnalysis?: ScriptAnalysisData | null;
   };
@@ -52,4 +52,3 @@ export const ScriptAnalysisCard: React.FC<ScriptAnalysisCardProps> = ({ script, 
     </div>
   );
 };
-

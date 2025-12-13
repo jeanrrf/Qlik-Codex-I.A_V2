@@ -1,7 +1,7 @@
 // web/src/components/Pipeline/SubTaskItem.tsx
 import React from 'react';
 import type { SubStepExecution } from '../../types/api';
-import { formatDuration } from '../../lib/formatters';
+import { formatDuration } from '../../lib/formatTime';
 import './Pipeline.css';
 
 // ═══════════════════════════════════════════════════════════════

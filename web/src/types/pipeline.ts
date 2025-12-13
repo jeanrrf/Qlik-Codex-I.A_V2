@@ -239,8 +239,29 @@ export function resetStagesToPending(stages: PipelineStage[]): PipelineStage[] {
  */
 export function calculateOverallProgress(stages: PipelineStage[]): number {
   if (stages.length === 0) return 0;
-  const completedCount = stages.filter(s => s.status === 'success').length;
-  return Math.round((completedCount / stages.length) * 100);
+  const progressSum = stages.reduce((sum, stage) => {
+    // Etapas concluA-das, ignoradas ou com erro contam como finalizadas
+    if (stage.status === 'success' || stage.status === 'skipped' || stage.status === 'error' || stage.status === 'timeout') {
+      return sum + 1;
+    }
+
+    // Etapas com subtarefas usam o progresso relativo dos substeps
+    if (stage.subSteps && stage.subSteps.length > 0) {
+      const completed = stage.subSteps.filter(s => s.status === 'success').length;
+      const running = stage.subSteps.filter(s => s.status === 'running').length;
+      const fraction = (completed + running * 0.5) / stage.subSteps.length;
+      return sum + fraction;
+    }
+
+    // Etapa sem subtarefas em execuA-ao recebe peso parcial para evitar pulo de 0->100
+    if (stage.status === 'running') {
+      return sum + 0.3;
+    }
+
+    return sum;
+  }, 0);
+
+  return Math.min(100, Math.round((progressSum / stages.length) * 100));
 }
 
 /**

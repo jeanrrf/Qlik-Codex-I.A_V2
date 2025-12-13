@@ -2,7 +2,7 @@
 import React from 'react';
 import type { PipelineStage, StageTheme } from '../../types/pipeline';
 import { calculateStageDuration, getStatusLabel } from '../../types/pipeline';
-import { formatDuration } from '../../lib/formatters';
+import { formatDuration } from '../../lib/formatTime';
 import { SubTaskItem } from './SubTaskItem';
 import './Pipeline.css';
 

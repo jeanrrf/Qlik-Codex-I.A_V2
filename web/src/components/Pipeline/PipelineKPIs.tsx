@@ -2,7 +2,7 @@
 import React from 'react';
 import type { PipelineProgress, PipelineStage } from '../../types/pipeline';
 import type { OptimizeResult } from '../../types/api';
-import { formatDuration } from '../../lib/formatters';
+import { formatDuration } from '../../lib/formatTime';
 import './Pipeline.css';
 
 // ═══════════════════════════════════════════════════════════════

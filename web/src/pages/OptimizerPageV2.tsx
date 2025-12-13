@@ -39,7 +39,7 @@ import { useRunHistory } from "../hooks/useRunHistory";
 import { ResultViewerModal } from "../components/ResultViewerModal";
 import { ScriptAnalysisCard } from "../components/ScriptAnalysisCard";
 import { ScriptInputCard } from "../components/ScriptInputCard";
-import { analyzeScriptComplexity, ScriptComplexityMetrics } from "../lib/scriptAnalysis";
+import { analyzeScriptComplexity } from "../lib/scriptAnalysis";
 import { loadLatestSnapshot, saveSnapshot } from "../lib/indexedStorage";
 
 type OptimizerPageProps = Record<string, never>;
@@ -121,10 +121,10 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
   const MAX_ULTRA_EXPERT_RUNS = quotaData?.limit ?? 4;
 
   // Sincroniza mudança de modo com o hook de progresso
-  const handleModeChange = (newMode: OptimizeMode) => {
+  const handleModeChange = useCallback((newMode: OptimizeMode) => {
     setMode(newMode);
     optimization.updateMode(newMode); // Atualiza as stages visíveis
-  };
+  }, [optimization]);
 
   const selectedLLM = useMemo(() => getLLMOptionById(llmOptionId), [llmOptionId]);
   const providerForMode = useMemo(() => mode === "nvidia-fast" ? "nvidia" as const : selectedLLM.provider, [mode, selectedLLM]);
@@ -157,11 +157,14 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
         setSnapshotAvailable(Boolean(snapshot));
 
         const restored = await session.restoreSession();
+        const snapshotResult = snapshot as unknown as { script?: string; progress?: PipelineProgress; mode?: OptimizeMode; result?: OptimizeResult | null; llmProvider?: string };
+
+        const candidateScript = restored?.script ?? snapshotResult?.script ?? "";
         if (restored && restored.progressData) {
           console.warn(" Sessão ativa restaurada");
           isRestoringRef.current = true;
 
-          setScript(restored.script);
+          setScript(candidateScript);
           if (restored.mode) {
             handleModeChange(restored.mode as OptimizeMode);
           }
@@ -170,20 +173,27 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
             if (llmOption) setLlmOptionId(llmOption.id);
           }
 
-          // Restaura progresso completo
           if (restored.progressData) {
-            optimization.restoreProgress(restored.progressData);
+            optimization.restoreProgress(restored.progressData as unknown as PipelineProgress);
           }
 
-          // Se estava concluído, tenta restaurar resultado se disponível (não persistido atualmente, mas preparado)
-          if (restored.status === "completed") {
-            // TODO: Persistir resultado final também para restauração completa
-          }
-
-          // Reset flag after a short delay to allow effects to run
           setTimeout(() => {
             isRestoringRef.current = false;
           }, 500);
+        } else if (snapshotResult && snapshotResult.progress) {
+          console.warn(" Snapshot local restaurado");
+          isRestoringRef.current = true;
+          setScript(candidateScript);
+          if (snapshotResult.mode) {
+            handleModeChange(snapshotResult.mode as OptimizeMode);
+          }
+          if (snapshotResult.result) {
+            setResult(snapshotResult.result as OptimizeResult);
+          }
+          optimization.restoreProgress(snapshotResult.progress as PipelineProgress);
+          setTimeout(() => {
+            isRestoringRef.current = false;
+          }, 300);
         }
       } catch (error) {
         console.warn("Não foi possível restaurar sessão:", error);
@@ -238,6 +248,32 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
   const handleBackNavigation = () => {
     navigateBack("landing");
   };
+
+  const applySnapshot = useCallback((snap: { script?: string; mode?: OptimizeMode; result?: OptimizeResult | null; progress?: PipelineProgress }) => {
+    if (!snap) return;
+    isRestoringRef.current = true;
+    setScript(snap.script || "");
+    if (snap.mode) handleModeChange(snap.mode);
+    if (snap.result !== undefined) setResult(snap.result || null);
+    if (snap.progress) optimization.restoreProgress(snap.progress);
+    setTimeout(() => {
+      isRestoringRef.current = false;
+    }, 300);
+  }, [handleModeChange, optimization]);
+
+  const handleRestoreSnapshot = useCallback(async () => {
+    try {
+      const snap = await loadLatestSnapshot(user?.id);
+      if (!snap || !snap.progress) {
+        setError("Nenhum snapshot local disponível.");
+        return;
+      }
+      applySnapshot(snap as unknown as { script?: string; mode?: OptimizeMode; result?: OptimizeResult | null; progress?: PipelineProgress });
+    } catch (err) {
+      console.warn("[Snapshot] Falha ao restaurar snapshot local:", err);
+      setError("Falha ao restaurar snapshot local.");
+    }
+  }, [applySnapshot, user?.id]);
 
   const handleOptimize = async () => {
     setError(null);
@@ -297,7 +333,8 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
           llmProvider: providerForMode,
           llmModel: llmModelForMode,
           progress: optimization.progress,
-          status: "completed"
+          status: "completed",
+          isRunning: false
         }).catch(console.error);
 
         pushHistory({
@@ -318,7 +355,8 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
           llmProvider: providerForMode,
           llmModel: llmModelForMode,
           progress: optimization.progress,
-          status: "error"
+          status: "error",
+          isRunning: false
         }).catch(console.error);
 
         pushHistory({
@@ -407,7 +445,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
 
   // === RENDER ===
   return (
-    <div className={`opt-page ${mode === "nvidia-fast" ? "nvidia-mode-active" : ""} ${optimization.isOptimizing && mode === "nvidia-fast" ? "optimizing-pulse" : ""}`}>
+    <div className={`opt-page ${mode === "nvidia-fast" ? "nvidia-mode-active" : ""} ${optimization.isRunning && mode === "nvidia-fast" ? "optimizing-pulse" : ""}`}>
       {/* Background */}
       <div className="opt-bg">
         <div className="bg-gradient" />
@@ -531,8 +569,9 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
               onClick={() => consultancyDoc && setShowConsultancy(true)}
               disabled={!consultancyDoc}
               title={consultancyDoc ? "Ver Auditoria/Consultoria" : "Auditoria será gerada após otimização"}
+              aria-label={consultancyDoc ? "Ver Auditoria/Consultoria" : "Auditoria será gerada após otimização"}
             >
-
+              <Icons.Document />
             </button>
 
             {/* Ver Resultado */}
@@ -542,7 +581,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
               disabled={!result}
               title={result ? "Ver resultado da otimização" : "Resultado será exibido após otimização"}
             >
-
+              <Icons.Eye />
             </button>
 
             {/* Baixar */}
@@ -553,6 +592,16 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
               title={result ? "Baixar arquivos" : "Download disponível após otimização"}
             >
               <Icons.Download />
+            </button>
+
+            {/* Restaurar última sessão */}
+            <button
+              className={`action-btn-compact ${!snapshotAvailable ? "disabled-blur" : ""}`}
+              onClick={handleRestoreSnapshot}
+              disabled={!snapshotAvailable}
+              title={snapshotAvailable ? "Restaurar última sessão salva localmente" : "Nenhum snapshot salvo"}
+            >
+              <Icons.Clock />
             </button>
 
             {/* Histórico */}

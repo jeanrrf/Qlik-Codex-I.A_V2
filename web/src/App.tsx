@@ -75,7 +75,7 @@ const AppContent: React.FC = () => {
     });
   }, []);
 
-  const ViewContainer: React.FC<{ active: boolean }> = ({ active, children }) => (
+  const ViewContainer: React.FC<{ active: boolean; children: React.ReactNode }> = ({ active, children }) => (
     <div style={{ display: active ? "block" : "none", width: "100%" }}>
       {children}
     </div>

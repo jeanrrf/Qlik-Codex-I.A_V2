@@ -34,7 +34,7 @@ interface RealtimeEvent {
 }
 
 export default function AnalyticsDashboard() {
-  const { isOwner, accessToken } = useAuth();
+  const { isOwner } = useAuth();
   const { navigateBack } = useNavigation();
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [realtimeEvents, setRealtimeEvents] = useState<RealtimeEvent[]>([]);
@@ -343,12 +343,12 @@ export default function AnalyticsDashboard() {
                   <div className="event-content">
                     <div className="event-type">{event.type === 'event' ? 'Evento' : 'Pageview'}</div>
                     <div className="event-details">
-                      {event.type === 'pageview' && (event.data.page || '—')}
+                      {event.type === 'pageview' && ((event.data.page as string) || '—')}
                       {event.type === 'event' &&
                         `${event.data.event_type || 'evento'} - ${event.data.event_category || ''}`}
                     </div>
                     <div className="event-time">
-                      {new Date(event.data.timestamp).toLocaleTimeString('pt-BR')}
+                      {new Date(event.data.timestamp as string).toLocaleTimeString('pt-BR')}
                     </div>
                   </div>
                   {event.data.is_owner === 1 && (

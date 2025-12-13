@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 
-import { OptimizeScriptApiResponse, OptimizeMode, LLMProviderName } from "../types/api";
+import { OptimizeScriptApiResponse, OptimizeMode, LLMProviderName, StepExecutionResult } from "../types/api";
 
 import { SubStepExecution } from "../types/api";
 
@@ -90,6 +90,9 @@ export interface UseOptimizationProgressReturn {
 
   isConnected: boolean;
 
+  /** Mensagem de status em tempo real */
+  liveMessage: string | null;
+
   /** SSE: Análise do script (estrutura, QVD operations, estratégia) */
 
   scriptAnalysis: ScriptAnalysisData | null;
@@ -155,10 +158,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
   const [isConnected] = useState(false); // POST com SSE - conexão via fetch stream
 
   const [scriptAnalysis, setScriptAnalysis] = useState<ScriptAnalysisData | null>(null);
-
-
-
-
+  const [liveMessage, setLiveMessage] = useState<string | null>(null);
 
   const [currentStep, setCurrentStep] = useState<string | null>(null);
 
@@ -265,6 +265,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
     setResult(null);
 
     setIsRunning(false);
+    setLiveMessage(null);
 
   }, [currentMode]);
 
@@ -289,6 +290,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
     }
 
     setIsRunning(false);
+    setLiveMessage("Otimização cancelada pelo usuário.");
 
     setProgress(prev => ({
 
@@ -349,6 +351,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
     setCurrentStep(null);
 
     setError(null);
+    setLiveMessage("Inicializando pipeline...");
 
 
 
@@ -389,6 +392,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
       status: "running"
 
     }));
+    setLiveMessage(`Iniciando ${stagesToUse[0]?.name || 'pipeline'}...`);
 
 
 
@@ -555,6 +559,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
             if (event.type === 'script_analysis') {
 
               setScriptAnalysis(event.data);
+              setLiveMessage("AnA­lise do script em execuAAœo...");
 
             } else if (event.type === 'provider_disabled') {
 
@@ -564,10 +569,12 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
                 ...prev,
                 errorMessage: providerMsg
               }));
+              setLiveMessage(providerMsg);
 
             } else if (event.type === 'token_usage') {
               // NOVO: Captura tokens consumidos e propaga para a UI
-              console.log('[SSE Frontend] Received token_usage:', event);
+              console.warn('[SSE Frontend] token_usage:', event);
+              setLiveMessage(`Gerando cA3digo (${event.provider}/${event.model})`);
               setProgress(prev => {
                 const newStages = prev.stages.map(stage => {
                   const stageId = event.taskName; // e.g., "CODE_GEN"
@@ -586,7 +593,8 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
             } else if (event.type === 'thinking') {
               // NOVO: Captura thinking content do Gemini 2.5 Flash Thinking Mode
-              console.log('[SSE Frontend] Received thinking:', event.taskName, event.thinkingContent?.substring(0, 100) + '...');
+              console.warn('[SSE Frontend] thinking:', event.taskName, event.thinkingContent?.substring(0, 100) + '...');
+              setLiveMessage("Modelo estruturando resposta...");
               setProgress(prev => {
                 const newStages = prev.stages.map(stage => {
                   const stageId = event.taskName;
@@ -608,6 +616,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
                 ...prev,
                 warnings: [...(prev.warnings || []), warningMsg]
               }));
+              setLiveMessage(warningMsg);
 
             } else if (event.type === 'substep') {
 
@@ -626,6 +635,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
                 const taskId = sub.id;
 
                 taskStartTimeRef.current.set(taskId, Date.now());
+                setLiveMessage(`Executando ${sub.name || sub.id}...`);
 
 
 
@@ -642,6 +652,8 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
                   clearTimeout(globalTimeoutId);
 
                   setError('Timeout: Tarefa excedeu 3 minutos');
+
+                  setLiveMessage('Timeout: Tarefa excedeu 3 minutos');
 
                   setProgress(prev => {
 
@@ -718,6 +730,11 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
                 }
 
                 taskStartTimeRef.current.delete(taskId);
+                if (sub.status === 'success') {
+                  setLiveMessage(`${sub.name || sub.id} concluA­do`);
+                } else if (sub.status === 'error') {
+                  setLiveMessage(`Erro em ${sub.name || sub.id}`);
+                }
 
               }
 
@@ -752,7 +769,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
                     // Tenta adicionar NOVA task dinâmica se pertencer a esta stage
                     const targetStageId = getStageIdForSubTask(sub.id);
                     if (targetStageId === stage.id) {
-                      console.log(`[Frontend] Adicionando task dinâmica ${sub.id} para stage ${stage.id}`);
+                      console.warn(`[Frontend] Adicionando task dinâmica ${sub.id} para stage ${stage.id}`);
                       newSubSteps.push({
                         id: sub.id,
                         name: sub.name || sub.id, // Fallback name
@@ -800,41 +817,6 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
               let finalElapsed = 0;
 
               setProgress(prev => {
-
-                interface AnalysisStep {
-
-                  stepId: string;
-
-                  name?: string;
-
-                  status: string;
-
-                  subSteps?: AnalysisSubStep[];
-
-                }
-
-
-
-                interface AnalysisSubStep {
-
-                  id: string;
-
-                  name: string;
-
-                  status: string;
-
-                  startTime?: number;
-
-                  endTime?: number;
-
-                  duration?: number;
-
-                  error?: string;
-
-                }
-
-
-
                 // Determina se a otimização foi bem-sucedida
                 const isOptimizationSuccess = !!(data.optimizedScript || data.response?.optimizedScript);
 
@@ -849,11 +831,9 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
                 if (isOptimizationSuccess) {
                   updatedStages.forEach(stage => {
                     stage.status = "success";
-                    stage.progress = 100;
                     if (stage.subSteps) {
                       stage.subSteps.forEach(sub => {
                         sub.status = "success";
-                        sub.progress = 100;
                       });
                       // Calcula duração total da stage somando subtasks
                       const totalDuration = stage.subSteps.reduce((acc, sub) => acc + (sub.duration || 0), 0);
@@ -865,10 +845,10 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
                 } else {
                   // Fallback: tenta atualizar os sub-steps com dados reais da API
                   if (data.analysis?.steps) {
-                    const optStep = data.analysis.steps.find((s: AnalysisStep) => s.stepId === "opt_main");
+                    const optStep = data.analysis.steps.find((s: StepExecutionResult) => s.stepId === "opt_main");
 
                     if (optStep?.subSteps && Array.isArray(optStep.subSteps)) {
-                      optStep.subSteps.forEach((realSub: AnalysisSubStep) => {
+                      optStep.subSteps.forEach((realSub: SubStepExecution) => {
                         for (const stage of updatedStages) {
                           if (!stage.subSteps) continue;
                           const subIdx = stage.subSteps.findIndex(s => s.id === realSub.id);
@@ -1117,6 +1097,8 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
     disconnect: () => { }, // Stub para compatibilidade com interface
 
     isConnected,
+
+    liveMessage,
 
     scriptAnalysis,
 

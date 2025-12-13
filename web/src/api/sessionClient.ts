@@ -2,17 +2,19 @@
  * Cliente de API para gerenciamento de sessões ativas
  */
 
-import type { OptimizeMode, LLMProviderName, ProgressData } from "../types/api";
+import type { OptimizeMode, LLMProviderName } from "../types/api";
+import type { PipelineProgress } from "../types/pipeline";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
 
 export interface SessionData {
   sessionId: string;
   userId?: string;
+  script?: string;
   mode: OptimizeMode;
   llmProvider?: LLMProviderName;
   llmModel?: string;
-  progressData: ProgressData;
+  progressData: PipelineProgress;
   status: "running" | "paused" | "completed" | "error";
 }
 

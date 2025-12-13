@@ -121,8 +121,8 @@ export function useSessionPersistence() {
       mode: options.mode,
       llmProvider: options.llmProvider,
       llmModel: options.llmModel,
-      progressData: options.progress,
-      status: options.isRunning ? "running" as const : "paused" as const
+      progressData: options.progress as unknown as import("../types/api").ProgressData,
+      status: options.status || (options.isRunning ? "running" as const : "paused" as const)
     };
 
     try {
