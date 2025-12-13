@@ -9,6 +9,8 @@ import {
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
 const ACCESS_TOKEN_KEY = "qlik-codex-access-token";
+// Default backend base (Render). Can be overridden via VITE_API_BASE_URL at build time.
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://qlik-codex-i-a-v2.onrender.com/api";
 
 export function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = { ...JSON_HEADERS };
@@ -23,12 +25,19 @@ export function getAuthHeaders(): Record<string, string> {
   return headers;
 }
 
+export function resolveApiUrl(endpoint: string): string {
+  if (endpoint.startsWith("http://") || endpoint.startsWith("https://")) return endpoint;
+  const base = API_BASE.endsWith("/") ? API_BASE.slice(0, -1) : API_BASE;
+  const path = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  return `${base}${path}`;
+}
+
 interface OptimizeOptions {
   llmProvider?: LLMProviderName;
   llmModel?: string;
 }
 
-// --- Core API Functions (Moved from lib/apiClient.ts) ---
+// --- Core API Functions ---
 
 export async function optimizeScript(
   script: string,
@@ -43,7 +52,7 @@ export async function optimizeScript(
     encoding: "base64"
   };
 
-  const resp = await fetch("/api/scripts/optimize", {
+  const resp = await fetch(resolveApiUrl("/scripts/optimize"), {
     method: "POST",
     headers: getAuthHeaders(),
     credentials: "include",
@@ -69,7 +78,7 @@ export async function optimizeScript(
 export async function requestQlikFormatter(
   body: QlikFormatterRequestBody
 ): Promise<QlikFormatterResponse> {
-  const resp = await fetch("/api/tools/qlik-formatter", {
+  const resp = await fetch(resolveApiUrl("/tools/qlik-formatter"), {
     method: "POST",
     headers: getAuthHeaders(),
     credentials: "include",
@@ -95,7 +104,7 @@ export async function requestQlikFormatterStream(
   body: QlikFormatterRequestBody,
   onProgress?: (percent: number, message?: string) => void
 ): Promise<QlikFormatterResponse> {
-  const resp = await fetch("/api/tools/qlik-formatter/stream", {
+  const resp = await fetch(resolveApiUrl("/tools/qlik-formatter/stream"), {
     method: "POST",
     headers: getAuthHeaders(),
     credentials: "include",
@@ -172,9 +181,10 @@ export const apiClient = {
       Pragma: "no-cache",
     };
 
+    const target = resolveApiUrl(endpoint);
     const url = options?.bustCache
-      ? `${endpoint}${endpoint.includes("?") ? "&" : "?"}_=${Date.now()}`
-      : endpoint;
+      ? `${target}${target.includes("?") ? "&" : "?"}_=${Date.now()}`
+      : target;
 
     const response = await fetch(url, {
       method: "GET",
@@ -191,7 +201,7 @@ export const apiClient = {
   },
 
   async post<T>(endpoint: string, data: unknown): Promise<T> {
-    const response = await fetch(endpoint, {
+    const response = await fetch(resolveApiUrl(endpoint), {
       method: "POST",
       headers: getAuthHeaders(),
       credentials: "include",
@@ -206,7 +216,7 @@ export const apiClient = {
   },
 
   async delete<T>(endpoint: string, data?: unknown): Promise<T> {
-    const response = await fetch(endpoint, {
+    const response = await fetch(resolveApiUrl(endpoint), {
       method: "DELETE",
       headers: getAuthHeaders(),
       credentials: "include",

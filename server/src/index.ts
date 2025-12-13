@@ -31,16 +31,29 @@ const app = express();
 // Trust proxy (Render/Vercel)
 app.set("trust proxy", 1);
 
-const corsOptions =
-  config.corsAllowAll
-    ? {
-      origin: true as const, // reflect request origin
-      credentials: true as const
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Se permitir tudo, retorna true
+    if (config.corsAllowAll) return callback(null, true);
+
+    // Se não tem origin (server-to-server ou tools), permite
+    if (!origin) return callback(null, true);
+
+    // Verifica lista explicita
+    if (config.corsOrigins.includes(origin)) return callback(null, true);
+
+    // Permite subdomínios da Vercel dinamicamente (*.vercel.app)
+    if (origin.endsWith(".vercel.app")) return callback(null, true);
+
+    // Permite localhost em dev
+    if (config.isDevelopment && (origin.includes("localhost") || origin.includes("127.0.0.1"))) {
+      return callback(null, true);
     }
-    : {
-      origin: config.corsOrigins,
-      credentials: true as const
-    };
+
+    callback(null, false);
+  },
+  credentials: true
+};
 const webBuildPath = path.resolve(__dirname, "..", "..", "web", "dist");
 const indexHtmlPath = path.join(webBuildPath, "index.html");
 

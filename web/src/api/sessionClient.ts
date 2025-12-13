@@ -6,7 +6,7 @@ import type { OptimizeMode, LLMProviderName } from "../types/api";
 import type { PipelineProgress } from "../types/pipeline";
 import { getAuthHeaders } from "./client";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://qlik-codex-i-a-v2.onrender.com/api";
 
 export interface SessionData {
   sessionId: string;
