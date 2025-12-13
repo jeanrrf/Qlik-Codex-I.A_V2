@@ -108,7 +108,7 @@ export default function AnalyticsDashboard() {
     }
 
     try {
-      await apiClient.delete('/api/analytics/cleanup?days=90');
+      await apiClient.delete('/analytics/cleanup?days=90');
       alert('Limpeza concluída com sucesso');
       loadSummary();
     } catch {

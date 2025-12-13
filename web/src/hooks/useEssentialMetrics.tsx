@@ -29,7 +29,7 @@ export function useEssentialMetrics() {
       tracked.current = true;
 
       // Envia visita ao backend (silencioso, não bloqueia UI)
-      apiClient.post('/api/metrics/visit', { sessionId: sessionId.current })
+      apiClient.post('/metrics/visit', { sessionId: sessionId.current })
         .catch(() => {
           // Ignora erros silenciosamente
         });

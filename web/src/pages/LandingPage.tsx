@@ -145,7 +145,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
     setFormError(null);
 
     try {
-      await apiClient.post('/api/contact', formState);
+      await apiClient.post('/contact', formState);
       setIsSent(true);
       setFormState({ name: "", email: "", company: "", message: "" });
     } catch (err) {
