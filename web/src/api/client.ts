@@ -10,7 +10,8 @@ import {
 const JSON_HEADERS = { "Content-Type": "application/json" };
 const ACCESS_TOKEN_KEY = "qlik-codex-access-token";
 // Default backend base (Render). Can be overridden via VITE_API_BASE_URL at build time.
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://qlik-codex-i-a-v2.onrender.com/api";
+// Use relative path "/api" by default to leverage Vercel rewrites in production
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
 
 export function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = { ...JSON_HEADERS };
