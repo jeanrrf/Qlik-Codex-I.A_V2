@@ -153,9 +153,35 @@ function buildNegativeSection(): string {
   return NEGATIVE_RULES.map((r, i) => `${i + 1}. ${r}`).join("\n");
 }
 
-function buildMegaPrompt(task: MegaTaskId, script: string, parserSummary: string, history?: string): string {
+function buildMegaPrompt(
+  task: MegaTaskId,
+  script: string,
+  parserSummary: string,
+  history?: string,
+  ragContext?: import('../types/rag').RAGContext | null
+): string {
   const taskTemplate = TASK_TEMPLATES[task];
   const historyBlock = history ? `\n--- HISTÓRICO (Resumo) ---\n${history}\n` : "";
+
+  // RAG: Constrói bloco de contexto com exemplos de otimizações similares
+  let ragBlock = "";
+  if (ragContext && ragContext.examples.length > 0) {
+    const examplesText = ragContext.examples.map((ex, i) => `
+EXEMPLO ${i + 1} (Score: ${ex.rewardScore}):
+Original:
+${ex.originalSnippet.substring(0, 500)}...
+
+Otimizado:
+${ex.optimizedSnippet.substring(0, 500)}...
+
+Mudanças: ${ex.changesSummary.substring(0, 200)}`).join('\n---\n');
+
+    const patternsText = ragContext.commonPatterns.length > 0
+      ? `\nPadrões comuns: ${ragContext.commonPatterns.join(', ')}`
+      : '';
+
+    ragBlock = `\n--- CONTEXTO VIA RAG (Otimizações Similares Bem-Sucedidas) ---\nEncontradas ${ragContext.retrievalMetadata.totalResults} otimizações similares (similaridade média: ${(ragContext.retrievalMetadata.avgSimilarity * 100).toFixed(1)}%).\nUse esses exemplos como referência para aplicar padrões comprovados:\n${examplesText}${patternsText}\n`;
+  }
 
   return `
 ${PERSONA}
@@ -165,7 +191,7 @@ ${buildNegativeSection()}
 
 --- CONTEXTO ESTRUTURADO ---
 Parser: ${parserSummary}
-${historyBlock}
+${historyBlock}${ragBlock}
 --- SCRIPT ORIGINAL (compactado para economia de tokens) ---
 ${script}
 
@@ -217,6 +243,10 @@ const RETRYABLE_TASK_ERROR_PATTERNS = [
 function isRetryableTaskError(message: string | undefined): boolean {
   if (!message) return false;
   if (/abort/i.test(message)) return false;
+  // Se o orquestrador já tentou todos os provedores e falhou, não adianta tentar de novo
+  if (/Todas as tentativas falharam/i.test(message)) return false;
+  if (/fallback triggered/i.test(message)) return false;
+
   return RETRYABLE_TASK_ERROR_PATTERNS.some(pattern => pattern.test(message));
 }
 
@@ -238,6 +268,7 @@ interface MegaOptimizerResult {
 
 interface MegaOptimizerOptions {
   signal?: AbortSignal;
+  ragContext?: import('../types/rag').RAGContext | null;
 }
 
 export class QlikOptimizeAgent {
@@ -249,6 +280,7 @@ export class QlikOptimizeAgent {
   private orchestrator: ProviderOrchestrator;
   private abortSignal?: AbortSignal;
   private parserSummary: string;
+  private ragContext?: import('../types/rag').RAGContext | null;
 
   constructor(script: string, options?: MegaOptimizerOptions) {
     // Sanitize input script to remove any HTML tags if the user pasted formatted code
@@ -258,6 +290,7 @@ export class QlikOptimizeAgent {
     this.promptScript = compaction.compacted;
     this.scriptHash = createHash('sha256').update(this.script).digest('hex').substring(0, 16);
     this.abortSignal = options?.signal;
+    this.ragContext = options?.ragContext;
     const parsed = parseQlikScript(this.script);
     this.parserSummary = buildParserSummary(parsed);
 
@@ -377,7 +410,7 @@ export class QlikOptimizeAgent {
       ? "Contexto do script já fornecido nas etapas anteriores. Use apenas os artefatos gerados (optimizedScript, plan, validation)."
       : this.promptScript;
 
-    let fullPrompt = buildMegaPrompt(taskName, scriptForPrompt, this.parserSummary, this.compactHistory);
+    let fullPrompt = buildMegaPrompt(taskName, scriptForPrompt, this.parserSummary, this.compactHistory, this.ragContext);
 
     // Token budgeting: if prompt estimated tokens exceeds config limit, trim compactHistory progressively
     const maxTokens = config.maxPromptTokens || 50000;
@@ -392,7 +425,7 @@ export class QlikOptimizeAgent {
       while (parts.length > 0) {
         parts.shift(); // remove oldest
         this.compactHistory = parts.join('\n');
-        fullPrompt = buildMegaPrompt(taskName, scriptForPrompt, this.parserSummary, this.compactHistory);
+        fullPrompt = buildMegaPrompt(taskName, scriptForPrompt, this.parserSummary, this.compactHistory, this.ragContext);
         estimatedTokens = Math.ceil(fullPrompt.length / 4);
         if (estimatedTokens <= maxTokens) break;
       }
@@ -400,7 +433,7 @@ export class QlikOptimizeAgent {
       if (estimatedTokens > maxTokens) {
         // As a last resort, clear compactHistory entirely
         this.compactHistory = '';
-        fullPrompt = buildMegaPrompt(taskName, scriptForPrompt, this.parserSummary, this.compactHistory);
+        fullPrompt = buildMegaPrompt(taskName, scriptForPrompt, this.parserSummary, this.compactHistory, this.ragContext);
         estimatedTokens = Math.ceil(fullPrompt.length / 4);
       }
 

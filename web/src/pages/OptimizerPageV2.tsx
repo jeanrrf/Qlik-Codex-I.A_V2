@@ -29,6 +29,7 @@ import { useSessionPersistence } from "../hooks/useSessionPersistence";
 import { highlightQlikCode } from "../lib/qlikSyntaxHighlighter";
 import QuotaDisplay from "../components/QuotaDisplay/QuotaDisplay";
 import { getQuotas, UsageQuotaCheck } from "../api/usage";
+import OptimizationFeedback from "../components/OptimizationFeedback";
 
 // Pipeline Components - Refatorados
 import { PipelineContainer, PipelineKPIs } from "../components/Pipeline";
@@ -1168,6 +1169,13 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
                         </div>
                       </div>
                     </div>
+
+                    {/* RAG Feedback Component */}
+                    {result.optimizationId && (
+                      <OptimizationFeedback
+                        optimizationId={result.optimizationId}
+                      />
+                    )}
 
                     {!isNvidiaResult && result.changes && result.changes.length > 0 && (
                       <div className="changes-list">

@@ -85,7 +85,7 @@ AUTH_COOKIE_DOMAIN=.onrender.com
 
 # Owner Access
 OWNER_ACCESS_TOKEN=token_secreto_do_proprietario
-OWNER_EMAIL=seu-email@gmail.com
+OWNER_EMAIL=sentinnellia@gmail.com
 
 # LLM APIs
 GEMINI_API_KEY=sua_chave_gemini
@@ -108,7 +108,7 @@ SERVE_STATIC_FRONTEND=false
 
 ```env
 VITE_API_BASE_URL=https://seu-backend.onrender.com
-VITE_OWNER_EMAIL=seu-email@gmail.com
+VITE_OWNER_EMAIL=sentinnellia@gmail.com
 ```
 
 5. Deploy automático ao push no branch `main`

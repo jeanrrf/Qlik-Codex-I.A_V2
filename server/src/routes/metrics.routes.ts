@@ -1,8 +1,10 @@
 import { Router } from "express";
 
+import { config } from "../lib/config";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { AuthRequest, optionalAuth } from "../middleware/authMiddleware";
 import { recordVisit } from "../services/analyticsService";
+import { vectorRAGService } from "../services/vectorRAGService";
 import { UserRole } from "../types/auth";
 
 const router = Router();
@@ -27,6 +29,41 @@ router.post(
       isOwner: req.user?.role === UserRole.OWNER
     });
     res.status(201).json({ success: true });
+  })
+);
+
+/**
+ * GET /api/metrics/stats
+ * Retorna estatísticas do sistema incluindo RAG
+ */
+router.get(
+  "/stats",
+  optionalAuth,
+  asyncHandler(async (_req: AuthRequest, res) => {
+    const stats: Record<string, unknown> = {
+      timestamp: new Date().toISOString(),
+      rag: {
+        enabled: config.rag.enabled,
+      }
+    };
+
+    // Adicionar stats do RAG se habilitado
+    if (config.rag.enabled) {
+      try {
+        const ragStats = await vectorRAGService.getStats();
+        stats.rag = {
+          enabled: true,
+          ...ragStats
+        };
+      } catch (_err) {
+        stats.rag = {
+          enabled: true,
+          error: 'Failed to fetch RAG stats'
+        };
+      }
+    }
+
+    res.json(stats);
   })
 );
 

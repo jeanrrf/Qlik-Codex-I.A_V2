@@ -6,7 +6,7 @@ export function AuthCallback() {
   const [status, setStatus] = useState("Processando autenticação...");
 
   useEffect(() => {
-    let redirectTimeout: NodeJS.Timeout;
+    let redirectTimeout: ReturnType<typeof setTimeout>;
     let hasRedirected = false;
 
     const safeRedirect = () => {

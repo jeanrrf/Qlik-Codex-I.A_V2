@@ -229,6 +229,16 @@ export class ProviderOrchestrator {
           error: errorMessage
         });
 
+        // Notifica frontend sobre a falha da tentativa
+        sseEmitter.sendToCurrent({
+          type: "provider_attempt_failed",
+          provider: plan.provider,
+          model: plan.model,
+          error: errorMessage,
+          attempt: attemptCount,
+          maxAttempts: this.rotationConfig.maxAttemptsPerStep
+        });
+
         const attempt: ProviderAttempt = {
           provider: plan.provider,
           model: plan.model || "unknown",

@@ -94,7 +94,7 @@ Observe os logs no console:
 🌐 [AuthContext] Verificando status de autenticação...
 ✅ [AuthContext] Status recebido: {authenticated: true, user: {...}}
 👤 [AuthContext] Usuário autenticado, buscando dados completos...
-✅ [AuthContext] Dados do usuário recebidos: seu-email@gmail.com
+✅ [AuthContext] Dados do usuário recebidos: sentinnellia@gmail.com
 ✅ [AuthContext] Estado atualizado - usuário autenticado
 ✅ Revalidação concluída
 ✅ Auth processado - redirecionando

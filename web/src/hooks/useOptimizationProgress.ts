@@ -607,6 +607,14 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
                 return { ...prev, stages: newStages };
               });
 
+            } else if (event.type === 'provider_attempt_failed') {
+              const warningMsg = `Tentativa falhou (${event.attempt}/${event.maxAttempts}): ${event.provider} - ${event.error}`;
+              console.warn('[SSE Frontend]', warningMsg);
+              setProgress(prev => ({
+                ...prev,
+                warnings: [...(prev.warnings || []), warningMsg]
+              }));
+
             } else if (event.type === 'substep') {
 
               // Atualiza substep em tempo real
@@ -833,82 +841,69 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
 
 
+                // Determina se a otimização foi bem-sucedida
+                const isOptimizationSuccess = !!(data.optimizedScript || data.response?.optimizedScript);
+
                 // Copia defensiva das stages
                 const updatedStages = prev.stages.map(stage => ({
-
                   ...stage,
-
                   subSteps: stage.subSteps?.map(sub => ({ ...sub }))
-
                 }));
 
-
-
-                // Atualiza os sub-steps com dados reais da API, se existirem
-                if (data.analysis?.steps) {
-
-                  const optStep = data.analysis.steps.find((s: AnalysisStep) => s.stepId === "opt_main");
-
-
-
-                  if (optStep?.subSteps && Array.isArray(optStep.subSteps)) {
-
-                    optStep.subSteps.forEach((realSub: AnalysisSubStep) => {
-
-                      for (const stage of updatedStages) {
-
-                        if (!stage.subSteps) continue;
-
-                        const subIdx = stage.subSteps.findIndex(s => s.id === realSub.id);
-
-                        if (subIdx !== -1) {
-
-                          stage.subSteps[subIdx] = {
-
-                            ...stage.subSteps[subIdx],
-
-                            status: realSub.status || "success",
-
-                            startTime: realSub.startTime,
-
-                            endTime: realSub.endTime,
-
-                            duration: realSub.duration,
-
-                            error: realSub.error
-
-                          };
-
-                          break;
-
-                        }
-
+                // Se otimização foi sucesso, força TODAS as stages e subtasks para success
+                // Isso resolve o problema de IDs dinâmicos que não fazem match com o backend
+                if (isOptimizationSuccess) {
+                  updatedStages.forEach(stage => {
+                    stage.status = "success";
+                    stage.progress = 100;
+                    if (stage.subSteps) {
+                      stage.subSteps.forEach(sub => {
+                        sub.status = "success";
+                        sub.progress = 100;
+                      });
+                      // Calcula duração total da stage somando subtasks
+                      const totalDuration = stage.subSteps.reduce((acc, sub) => acc + (sub.duration || 0), 0);
+                      if (totalDuration > 0) {
+                        stage.duration = totalDuration;
                       }
-
-                    });
-
-                  }
-
-                }
-
-
-
-                // Recalcula status/duração das stages baseado nos sub-steps atualizados
-                updatedStages.forEach(stage => {
-
-                  if (stage.subSteps && stage.subSteps.length > 0) {
-
-                    stage.status = calculateStageStatus(stage.subSteps);
-
-                    if (stage.status === "success") {
-
-                      stage.duration = stage.subSteps.reduce((acc, sub) => acc + (sub.duration || 0), 0);
-
                     }
+                  });
+                } else {
+                  // Fallback: tenta atualizar os sub-steps com dados reais da API
+                  if (data.analysis?.steps) {
+                    const optStep = data.analysis.steps.find((s: AnalysisStep) => s.stepId === "opt_main");
 
+                    if (optStep?.subSteps && Array.isArray(optStep.subSteps)) {
+                      optStep.subSteps.forEach((realSub: AnalysisSubStep) => {
+                        for (const stage of updatedStages) {
+                          if (!stage.subSteps) continue;
+                          const subIdx = stage.subSteps.findIndex(s => s.id === realSub.id);
+                          if (subIdx !== -1) {
+                            stage.subSteps[subIdx] = {
+                              ...stage.subSteps[subIdx],
+                              status: realSub.status || "success",
+                              startTime: realSub.startTime,
+                              endTime: realSub.endTime,
+                              duration: realSub.duration,
+                              error: realSub.error
+                            };
+                            break;
+                          }
+                        }
+                      });
+                    }
                   }
 
-                });
+                  // Recalcula status/duração das stages baseado nos sub-steps atualizados
+                  updatedStages.forEach(stage => {
+                    if (stage.subSteps && stage.subSteps.length > 0) {
+                      stage.status = calculateStageStatus(stage.subSteps);
+                      if (stage.status === "success") {
+                        stage.duration = stage.subSteps.reduce((acc, sub) => acc + (sub.duration || 0), 0);
+                      }
+                    }
+                  });
+                }
 
 
 

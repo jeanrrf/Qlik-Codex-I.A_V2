@@ -154,7 +154,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
     }
   };
 
-  const CONTACT_EMAIL = "rosso.jeandasilva@gmail.com";
+  const CONTACT_EMAIL = "sentinnellia@gmail.com";
   const WHATSAPP_NUMBER = "+55 48 991937304";
   const WHATSAPP_URL =
     "https://api.whatsapp.com/send?phone=5548991937304&text=Quero%20conhecer%20o%20Qlik%20Codex%20IA";
@@ -789,7 +789,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               </div>
 
               <div className="contact-actions">
-                <button className="btn btn-contact-primary" onClick={() => window.location.href = 'mailto:rosso.jeandasilva@gmail.com'}>
+                <button className="btn btn-contact-primary" onClick={() => window.location.href = 'mailto:sentinnellia@gmail.com'}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect width="20" height="16" x="2" y="4" rx="2" />
                     <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />

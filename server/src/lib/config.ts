@@ -160,5 +160,16 @@ export const config = {
     monthlyReloadsAverage: 120,         // reloads/mês (4x/dia)
     developersOnTeam: 3,                // desenvolvedores Qlik na equipe
     averageIncidentCostPerHour: 500     // R$/hora de incidente em produção
+  },
+
+  // RAG (Retrieval-Augmented Generation) Configuration
+  rag: {
+    enabled: (process.env.RAG_ENABLED || 'false').toLowerCase() === 'true',
+    maxExamples: Number(process.env.RAG_MAX_EXAMPLES ?? '3'),
+    similarityThreshold: Number(process.env.RAG_SIMILARITY_THRESHOLD ?? '0.7'),
+    minRewardScore: Number(process.env.RAG_MIN_REWARD_SCORE ?? '5'),
+    searchTimeoutMs: Number(process.env.RAG_SEARCH_TIMEOUT_MS ?? '200'),
+    embeddingModel: process.env.RAG_EMBEDDING_MODEL || 'text-embedding-004',
+    embeddingDimensions: Number(process.env.RAG_EMBEDDING_DIMENSIONS ?? '768')
   }
 };

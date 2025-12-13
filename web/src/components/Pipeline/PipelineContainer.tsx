@@ -85,6 +85,17 @@ export const PipelineContainer: React.FC<PipelineContainerProps> = ({
         </span>
       </div>
 
+      {/* Warnings */}
+      {progress.warnings && progress.warnings.length > 0 && (
+        <div className="pipeline-warnings">
+          {progress.warnings.map((warning, i) => (
+            <div key={i} className="pipeline-warning-item">
+              ⚠️ {warning}
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Stage Cards Grid */}
       <div className={`pipeline-stages-grid stages-${stageCount}`}>
         {visibleStages.map((stage, index) => (

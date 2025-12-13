@@ -20,15 +20,19 @@ import { sseEmitter } from "../lib/sseEmitter";
 import type { ConsultancyDocument } from "../types/consultancy";
 import type { LLMOptions } from "../types/optimization";
 import type { DeterministicValidationSnapshot, OptimizeMode, OptimizeResult } from "../types/qlik";
+import type { RAGContext } from "../types/rag";
 import { validateQlikScript } from "../validators/qlikValidator";
 
 import { stepTimingService } from "./stepTimingService";
+import { vectorRAGService } from "./vectorRAGService";
 
 export interface FullOptimizeResult extends OptimizeResult {
   explanation?: string;
   consultancyDocument?: ConsultancyDocument;
   compactAuditReport?: CompactAuditReport; // NOVO: relatório compacto
   roiExecutiveSummary?: string;  // REVENUE FEATURE: ROI summary em texto
+  ragContext?: RAGContext | null; // RAG: contexto recuperado de otimizações similares
+  optimizationId?: string; // RAG: ID para feedback posterior
   analysisOnly?: {
     parsed: {
       keyFindings: string[];
@@ -149,13 +153,45 @@ async function runUltraExpertMode(
   llmOptions?: LLMOptions,
   _generateConsultancy = true,
   isTruncated = false,
-  abortSignal?: AbortSignal
+  abortSignal?: AbortSignal,
+  userId?: string
 ): Promise<FullOptimizeResult> {
   checkAborted(abortSignal, 'Ultra Expert mode start');
   logger.info("⚡ MODO ULTRA EXPERT - MEGA OPTIMIZER (Gemini 2.5 Flash Architecture)");
 
-  // Instantiate the Mega Optimizer with AbortSignal support
-  const optimizer = new QlikOptimizeAgent(script, { signal: abortSignal });
+  // ========== RAG: BUSCA CONTEXTO DE OTIMIZAÇÕES SIMILARES ==========
+  let ragContext: RAGContext | null = null;
+
+  if (vectorRAGService.isEnabled()) {
+    try {
+      const ragStart = Date.now();
+      ragContext = await vectorRAGService.buildRAGContext(script);
+      const ragElapsed = Date.now() - ragStart;
+
+      if (ragContext) {
+        logger.info('[RAG] Context retrieved', {
+          examples: ragContext.examples.length,
+          avgSimilarity: ragContext.retrievalMetadata.avgSimilarity.toFixed(3),
+          latencyMs: ragElapsed
+        });
+
+        sseEmitter.sendToCurrent({
+          type: 'rag_context',
+          examples: ragContext.examples.length,
+          avgSimilarity: ragContext.retrievalMetadata.avgSimilarity,
+          latencyMs: ragElapsed
+        });
+      } else {
+        logger.info('[RAG] No similar optimizations found');
+      }
+    } catch (error) {
+      logger.warn('[RAG] Failed to retrieve context, continuing without RAG', { error });
+      // Fail-open: continua sem RAG se falhar
+    }
+  }
+
+  // Instantiate the Mega Optimizer with AbortSignal support + RAG context
+  const optimizer = new QlikOptimizeAgent(script, { signal: abortSignal, ragContext });
   const originalLines = script.split(/\r?\n/).length;
 
   // Run the pipeline
@@ -165,7 +201,7 @@ async function runUltraExpertMode(
   const diffStats = calculateDiffStats(script, megaResult.optimizedScript);
 
   // Map results to FullOptimizeResult
-  return {
+  const result: FullOptimizeResult = {
     originalScript: script,
     optimizedScript: megaResult.optimizedScript,
     // summary may include a truncation warning when free-tier truncation occurred
@@ -256,13 +292,60 @@ async function runUltraExpertMode(
 
     roiExecutiveSummary: typeof megaResult.plan?.estimatedImprovement === 'string' ? megaResult.plan.estimatedImprovement : String(megaResult.plan?.estimatedImprovement ?? '')
   };
+
+  // ========== RAG: INDEXA RESULTADO PARA FUTURAS OTIMIZAÇÕES ==========
+  let optimizationId: string | undefined;
+
+  if (vectorRAGService.isEnabled()) {
+    try {
+      const patterns = [
+        ...((megaResult.analysis as Record<string, unknown> | undefined)?.optimizationOpportunities as string[] || []),
+        ...(megaResult.plan.planSteps as Array<Record<string, unknown>> || []).map(s => String(s.title || ''))
+      ].filter(p => p.length > 0).slice(0, 10);
+
+      const changesSummary = String(megaResult.report.executiveSummary || '');
+
+      const complexity: 'low' | 'medium' | 'high' = originalLines < 100 ? 'low' : originalLines < 500 ? 'medium' : 'high';
+
+      optimizationId = await vectorRAGService.indexOptimization(
+        script,
+        megaResult.optimizedScript,
+        {
+          mode: 'ultra-expert',
+          provider: llmOptions?.provider || 'google',
+          model: llmOptions?.model || config.geminiModel,
+          scriptLines: originalLines,
+          complexity,
+          breakingRisk: ((): 'none' | 'low' | 'medium' | 'high' => {
+            const r = String(megaResult.plan?.riskLevel ?? 'none');
+            return ['none', 'low', 'medium', 'high'].includes(r) ? r as 'none' | 'low' | 'medium' | 'high' : 'none';
+          })(),
+          optimizationTags: patterns,
+          userId
+        },
+        changesSummary,
+        patterns
+      );
+
+      if (optimizationId) {
+        logger.info('[RAG] Optimization indexed', { optimizationId });
+        result.optimizationId = optimizationId;
+      }
+    } catch (error) {
+      logger.warn('[RAG] Failed to index optimization, continuing', { error });
+      // Fail-open: não bloqueia se indexação falhar
+    }
+  }
+
+  result.ragContext = ragContext;
+  return result;
 }
 
 /**
  * MODO NVIDIA FAST: Refatoração direta (apenas código)
  * Envia contexto completo em uma única chamada e retorna somente o script otimizado.
  */
-const NVIDIA_FAST_MAX_RETRIES = 2;
+const NVIDIA_FAST_MAX_RETRIES = 3;
 async function runNvidiaFastMode(
   script: string,
   llmOptions?: LLMOptions,
@@ -431,6 +514,16 @@ ${scriptForPrompt}
       }
 
       const canRetry = attempt < NVIDIA_FAST_MAX_RETRIES && isRetryableProviderError(error);
+
+      // Notifica frontend sobre a falha da tentativa
+      sseEmitter.sendToCurrent({
+        type: "provider_attempt_failed",
+        provider: "nvidia",
+        model: model,
+        error: errorMessage,
+        attempt: attempt,
+        maxAttempts: NVIDIA_FAST_MAX_RETRIES
+      });
 
       if (canRetry) {
         logger.warn(`[NVIDIA FAST] Tentativa ${attempt} falhou (${errorMessage}). Nova tentativa...`);

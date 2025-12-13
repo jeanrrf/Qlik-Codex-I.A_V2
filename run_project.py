@@ -10,7 +10,7 @@ def run_command(command, cwd=None, shell=True, ignore_error=False) -> None:
     try:
         subprocess.check_call(command, cwd=cwd, shell=shell)
         print(f"✅ Success: {command}")
-    except subprocess.CalledProcessError as e: subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
         print(f"❌ Error executing {command}: {e}")
         if not ignore_error:
             sys.exit(1)

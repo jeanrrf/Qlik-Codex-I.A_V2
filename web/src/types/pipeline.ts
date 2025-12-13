@@ -98,6 +98,8 @@ export interface PipelineProgress {
   status: PipelineStatus;
   /** Mensagem de erro, se houver */
   errorMessage?: string;
+  /** Lista de avisos (retries, etc) */
+  warnings?: string[];
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -299,5 +301,6 @@ export function createInitialProgress(mode: 'ultra-expert' | 'nvidia-fast' = 'ul
     currentStageIndex: -1,
     elapsedTime: 0,
     status: 'idle',
+    warnings: [],
   };
 }

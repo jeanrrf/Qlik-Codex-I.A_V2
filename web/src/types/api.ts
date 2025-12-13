@@ -89,6 +89,7 @@ export interface OptimizeResult {
     linesRemoved: number;
     linesModified: number;
   };
+  optimizationId?: string; // RAG: ID da otimização para feedback
 }
 
 export interface OptimizeScriptRequestBody {

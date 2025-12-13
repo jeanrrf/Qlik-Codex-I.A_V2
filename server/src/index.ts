@@ -17,11 +17,13 @@ import { analyticsRouter } from "./routes/analytics.routes";
 import authRouter from "./routes/auth.routes";
 import { healthRouter } from "./routes/health.routes";
 import { metricsRouter } from "./routes/metrics.routes";
+import ragRouter from "./routes/rag.routes";
 import { router as scriptsRouter } from "./routes/scripts.routes";
 import sessionRouter from "./routes/session.routes";
 import { toolsRouter } from "./routes/tools.routes";
 import usageRouter from "./routes/usage.routes";
 import { validationRouter } from "./routes/validation.routes";
+import { vectorRAGService } from "./services/vectorRAGService";
 
 const app = express();
 
@@ -127,6 +129,7 @@ app.use("/api/sessions", sessionRouter);
 app.use("/api/usage", usageRouter);
 app.use("/api/analytics", analyticsRouter);
 app.use("/api/metrics", metricsRouter);
+app.use("/api/rag", ragRouter);
 
 if (config.serveStaticFrontend && fs.existsSync(webBuildPath)) {
   logger.info(`Serving static frontend from: ${webBuildPath}`);
@@ -200,6 +203,19 @@ async function startServer() {
     logger.info('Initializing database connection...');
     await initDb();
     logger.info('Database initialization completed successfully');
+
+    // Initialize RAG system if enabled
+    if (config.rag.enabled) {
+      logger.info('Initializing RAG vector store...');
+      try {
+        await vectorRAGService.initialize();
+        logger.info('RAG vector store initialized successfully');
+      } catch (ragErr) {
+        logger.error('Failed to initialize RAG system (non-fatal, will continue without RAG)', ragErr);
+      }
+    } else {
+      logger.info('RAG system is disabled (RAG_ENABLED=false)');
+    }
   } catch (err) {
     logger.error("Failed to initialize database", err);
     process.exit(1);

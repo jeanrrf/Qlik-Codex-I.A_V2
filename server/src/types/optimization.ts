@@ -325,7 +325,7 @@ export const OPTIMIZATION_STEPS: OptimizationStep[] = [
 ];
 
 export const DEFAULT_ROTATION_CONFIG: ProviderRotationConfig = {
-  maxAttemptsPerStep: 4,
+  maxAttemptsPerStep: 3,
   providerOrder: ["google", "nvidia"],
   neverRetryProvider: true,
   timeoutPerStep: 180000, // 3 minutos por tarefa (180000ms)

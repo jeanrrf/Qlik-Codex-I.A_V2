@@ -4,10 +4,11 @@
  */
 
 // import type { InValue } from '@libsql/client'; // Unused
+import { performance } from "node:perf_hooks";
+
 import { OAuth2Client } from "google-auth-library";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
-import { performance } from "node:perf_hooks";
 
 import { config } from "../lib/config";
 import { logger } from "../lib/logger";
