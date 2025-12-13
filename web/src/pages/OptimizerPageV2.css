@@ -1701,6 +1701,73 @@
   background: rgba(57, 255, 20, 0.4);
 }
 
+/* Live status */
+.live-status-card {
+  margin-top: 12px;
+  padding: 16px 18px;
+  border: 1px solid rgba(0, 242, 255, 0.15);
+  background: rgba(8, 13, 20, 0.9);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.live-status-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.live-status-right {
+  width: 260px;
+}
+
+.live-status-left h3 {
+  margin: 4px 0;
+  font-size: 1.1rem;
+}
+
+.live-message {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.live-progress-bar {
+  position: relative;
+  width: 240px;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.live-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00f2ff, #39ff14);
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+
+.live-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  color: var(--text-secondary);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.85rem;
+}
+
+.live-progress-value {
+  color: #00f2ff;
+}
+
+.live-progress-time {
+  color: #8f9bb3;
+}
+
 /* Resultado inline */
 .result-inline-card {
   margin-top: 24px;
@@ -1734,6 +1801,32 @@
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.02);
+}
+
+.result-metrics-grid {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  background: rgba(7, 10, 15, 0.8);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.result-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metric-label {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.metric-value {
+  font-size: 1rem;
 }
 
 .result-code-panels {

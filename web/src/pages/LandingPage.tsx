@@ -4,6 +4,8 @@ import { apiClient } from "../api/client";
 import QlikFormatterTool from "../components/QlikFormatterTool";
 import { BrandMark } from "../components/BrandMark";
 
+import "./LandingPage.css";
+
 interface LandingPageProps {
   onStart: () => void;
 }
@@ -489,7 +491,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               </p>
             </div>
             <div className="section-header-logo" aria-hidden="true">
-              <img src="/brand-visual-hero.png" alt="Logo Qlik Codex I.A" loading="lazy" />
+              <img src="/brand-visual-hero.png" alt="Logo Qlik Codex I.A" loading="lazy" width="320" />
             </div>
           </div>
 

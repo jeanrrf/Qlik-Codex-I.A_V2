@@ -263,6 +263,13 @@ interface MegaOptimizerResult {
     totalTime: number;
     taskTimes: Record<string, number>;
     providerStats?: Record<string, { success: number; failed: number }>;
+    tokenUsage?: Partial<Record<MegaTaskId, {
+      provider: string;
+      model: string;
+      attempt: number;
+      tokensConsumed: { promptTokens: number; completionTokens: number; totalTokens: number };
+      durationMs: number;
+    }>>;
   };
 }
 
@@ -277,6 +284,13 @@ export class QlikOptimizeAgent {
   private scriptHash: string;
   private compactHistory: string = ""; // Resumo compacto em vez de histórico completo
   private taskTimes: Record<string, number> = {};
+  private taskTokens: Partial<Record<MegaTaskId, {
+    provider: string;
+    model: string;
+    attempt: number;
+    tokensConsumed: { promptTokens: number; completionTokens: number; totalTokens: number };
+    durationMs: number;
+  }>> = {};
   private orchestrator: ProviderOrchestrator;
   private abortSignal?: AbortSignal;
   private parserSummary: string;
@@ -459,14 +473,25 @@ export class QlikOptimizeAgent {
         ? `Regenerando ${taskName} (tentativa ${attempt}/${MAX_TASK_RETRIES})`
         : `Executando ${taskName}...`;
 
+      // Evento can?nico por tarefa (mant?m stage principal em sincronia)
       sseEmitter.sendToCurrent({
         type: "substep",
         substep: {
-          id: `${taskName.toLowerCase()}_attempt_${attempt}` as OptimizationStepId,
+          id: taskName as OptimizationStepId,
           name: statusLabel,
           description: attempt > 1
-            ? `Retry automático ${attempt}/${MAX_TASK_RETRIES}`
+            ? `Retry autom?tico ${attempt}/${MAX_TASK_RETRIES}`
             : `Primeira tentativa de ${taskName}`,
+          status: "running",
+          startTime: new Date().toISOString()
+        }
+      });
+      // Evento detalhado por tentativa (mant?m hist?rico para UI)
+      sseEmitter.sendToCurrent({
+        type: "substep",
+        substep: {
+          id: `${taskName.toUpperCase()}_ATTEMPT_${attempt}` as OptimizationStepId,
+          name: `${taskName} tentativa ${attempt}`,
           status: "running",
           startTime: new Date().toISOString()
         }
@@ -504,6 +529,15 @@ export class QlikOptimizeAgent {
         const metadata = successfulProvider?.metadata;
         const tokensConsumed = metadata?.tokensConsumed as { promptTokens: number; completionTokens: number; totalTokens: number } | undefined;
         const thinkingContent = metadata?.thinkingContent as string | undefined;
+        if (tokensConsumed && successfulProvider) {
+          this.taskTokens[taskName] = {
+            provider: successfulProvider.provider,
+            model: successfulProvider.model,
+            attempt,
+            tokensConsumed,
+            durationMs: 0 // filled after duration calculation
+          };
+        }
 
         logger.info(`[MegaOptimizer] <<< RECEIVED [${taskName}] via Orchestrator`, {
           responseSizeChars: responseText.length,
@@ -604,6 +638,9 @@ export class QlikOptimizeAgent {
 
         const duration = Date.now() - totalStart;
         this.taskTimes[taskName] = duration;
+        if (this.taskTokens[taskName]) {
+          this.taskTokens[taskName].durationMs = duration;
+        }
 
         const summary = this.summarizeTaskResult(taskName, parsedResult);
         this.compactHistory = this.compactHistory
@@ -619,11 +656,23 @@ export class QlikOptimizeAgent {
           : 'unknown';
         logger.info(`[MegaOptimizer] Completed task: ${taskName} using ${providerInfo} in ${duration}ms (attempt ${attempt})`);
 
+        // Atualiza est?gio can?nico
         sseEmitter.sendToCurrent({
           type: "substep",
           substep: {
-            id: `${taskName.toLowerCase()}_attempt_${attempt}` as OptimizationStepId,
-            name: `${taskName} concluída (tentativa ${attempt})`,
+            id: taskName as OptimizationStepId,
+            name: `${taskName} conclu?da`,
+            status: "success",
+            duration,
+            endTime: new Date().toISOString()
+          }
+        });
+        // Mant?m hist?rico por tentativa
+        sseEmitter.sendToCurrent({
+          type: "substep",
+          substep: {
+            id: `${taskName.toUpperCase()}_ATTEMPT_${attempt}` as OptimizationStepId,
+            name: `${taskName} conclu?da (tentativa ${attempt})`,
             status: "success",
             duration,
             endTime: new Date().toISOString()
@@ -658,10 +707,23 @@ export class QlikOptimizeAgent {
         }
 
         const failureDuration = Date.now() - totalStart;
+        // Marca tarefa como erro (can?nico)
         sseEmitter.sendToCurrent({
           type: "substep",
           substep: {
-            id: `${taskName.toLowerCase()}_failed` as OptimizationStepId,
+            id: taskName as OptimizationStepId,
+            name: `Falha definitiva em ${taskName}`,
+            status: "error",
+            error: errorMessage,
+            duration: failureDuration,
+            endTime: new Date().toISOString()
+          }
+        });
+        // Evento detalhado por tentativa final
+        sseEmitter.sendToCurrent({
+          type: "substep",
+          substep: {
+            id: `${taskName.toUpperCase()}_FAILED` as OptimizationStepId,
             name: `Falha definitiva em ${taskName}`,
             status: "error",
             error: errorMessage,
@@ -779,6 +841,20 @@ export class QlikOptimizeAgent {
 
     // Coleta estatísticas do orquestrador
     const orchestratorStats = this.orchestrator.getStats();
+    const tokenUsage = this.taskTokens;
+    const totalTokensUsed = Object.values(tokenUsage).reduce((acc, t) => acc + (t.tokensConsumed?.totalTokens || 0), 0);
+    logger.info("[MegaOptimizer] EXECUTION SUMMARY", {
+      mode: "ultra-expert",
+      scriptHash: this.scriptHash,
+      scriptLines: this.script.split(/\r?\n/).length,
+      totalTimeMs: totalTime,
+      taskTimes: this.taskTimes,
+      totalTokensUsed,
+      tokenUsage,
+      providerStats: orchestratorStats.providerStats,
+      ragContext: Boolean(this.ragContext)
+    });
+
 
     // Prepare changes list
     const changes = Array.isArray(codeGen.changesApplied) ? (codeGen.changesApplied as unknown[]) : [];
@@ -809,7 +885,8 @@ export class QlikOptimizeAgent {
       metrics: {
         totalTime,
         taskTimes: this.taskTimes,
-        providerStats: orchestratorStats.providerStats
+        providerStats: orchestratorStats.providerStats,
+        tokenUsage
       }
     };
   }

@@ -1157,46 +1157,7 @@ select:focus {
   }
 }
 
-/* --- OLD FORMATTER SECTION (DEPRECATED) --- */
-.formatter-section {
-  padding: 80px 0;
-  max-width: 1200px;
-  margin: 0 auto;
-}
 
-.formatter-container {
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-}
-
-.formatter-header {
-  text-align: center;
-  max-width: 720px;
-  margin: 0 auto;
-}
-
-.formatter-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: linear-gradient(135deg, rgba(112, 0, 255, 0.1), rgba(0, 242, 255, 0.1));
-  border: 1px solid rgba(0, 242, 255, 0.2);
-  border-radius: 50px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  color: var(--primary);
-  text-transform: uppercase;
-  margin-bottom: 20px;
-}
-
-.formatter-badge svg {
-  width: 16px;
-  height: 16px;
-  stroke: var(--primary);
-}
 
 /* --- HERO SECTION --- */
 .hero-section {

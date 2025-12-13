@@ -175,6 +175,7 @@ class VectorRAGService {
    */
   private async generateEmbedding(text: string): Promise<number[]> {
     try {
+      const startedAt = Date.now();
       let embedding: number[];
 
       if (this.ragConfig.embeddingProvider === 'nvidia') {
@@ -184,12 +185,22 @@ class VectorRAGService {
       }
 
       if (embedding.length !== this.ragConfig.embeddingDimensions) {
-        logger.warn('[RAG] Embedding dimension mismatch', {
+        const prev = this.ragConfig.embeddingDimensions;
+        this.ragConfig.embeddingDimensions = embedding.length;
+        logger.warn('[RAG] Embedding dimension mismatch - auto-adjusted expected dimensions', {
           provider: this.ragConfig.embeddingProvider,
-          expected: this.ragConfig.embeddingDimensions,
-          received: embedding.length
+          expected: prev,
+          received: embedding.length,
+          adjustedTo: this.ragConfig.embeddingDimensions
         });
       }
+
+      logger.info('[RAG] Embedding generated', {
+        provider: this.ragConfig.embeddingProvider,
+        model: this.ragConfig.embeddingModel,
+        dimensions: embedding.length,
+        durationMs: Date.now() - startedAt
+      });
 
       return embedding;
     } catch (error) {

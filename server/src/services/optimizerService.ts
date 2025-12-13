@@ -350,6 +350,19 @@ async function runUltraExpertMode(
       logger.info("Consultancy document generated successfully");
     } catch (error) {
       logger.warn("Failed to generate consultancy document", { error });
+      // Fallback: tenta gerar um relatório compacto sem traces para não deixar o usuário sem auditoria
+      try {
+        logger.info("Retrying consultancy generation with compact mode (fallback)");
+        const consultancyDoc = await runConsultancyAgent(result, {
+          generateTimeline: false,
+          generateMarkers: true,
+          generateTips: false
+        });
+        result.consultancyDocument = consultancyDoc;
+        logger.info("Consultancy document generated via fallback");
+      } catch (fallbackErr) {
+        logger.warn("Fallback consultancy generation also failed", { error: fallbackErr });
+      }
     }
   }
 
@@ -756,5 +769,4 @@ function createOptimizerService() {
 }
 
 export const optimizerService = createOptimizerService();
-
 

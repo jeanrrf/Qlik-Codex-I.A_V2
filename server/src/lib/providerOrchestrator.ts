@@ -102,11 +102,15 @@ export class ProviderOrchestrator {
       estimatedTokens
     });
 
-    // Plano fixo de fallback por modelo.
-    const attemptPlan: Array<{ provider: "google" | "nvidia"; model?: string; label: string }> = [
-      { provider: "google", model: config.geminiModel, label: "Gemini (primario)" },
-      { provider: "nvidia", model: config.nvidiaModel, label: "NVIDIA" }
-    ];
+    // Plano de fallback baseado na ordem configurada
+    const attemptPlan: Array<{ provider: "google" | "nvidia"; model?: string; label: string }> =
+      (this.rotationConfig.providerOrder || ["google", "nvidia"])
+        .map((provider) => {
+          const normalized = provider === "google" ? "google" : "nvidia";
+          return normalized === "google"
+            ? { provider: "google" as const, model: config.geminiModel, label: "Gemini (primario)" }
+            : { provider: "nvidia" as const, model: config.nvidiaModel, label: "NVIDIA fallback" };
+        });
 
     for (const plan of attemptPlan) {
       ensureNotAborted();

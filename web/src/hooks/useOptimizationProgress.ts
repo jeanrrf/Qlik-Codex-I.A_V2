@@ -371,6 +371,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
       }
 
       setError("Tempo limite global excedido (15 min). A operação foi cancelada.");
+      setLiveMessage("Tempo limite global excedido (15 min).");
       setProgress(prev => ({ ...prev, status: "error", errorMessage: "Tempo limite global excedido (15 min)." }));
       setIsRunning(false);
     }, 15 * 60 * 1000);
@@ -911,6 +912,8 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
 
 
+              setLiveMessage("Otimização concluída");
+
               // Só congela o timer e marca como concluído quando todas as etapas terminaram
               if (isFullyComplete) {
 
@@ -935,6 +938,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
             } else if (event.type === 'error') {
 
               setError(event.error || 'Erro no backend');
+              setLiveMessage(event.error || 'Erro no backend');
 
               throw new Error(event.error || 'Erro no processamento');
 
@@ -969,6 +973,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
       const errorMessage = err instanceof Error ? err.message : "Erro desconhecido";
 
       setError(errorMessage);
+      setLiveMessage(errorMessage);
 
 
 
@@ -1025,6 +1030,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
   const restoreProgress = useCallback((savedProgress: OptimizationProgress) => {
     setProgress(savedProgress);
     if (savedProgress.status === 'running') {
+      setLiveMessage("Retomando execucao em andamento...");
       setIsRunning(true);
       // Restart timer if it was running
       startTimeRef.current = Date.now() - savedProgress.elapsedTime;

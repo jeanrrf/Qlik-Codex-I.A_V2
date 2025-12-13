@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 
-import packageJson from "../../package.json" assert { type: "json" };
+import packageJson from "../../package.json";
 
 // Em desenvolvimento, forçamos .env a sobrescrever variáveis já carregadas (evita chave antiga cacheada no terminal/VSCode)
 const shouldOverrideEnv = process.env.DOTENV_OVERRIDE === 'true' || (process.env.NODE_ENV ?? 'development') !== 'production';
@@ -17,15 +17,12 @@ const nodeEnv = (process.env.NODE_ENV || "development") as
   | "test";
 const isDevelopment = nodeEnv !== "production";
 
-const llmProvidersEnv = (process.env.LLM_PROVIDERS ?? "google")
-  .split(",")
-  .map((provider) => provider.trim().toLowerCase())
-  .filter((provider) => provider.length > 0);
-const llmProviders = llmProvidersEnv.length > 0 ? llmProvidersEnv : ["google"];
+// Provedores fixos (evita depender de env para ordem/lista)
+const llmProviders = ["google", "nvidia"];
 
 // NVIDIA single-source configuration
-const nvidiaChatModel = process.env.NVIDIA_CHAT_MODEL || "mistralai/devstral-2-123b-instruct-2512";
-const nvidiaEmbeddingModel = process.env.NVIDIA_EMBEDDING_MODEL || "nvidia/nv-embed-v1";
+const nvidiaChatModel = "mistralai/devstral-2-123b-instruct-2512";
+const nvidiaEmbeddingModel = "nvidia/nv-embed-v1";
 
 const MAX_BROWSER_AUTH_DAYS = 400;
 const rawAuthSessionDurationDays = Number(
@@ -86,9 +83,9 @@ export const config = {
   port: Number.isNaN(rawPort) ? 3000 : rawPort,
   maxInputChars,
   geminiApiKey: process.env.GEMINI_API_KEY || "",
-  geminiModel: process.env.GEMINI_MODEL_NAME || "gemini-2.5-flash",
+  geminiModel: "gemini-2.5-flash",
   // Fallback para Gemini (agora 2.5 Flash-Light / 2.0 Flash-Lite)
-  geminiFallbackModel: process.env.GEMINI_FALLBACK_MODEL_NAME || "gemini-2.0-flash-lite-preview-02-05",
+  geminiFallbackModel: "gemini-2.0-flash-lite-preview-02-05",
   nvidiaApiKey: process.env.NVIDIA_API_KEY || "",
   // NVIDIA centralized models
   nvidiaChatModel,
@@ -138,10 +135,10 @@ export const config = {
 
   // Analytics runtime toggle
   // Use ANALYTICS_ENABLED=true in env to explicitly enable analytics
-  analyticsEnabled: (process.env.ANALYTICS_ENABLED || 'false').toLowerCase() === 'true',
+  analyticsEnabled: false,
 
   // Prompt token safety budget (characters/4 ≈ tokens)
-  maxPromptTokens: Number(process.env.MAX_PROMPT_TOKENS ?? '40000'),
+  maxPromptTokens: 40000,
 
 
   // Optimization thresholds for LLM prompts
@@ -181,13 +178,14 @@ export const config = {
 
   // RAG (Retrieval-Augmented Generation) Configuration
   rag: {
-    enabled: (process.env.RAG_ENABLED || 'false').toLowerCase() === 'true',
-    maxExamples: Number(process.env.RAG_MAX_EXAMPLES ?? '3'),
-    similarityThreshold: Number(process.env.RAG_SIMILARITY_THRESHOLD ?? '0.7'),
-    minRewardScore: Number(process.env.RAG_MIN_REWARD_SCORE ?? '5'),
-    searchTimeoutMs: Number(process.env.RAG_SEARCH_TIMEOUT_MS ?? '200'),
-    embeddingProvider: (process.env.RAG_EMBEDDING_PROVIDER || 'google').toLowerCase(),
-    embeddingModel: process.env.RAG_EMBEDDING_MODEL || (process.env.RAG_EMBEDDING_PROVIDER === 'nvidia' ? nvidiaEmbeddingModel : 'text-embedding-004'),
-    embeddingDimensions: Number(process.env.RAG_EMBEDDING_DIMENSIONS ?? (process.env.RAG_EMBEDDING_PROVIDER === 'nvidia' ? '1024' : '768'))
+    enabled: true,
+    maxExamples: 3,
+    similarityThreshold: 0.7,
+    minRewardScore: 5,
+    searchTimeoutMs: 200,
+    // Default: NVIDIA embeddings (4096D). Override via env se precisar.
+    embeddingProvider: "nvidia",
+    embeddingModel: nvidiaEmbeddingModel,
+    embeddingDimensions: 4096
   }
 };

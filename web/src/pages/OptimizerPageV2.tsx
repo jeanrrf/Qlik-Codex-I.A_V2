@@ -174,7 +174,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
           }
 
           if (restored.progressData) {
-            optimization.restoreProgress(restored.progressData as unknown as PipelineProgress);
+            optimization.restoreProgress(restored.progressData);
           }
 
           setTimeout(() => {
@@ -413,6 +413,22 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
   const canOptimize = script?.trim().length > 0 && !optimization.isRunning;
   const hasResult = Boolean(result?.optimizedScript);
   const isNvidiaMode = mode === "nvidia-fast";
+  const runningStage = optimization.progress.stages?.[optimization.progress.currentStageIndex] || null;
+  const computedProgress = optimization.progress.overallProgress || 0;
+  const liveProgress = optimization.isRunning ? Math.min(99, Math.max(computedProgress, runningStage ? 5 : 2)) : computedProgress;
+  const liveStatusMessage = optimization.liveMessage || (optimization.isRunning ? `Executando ${runningStage?.name || "pipeline"}...` : null);
+
+  const resultStats = useMemo(() => {
+    if (!result) return null;
+    const originalLines = result.originalScript ? result.originalScript.split(/\r?\n/).length : 0;
+    const optimizedLines = result.optimizedScript ? result.optimizedScript.split(/\r?\n/).length : 0;
+    const apiStats = result.diffStats;
+    const added = apiStats?.linesAdded ?? Math.max(optimizedLines - originalLines, 0);
+    const removed = apiStats?.linesRemoved ?? Math.max(originalLines - optimizedLines, 0);
+    const modified = apiStats?.linesModified ?? (result.analysis?.changes?.length ?? 0);
+
+    return { originalLines, optimizedLines, added, removed, modified };
+  }, [result]);
 
   const modeInfo: Record<OptimizeMode, {
     title: string;
@@ -684,9 +700,32 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
             </div>
           )}
 
+          {/* Status em tempo real */}
+          {optimization.isRunning && (
+            <div className="live-status-card">
+              <div className="live-status-left">
+                <span className="pill live">Tempo real</span>
+                <h3>{runningStage?.name || "Pipeline em execucao"}</h3>
+                <p className="live-message">{liveStatusMessage || "Processando..."}</p>
+              </div>
+              <div className="live-status-right">
+                <div className="live-progress-bar">
+                  <div
+                    className="live-progress-fill"
+                    style={{ width: `${Math.min(100, Math.round(liveProgress || 0))}%` }}
+                  />
+                </div>
+                <div className="live-progress-meta">
+                  <span className="live-progress-value">{Math.round(liveProgress || 0)}%</span>
+                  <span className="live-progress-time">{formatDuration(optimization.progress.elapsedTime)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Pipeline Progress - REFATORADO */}
           <PipelineContainer
-            progress={optimization.progress as unknown as PipelineProgress}
+            progress={optimization.progress}
             mode={mode}
             title=" Pipeline de Otimização"
             modeInfo={{
@@ -697,7 +736,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
 
           {/* Pipeline KPIs */}
           <PipelineKPIs
-            progress={optimization.progress as unknown as PipelineProgress}
+            progress={optimization.progress}
             result={result}
             showAinexNote={true}
           />
@@ -744,6 +783,31 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
                 <div className="result-summary-inline">
                   <h4>Resumo</h4>
                   <p>{result.summary}</p>
+                </div>
+              )}
+
+              {resultStats && (
+                <div className="result-metrics-grid">
+                  <div className="result-metric">
+                    <span className="metric-label">Linhas originais</span>
+                    <strong className="metric-value">{resultStats.originalLines}</strong>
+                  </div>
+                  <div className="result-metric">
+                    <span className="metric-label">Linhas otimizadas</span>
+                    <strong className="metric-value">{resultStats.optimizedLines}</strong>
+                  </div>
+                  <div className="result-metric">
+                    <span className="metric-label">Adicionadas</span>
+                    <strong className="metric-value">+{resultStats.added}</strong>
+                  </div>
+                  <div className="result-metric">
+                    <span className="metric-label">Removidas</span>
+                    <strong className="metric-value">-{resultStats.removed}</strong>
+                  </div>
+                  <div className="result-metric">
+                    <span className="metric-label">Modificadas</span>
+                    <strong className="metric-value">{resultStats.modified}</strong>
+                  </div>
                 </div>
               )}
 

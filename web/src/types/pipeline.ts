@@ -249,8 +249,9 @@ export function calculateOverallProgress(stages: PipelineStage[]): number {
     if (stage.subSteps && stage.subSteps.length > 0) {
       const completed = stage.subSteps.filter(s => s.status === 'success').length;
       const running = stage.subSteps.filter(s => s.status === 'running').length;
+      const hasActivity = completed + running > 0;
       const fraction = (completed + running * 0.5) / stage.subSteps.length;
-      return sum + fraction;
+      return sum + (hasActivity ? fraction : 0.15);
     }
 
     // Etapa sem subtarefas em execuA-ao recebe peso parcial para evitar pulo de 0->100

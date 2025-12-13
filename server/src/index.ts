@@ -99,7 +99,13 @@ app.use(
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(morgan(config.isDevelopment ? "dev" : "tiny"));
+const requestLogger = morgan(config.isDevelopment ? "dev" : "tiny", {
+  skip: (req: express.Request) =>
+    req.path.startsWith("/api/analytics/summary") ||
+    req.path.startsWith("/health") ||
+    req.path === "/",
+});
+app.use(requestLogger);
 
 // Root endpoint
 app.get("/", (_req, res) => {

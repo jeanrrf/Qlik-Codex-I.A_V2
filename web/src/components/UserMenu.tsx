@@ -53,7 +53,12 @@ export function UserMenu() {
 
   return (
     <div className="user-menu" ref={menuRef}>
-      <button className="user-menu-trigger" onClick={() => setIsOpen(!isOpen)}>
+      <button
+        className="user-menu-trigger"
+        onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+        aria-haspopup="true"
+      >
         <div className="user-avatar">
           {user.avatarUrl ? (
             <img src={user.avatarUrl} alt={user.name || user.email} />
