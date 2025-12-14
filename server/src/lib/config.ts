@@ -187,5 +187,16 @@ export const config = {
     embeddingProvider: "nvidia",
     embeddingModel: nvidiaEmbeddingModel,
     embeddingDimensions: 4096
+  },
+
+  // Email Configuration
+  email: {
+    host: process.env.SMTP_HOST || "",
+    port: Number(process.env.SMTP_PORT) || 587,
+    secure: process.env.SMTP_SECURE === "true",
+    user: process.env.SMTP_USER || "",
+    pass: process.env.SMTP_PASS || "",
+    from: process.env.EMAIL_FROM || "noreply@qlikcodex.com",
+    to: process.env.EMAIL_TO || "contact@qlikcodex.com" // Default recipient for contact forms
   }
 };
