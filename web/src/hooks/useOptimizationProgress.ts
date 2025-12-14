@@ -1092,60 +1092,21 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
   const restoreProgress = useCallback((savedProgress: OptimizationProgress) => {
     setProgress(savedProgress);
+
+    // NEVER auto-resume execution from restored state
+    // The user must explicitly click "Execute" to restart
+    // This prevents the "ghost execution" bug where restoring a session
+    // that was 'running' would trigger UI timers without a real backend process.
     if (savedProgress.status === 'running') {
-      setLiveMessage("Retomando execucao em andamento...");
-      setIsRunning(true);
-      // Restart timer if it was running
-      startTimeRef.current = Date.now() - savedProgress.elapsedTime;
+      console.warn("[restoreProgress] Session was running, setting to paused/idle to prevent auto-execution");
+      setIsRunning(false);
+      setLiveMessage("Sessão restaurada (pausada)");
 
-      // Restore task start times
-      savedProgress.stages.forEach(stage => {
-        if (stage.subSteps) {
-          stage.subSteps.forEach(sub => {
-            if (sub.status === 'running' && sub.currentRunningTime) {
-              taskStartTimeRef.current.set(sub.id, Date.now() - sub.currentRunningTime);
-            }
-          });
-        }
-      });
-
-      // Restart interval
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      intervalRef.current = setInterval(() => {
-        const now = Date.now();
-        setProgress(prev => {
-          const newProgress = {
-            ...prev,
-            elapsedTime: now - startTimeRef.current
-          };
-
-          newProgress.stages = prev.stages.map(stage => {
-            let stageRunningTime = stage.currentRunningTime;
-            if (stage.status === 'running' && stage.startTime) {
-              stageRunningTime = now - stage.startTime;
-            }
-
-            if (!stage.subSteps) {
-              return { ...stage, currentRunningTime: stageRunningTime };
-            }
-
-            const updatedSubSteps = stage.subSteps.map(sub => {
-              if (sub.status === 'running') {
-                const taskStartTime = taskStartTimeRef.current.get(sub.id);
-                if (taskStartTime) {
-                  const runningTime = now - taskStartTime;
-                  return { ...sub, currentRunningTime: runningTime };
-                }
-              }
-              return sub;
-            });
-
-            return { ...stage, subSteps: updatedSubSteps, currentRunningTime: stageRunningTime };
-          });
-
-          return newProgress;
-        });
-      }, 100);
+      // Force status to idle/paused in the state
+      setProgress(prev => ({
+        ...prev,
+        status: 'idle'
+      }));
     }
   }, []);
 

@@ -174,7 +174,17 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
           }
 
           if (restored.progressData) {
-            optimization.restoreProgress(restored.progressData);
+            // Only restore progress, do NOT auto-resume execution
+            // optimization.restoreProgress(restored.progressData);
+
+            // If the session was running, we might want to show the last state but paused
+            // or ask the user if they want to resume. For now, let's just restore the data
+            // and set status to paused/idle to prevent auto-execution.
+            const safeProgress = {
+              ...restored.progressData,
+              status: 'idle' as const // Force idle to prevent auto-run
+            };
+            optimization.restoreProgress(safeProgress);
           }
 
           setTimeout(() => {
@@ -190,7 +200,14 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
           if (snapshotResult.result) {
             setResult(snapshotResult.result as OptimizeResult);
           }
-          optimization.restoreProgress(snapshotResult.progress as PipelineProgress);
+
+          // Same safety for local snapshot
+          const safeProgress = {
+            ...snapshotResult.progress,
+            status: 'idle' as const
+          };
+          optimization.restoreProgress(safeProgress as PipelineProgress);
+
           setTimeout(() => {
             isRestoringRef.current = false;
           }, 300);
