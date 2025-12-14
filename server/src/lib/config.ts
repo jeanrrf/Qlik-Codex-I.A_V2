@@ -191,6 +191,8 @@ export const config = {
 
   // Email Configuration
   email: {
+    // Set EMAIL_ENABLED=false to disable email features entirely (default: true if SMTP is configured)
+    enabled: process.env.EMAIL_ENABLED !== "false",
     host: process.env.SMTP_HOST || "",
     port: Number(process.env.SMTP_PORT) || 587,
     secure: process.env.SMTP_SECURE === "true",
