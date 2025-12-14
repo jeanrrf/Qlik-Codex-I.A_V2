@@ -164,6 +164,7 @@ async function runUltraExpertMode(
 
   if (vectorRAGService.isEnabled()) {
     try {
+      logger.info(`[RAG] Building context for script of length ${script.length} chars`);
       const ragStart = Date.now();
       ragContext = await vectorRAGService.buildRAGContext(script);
       const ragElapsed = Date.now() - ragStart;
@@ -415,15 +416,8 @@ sem Markdown nem explicações adicionais.
 ${scriptForPrompt}
 `;
 
-  const start = Date.now();
-
-  sseEmitter.sendToCurrent({
-    type: "step_progress",
-    stepId: "nvidia_fast",
-    name: "NVIDIA Fast Mode",
-    status: "running",
-    timestamp: new Date().toISOString()
-  });
+  // Inicia rastreamento via StepTimingService
+  stepTimingService.startSubStep("optimization", "nvidia_fast", "NVIDIA Fast Mode", "Otimização acelerada via NVIDIA NIM");
 
   let lastError: unknown = null;
 
@@ -500,16 +494,8 @@ ${scriptForPrompt}
         }
       }
 
-      const duration = Date.now() - start;
-
-      sseEmitter.sendToCurrent({
-        type: "step_progress",
-        stepId: "nvidia_fast",
-        name: "NVIDIA Fast Mode",
-        status: "success",
-        duration: `${duration}ms`,
-        timestamp: new Date().toISOString()
-      });
+      // Completa o step com sucesso
+      stepTimingService.completeSubStep("optimization", "nvidia_fast");
 
       // Calculate diff stats
       const diffStats = calculateDiffStats(script, optimizedScript);
@@ -590,15 +576,8 @@ ${scriptForPrompt}
         continue;
       }
 
-      const failureDuration = Date.now() - start;
-      sseEmitter.sendToCurrent({
-        type: "step_progress",
-        stepId: "nvidia_fast",
-        name: "NVIDIA Fast Mode",
-        status: "error",
-        duration: `${failureDuration}ms`,
-        timestamp: new Date().toISOString()
-      });
+      // Marca erro no step timing
+      stepTimingService.errorSubStep("optimization", "nvidia_fast", errorMessage);
 
       throw error instanceof Error ? error : new Error(errorMessage);
     }
@@ -627,7 +606,13 @@ export async function optimizeScript(
 
   // 1. Análise inicial e truncamento inteligente (se necessário)
   let scriptToProcess = originalScript;
+
+  // Inicia sub-step de pré-processamento
+  stepTimingService.startSubStep("optimization", "PRE_PROCESSING", "Pré-processamento e Truncamento");
+
   if (applyTruncation) {
+    logger.info(`[TRUNCATION] Enforcing Free Tier limit: ${lineLimit ?? 200} lines`);
+
     const truncationResult: SmartTruncationResult = applySmartTruncation(
       originalScript,
       lineLimit ?? 200
@@ -643,6 +628,8 @@ export async function optimizeScript(
         type: "warning",
         message: warningMessage
       });
+    } else {
+      logger.info(`[TRUNCATION] Script within limits (${truncationResult.originalLines} lines). No truncation needed.`);
     }
   } else if (config.maxInputChars > 0 && originalScript.length > config.maxInputChars) {
     const truncationResult: SmartTruncationResult = applySmartTruncation(
@@ -657,6 +644,9 @@ export async function optimizeScript(
       message: `O script original excede o limite de ${config.maxInputChars} caracteres e foi truncado para análise. A otimização pode ser parcial.`
     });
   }
+
+  // Finaliza sub-step
+  stepTimingService.completeSubStep("optimization", "PRE_PROCESSING");
 
   let result: FullOptimizeResult;
 

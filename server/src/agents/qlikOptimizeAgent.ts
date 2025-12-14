@@ -9,6 +9,7 @@ import { ProviderOrchestrator, createOrchestrator } from "../lib/providerOrchest
 import { parseQlikScript, buildParserSummary } from "../lib/qlikParser";
 import { sseEmitter } from "../lib/sseEmitter";
 import { extractJsonFromText } from "../lib/structuredResponse";
+import { stepTimingService } from "../services/stepTimingService";
 import type { OptimizationStepId } from "../types/optimization";
 
 import { QlikGranularOptimizer } from "./qlikGranularOptimizer";
@@ -473,20 +474,15 @@ export class QlikOptimizeAgent {
         ? `Regenerando ${taskName} (tentativa ${attempt}/${MAX_TASK_RETRIES})`
         : `Executando ${taskName}...`;
 
-      // Evento can?nico por tarefa (mant?m stage principal em sincronia)
-      sseEmitter.sendToCurrent({
-        type: "substep",
-        substep: {
-          id: taskName as OptimizationStepId,
-          name: statusLabel,
-          description: attempt > 1
-            ? `Retry autom?tico ${attempt}/${MAX_TASK_RETRIES}`
-            : `Primeira tentativa de ${taskName}`,
-          status: "running",
-          startTime: new Date().toISOString()
-        }
-      });
-      // Evento detalhado por tentativa (mant?m hist?rico para UI)
+      // Inicia rastreamento via StepTimingService (substitui evento canônico manual)
+      stepTimingService.startSubStep(
+        "optimization",
+        taskName as OptimizationStepId,
+        statusLabel,
+        attempt > 1 ? `Retry automático ${attempt}/${MAX_TASK_RETRIES}` : `Primeira tentativa de ${taskName}`
+      );
+
+      // Evento detalhado por tentativa (mantém histórico para UI)
       sseEmitter.sendToCurrent({
         type: "substep",
         substep: {
@@ -656,23 +652,15 @@ export class QlikOptimizeAgent {
           : 'unknown';
         logger.info(`[MegaOptimizer] Completed task: ${taskName} using ${providerInfo} in ${duration}ms (attempt ${attempt})`);
 
-        // Atualiza est?gio can?nico
-        sseEmitter.sendToCurrent({
-          type: "substep",
-          substep: {
-            id: taskName as OptimizationStepId,
-            name: `${taskName} conclu?da`,
-            status: "success",
-            duration,
-            endTime: new Date().toISOString()
-          }
-        });
-        // Mant?m hist?rico por tentativa
+        // Completa step via StepTimingService (substitui evento canônico manual)
+        stepTimingService.completeSubStep("optimization", taskName as OptimizationStepId);
+
+        // Mantém histórico por tentativa
         sseEmitter.sendToCurrent({
           type: "substep",
           substep: {
             id: `${taskName.toUpperCase()}_ATTEMPT_${attempt}` as OptimizationStepId,
-            name: `${taskName} conclu?da (tentativa ${attempt})`,
+            name: `${taskName} concluída (tentativa ${attempt})`,
             status: "success",
             duration,
             endTime: new Date().toISOString()
@@ -707,18 +695,10 @@ export class QlikOptimizeAgent {
         }
 
         const failureDuration = Date.now() - totalStart;
-        // Marca tarefa como erro (can?nico)
-        sseEmitter.sendToCurrent({
-          type: "substep",
-          substep: {
-            id: taskName as OptimizationStepId,
-            name: `Falha definitiva em ${taskName}`,
-            status: "error",
-            error: errorMessage,
-            duration: failureDuration,
-            endTime: new Date().toISOString()
-          }
-        });
+
+        // Marca erro via StepTimingService
+        stepTimingService.errorSubStep("optimization", taskName as OptimizationStepId, errorMessage);
+
         // Evento detalhado por tentativa final
         sseEmitter.sendToCurrent({
           type: "substep",
