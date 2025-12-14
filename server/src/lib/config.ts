@@ -199,6 +199,8 @@ export const config = {
     user: process.env.SMTP_USER || "",
     pass: process.env.SMTP_PASS || "",
     from: process.env.EMAIL_FROM || "noreply@qlikcodex.com",
-    to: process.env.EMAIL_TO || "contact@qlikcodex.com" // Default recipient for contact forms
+    to: process.env.EMAIL_TO || "sentinnellia@gmail.com", // Default recipient for contact forms
+    // Fail fast when SMTP host is unreachable to avoid request timeouts (default: 8s)
+    timeoutMs: Number(process.env.SMTP_TIMEOUT_MS) || 8000
   }
 };
