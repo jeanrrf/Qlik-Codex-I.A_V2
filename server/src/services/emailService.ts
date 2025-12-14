@@ -13,6 +13,7 @@ interface ContactEmailPayload {
 class EmailService {
   private transporter: nodemailer.Transporter | null = null;
   private readonly isConfigured: boolean;
+  private readonly timeoutMs: number = config.email.timeoutMs;
 
   constructor() {
     this.isConfigured = config.email.enabled && Boolean(config.email.host) && Boolean(config.email.user);
@@ -26,12 +27,10 @@ class EmailService {
           user: config.email.user,
           pass: config.email.pass
         },
-        // Connection timeout to avoid long waits (30 seconds)
-        connectionTimeout: 30000,
-        // Socket timeout for data transfer (60 seconds)
-        socketTimeout: 60000,
-        // Greeting timeout (30 seconds)
-        greetingTimeout: 30000
+        // Short timeouts to fail fast when SMTP is unreachable
+        connectionTimeout: this.timeoutMs,
+        socketTimeout: this.timeoutMs,
+        greetingTimeout: this.timeoutMs
       });
       logger.info("[EmailService] SMTP transporter initialized");
     } else {
@@ -70,7 +69,12 @@ ${payload.message || "Sem mensagem"}
         `
       };
 
-      const info = await this.transporter.sendMail(mailOptions);
+      const info = await Promise.race([
+        this.transporter.sendMail(mailOptions),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("SMTP send timeout")), this.timeoutMs)
+        )
+      ]);
       logger.info("[EmailService] Email sent", { messageId: info.messageId });
       return true;
     } catch (error) {
