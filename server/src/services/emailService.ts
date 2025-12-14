@@ -11,23 +11,37 @@ interface ContactEmailPayload {
 }
 
 class EmailService {
-  private transporter: nodemailer.Transporter;
+  private transporter: nodemailer.Transporter | null = null;
+  private readonly isConfigured: boolean;
 
   constructor() {
-    this.transporter = nodemailer.createTransport({
-      host: config.email.host,
-      port: config.email.port,
-      secure: config.email.secure,
-      auth: {
-        user: config.email.user,
-        pass: config.email.pass
-      }
-    });
+    this.isConfigured = config.email.enabled && Boolean(config.email.host) && Boolean(config.email.user);
+
+    if (this.isConfigured) {
+      this.transporter = nodemailer.createTransport({
+        host: config.email.host,
+        port: config.email.port,
+        secure: config.email.secure,
+        auth: {
+          user: config.email.user,
+          pass: config.email.pass
+        },
+        // Connection timeout to avoid long waits (30 seconds)
+        connectionTimeout: 30000,
+        // Socket timeout for data transfer (60 seconds)
+        socketTimeout: 60000,
+        // Greeting timeout (30 seconds)
+        greetingTimeout: 30000
+      });
+      logger.info("[EmailService] SMTP transporter initialized");
+    } else {
+      logger.info("[EmailService] Email disabled or SMTP not configured. Email features will be skipped.");
+    }
   }
 
   async sendContactEmail(payload: ContactEmailPayload): Promise<boolean> {
-    if (!config.email.host || !config.email.user) {
-      logger.warn("[EmailService] SMTP not configured. Skipping email sending.");
+    if (!this.isConfigured || !this.transporter) {
+      logger.debug("[EmailService] SMTP not configured. Skipping email sending.");
       return false;
     }
 
