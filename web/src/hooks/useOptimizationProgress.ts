@@ -584,7 +584,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
             } else if (event.type === 'token_usage') {
               // NOVO: Captura tokens consumidos e propaga para a UI
               console.warn('[SSE Frontend] token_usage:', event);
-              setLiveMessage(`Gerando cA3digo (${event.provider}/${event.model})`);
+              setLiveMessage(`Gerando código (${event.provider}/${event.model})`);
               setProgress(prev => {
                 const newStages = prev.stages.map(stage => {
                   const stageId = event.taskName; // e.g., "CODE_GEN"
@@ -598,7 +598,12 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
                   }
                   return stage;
                 });
-                return { ...prev, stages: newStages };
+                return {
+                  ...prev,
+                  stages: newStages,
+                  overallProgress: calculateOverallProgress(newStages),
+                  currentStageIndex: newStages.findIndex(s => s.status === 'running')
+                };
               });
 
             } else if (event.type === 'thinking') {
@@ -616,7 +621,12 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
                   }
                   return stage;
                 });
-                return { ...prev, stages: newStages };
+                return {
+                  ...prev,
+                  stages: newStages,
+                  overallProgress: calculateOverallProgress(newStages),
+                  currentStageIndex: newStages.findIndex(s => s.status === 'running')
+                };
               });
 
             } else if (event.type === 'provider_attempt_failed') {
@@ -813,17 +823,41 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
                   let newSubSteps = stage.subSteps ? [...stage.subSteps] : [];
 
                   // Tenta encontrar a task existente
-                  const subIdx = newSubSteps.findIndex(s => s.id === sub.id);
+                  let subIdx = newSubSteps.findIndex(s => s.id === sub.id);
+
+                  // Se não encontrou por ID exato, tenta encontrar por "match" de stage ou conteúdo
+                  if (subIdx === -1) {
+                    const targetStageId = getStageIdForSubTask(sub.id);
+                    if (targetStageId === stage.id) {
+                      // Tenta encontrar um substep que "contém" o ID ou vice-versa
+                      // Ex: sub.id="CODE_GEN_ATTEMPT_1" matches stage substep "CODE_GEN"
+                      const matchIdx = newSubSteps.findIndex(s =>
+                        sub.id.toUpperCase().includes(s.id.toUpperCase()) ||
+                        s.id.toUpperCase().includes(sub.id.toUpperCase())
+                      );
+
+                      if (matchIdx !== -1) {
+                        subIdx = matchIdx;
+                      } else {
+                        // Se não tem match de nome mas pertence a esta stage, 
+                        // tenta atualizar o primeiro pendente para evitar criar tasks infinitas
+                        const firstPending = newSubSteps.findIndex(s => s.status === 'pending');
+                        if (firstPending !== -1) {
+                          subIdx = firstPending;
+                        }
+                      }
+                    }
+                  }
 
                   if (subIdx !== -1) {
                     // ATUALIZA task existente
                     newSubSteps[subIdx] = {
                       ...newSubSteps[subIdx],
                       status: sub.status,
-                      startTime: sub.startTime,
-                      endTime: sub.endTime,
-                      duration: sub.duration,
-                      error: sub.error
+                      startTime: sub.startTime || newSubSteps[subIdx].startTime,
+                      endTime: sub.endTime || newSubSteps[subIdx].endTime,
+                      duration: sub.duration || newSubSteps[subIdx].duration,
+                      error: sub.error || newSubSteps[subIdx].error
                     };
                   } else {
                     // Tenta adicionar NOVA task dinâmica se pertencer a esta stage

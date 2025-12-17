@@ -46,7 +46,21 @@ export const ReviewSchema = z.object({
   notes: z.string().optional()
 });
 
+export const NvidiaFastSchema = z.object({
+  optimizedScript: z.string(),
+  summary: z.string().optional(),
+  changes: z.array(
+    z.object({
+      category: z.string().optional(),
+      area: z.string().optional(),
+      impact: z.string().optional()
+    })
+  ).optional(),
+  asAlignmentApplied: z.boolean().optional()
+});
+
 export const SupportedSchemas = {
   v1: LLMSchemaV1,
-  review: ReviewSchema
+  review: ReviewSchema,
+  nvidia_fast: NvidiaFastSchema
 };

@@ -448,10 +448,7 @@ async function runNvidiaFastMode(
       let changes: Array<Record<string, unknown>> = [];
 
       try {
-        let parsed:
-          | Record<string, unknown>
-          | undefined
-          | null = undefined;
+        let parsed: any = undefined;
         try {
           const mod = await import('../lib/structuredResponse.js');
           if (mod && typeof mod.extractJsonFromText === 'function') {
@@ -475,14 +472,26 @@ async function runNvidiaFastMode(
         }
 
         if (parsed) {
-          if (typeof parsed.optimizedScript === "string") {
-            optimizedScript = parsed.optimizedScript;
-          }
-          if (typeof parsed.summary === "string") {
-            summary = parsed.summary;
-          }
-          if (Array.isArray(parsed.changes)) {
-            changes = parsed.changes;
+          // Apply Zod validation for strict schema (Suggestion A)
+          const { NvidiaFastSchema } = await import('../validators/llmResponseSchemas.js');
+          const validation = NvidiaFastSchema.safeParse(parsed);
+          
+          if (validation.success) {
+            optimizedScript = validation.data.optimizedScript;
+            if (validation.data.summary) summary = validation.data.summary;
+            if (validation.data.changes) changes = validation.data.changes as any;
+            logger.info('[NVIDIA FAST] Strict schema validation successful');
+          } else {
+            logger.warn('[NVIDIA FAST] Schema validation failed, using loose mapping', { errors: validation.error.format() });
+            if (typeof parsed.optimizedScript === "string") {
+              optimizedScript = parsed.optimizedScript;
+            }
+            if (typeof parsed.summary === "string") {
+              summary = parsed.summary;
+            }
+            if (Array.isArray(parsed.changes)) {
+              changes = parsed.changes;
+            }
           }
         }
       } catch (err) {

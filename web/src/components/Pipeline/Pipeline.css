@@ -48,6 +48,33 @@
   margin: 0;
 }
 
+.pipeline-header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pipeline-model {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.pipeline-model strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.model-label {
+  opacity: 0.7;
+}
+
 .pipeline-mode-badge {
   display: inline-flex;
   align-items: center;
@@ -871,6 +898,7 @@
     text-align: center;
   }
 }
+
 /* Warnings */
 .pipeline-warnings {
   margin-bottom: 16px;
@@ -893,7 +921,13 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-5px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
 
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
