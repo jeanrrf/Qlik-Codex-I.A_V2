@@ -11,23 +11,36 @@ interface ContactEmailPayload {
 }
 
 class EmailService {
-  private transporter: nodemailer.Transporter;
+  private transporter: nodemailer.Transporter | null = null;
+  private readonly isConfigured: boolean;
+  private readonly timeoutMs: number = config.email.timeoutMs;
 
   constructor() {
-    this.transporter = nodemailer.createTransport({
-      host: config.email.host,
-      port: config.email.port,
-      secure: config.email.secure,
-      auth: {
-        user: config.email.user,
-        pass: config.email.pass
-      }
-    });
+    this.isConfigured = config.email.enabled && Boolean(config.email.host) && Boolean(config.email.user);
+
+    if (this.isConfigured) {
+      this.transporter = nodemailer.createTransport({
+        host: config.email.host,
+        port: config.email.port,
+        secure: config.email.secure,
+        auth: {
+          user: config.email.user,
+          pass: config.email.pass
+        },
+        // Short timeouts to fail fast when SMTP is unreachable
+        connectionTimeout: this.timeoutMs,
+        socketTimeout: this.timeoutMs,
+        greetingTimeout: this.timeoutMs
+      });
+      logger.info("[EmailService] SMTP transporter initialized");
+    } else {
+      logger.info("[EmailService] Email disabled or SMTP not configured. Email features will be skipped.");
+    }
   }
 
   async sendContactEmail(payload: ContactEmailPayload): Promise<boolean> {
-    if (!config.email.host || !config.email.user) {
-      logger.warn("[EmailService] SMTP not configured. Skipping email sending.");
+    if (!this.isConfigured || !this.transporter) {
+      logger.debug("[EmailService] SMTP not configured. Skipping email sending.");
       return false;
     }
 
@@ -56,7 +69,12 @@ ${payload.message || "Sem mensagem"}
         `
       };
 
-      const info = await this.transporter.sendMail(mailOptions);
+      const info = await Promise.race([
+        this.transporter.sendMail(mailOptions),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("SMTP send timeout")), this.timeoutMs)
+        )
+      ]);
       logger.info("[EmailService] Email sent", { messageId: info.messageId });
       return true;
     } catch (error) {
