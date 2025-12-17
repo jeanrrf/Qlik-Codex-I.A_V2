@@ -404,6 +404,26 @@ async function runNvidiaFastMode(
   // Inicia rastreamento via StepTimingService
   stepTimingService.startSubStep("optimization", "nvidia_fast", "NVIDIA Fast Mode", "Otimização acelerada via NVIDIA NIM");
 
+  // 🔔 EMIT substep START event for frontend to show "running" status
+  sseEmitter.sendToCurrent({
+    type: "substep",
+    substep: {
+      id: "NVIDIA_FAST",
+      name: "NVIDIA Fast Mode",
+      status: "running",
+      startTime: new Date().toISOString()
+    }
+  });
+
+  // 🔔 EMIT step_progress for coarse-grained UI updates
+  sseEmitter.sendToCurrent({
+    type: "step_progress",
+    stepId: "NVIDIA_FAST",
+    name: `NVIDIA Fast Mode (${model})`,
+    status: "running",
+    timestamp: new Date().toISOString()
+  });
+
   let lastError: unknown = null;
 
   for (let attempt = 1; attempt <= NVIDIA_FAST_MAX_RETRIES; attempt++) {
@@ -479,8 +499,21 @@ async function runNvidiaFastMode(
         }
       }
 
-      // Completa o step com sucesso
-      stepTimingService.completeSubStep("optimization", "nvidia_fast");
+      // Completa o step com sucesso (envia SSE via stepTimingService)
+      const completedStep = stepTimingService.completeSubStep("optimization", "nvidia_fast");
+      const nvidiaFastDuration = completedStep.duration || 0;
+
+      // 🔔 EMIT extra substep SUCCESS for frontend with uppercase ID for mapping
+      sseEmitter.sendToCurrent({
+        type: "substep",
+        substep: {
+          id: "NVIDIA_FAST",
+          name: "NVIDIA Fast Mode",
+          status: "success",
+          duration: nvidiaFastDuration,
+          endTime: new Date().toISOString()
+        }
+      });
 
       // Calculate diff stats
       const diffStats = calculateDiffStats(script, optimizedScript);
@@ -517,11 +550,12 @@ async function runNvidiaFastMode(
 
       // AUTOMATIC AS ALIGNMENT: if the model didn't vertically align AS in LOAD blocks, try to fix it conservatively
       try {
-        const { alignAsInLoadBlocks } = await import('../lib/alignAs');
+        const { alignAsInLoadBlocks } = await import('../lib/alignAs.js');
         const { fixed, changed } = alignAsInLoadBlocks(result.optimizedScript || '');
         if (changed) {
           result.optimizedScript = fixed;
-          result.analysis.notes = result.analysis.notes ? [...result.analysis.notes, 'AS alignment applied automatically by server'] : ['AS alignment applied automatically by server'];
+          const asNote = 'AS alignment applied automatically by server';
+          result.analysis.notes = result.analysis.notes ? `${result.analysis.notes}\n${asNote}` : asNote;
           logger.info('[NVIDIA FAST] AS alignment auto-applied to optimized script');
           sseEmitter.sendToCurrent({ type: 'info', message: 'AS alignment applied to optimized script' });
         }
@@ -540,6 +574,16 @@ async function runNvidiaFastMode(
       } catch (docErr) {
         logger.warn("[NVIDIA FAST] Failed to generate lightweight consultancy doc", { error: docErr });
       }
+
+      // 🔔 EMIT step_progress SUCCESS for coarse-grained UI
+      sseEmitter.sendToCurrent({
+        type: "step_progress",
+        stepId: "NVIDIA_FAST",
+        name: `NVIDIA Fast Mode (${model})`,
+        status: "success",
+        duration: `${nvidiaFastDuration}ms`,
+        timestamp: new Date().toISOString()
+      });
 
       return result;
     } catch (error) {

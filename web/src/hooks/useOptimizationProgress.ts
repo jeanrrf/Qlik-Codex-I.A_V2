@@ -557,7 +557,12 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
             const event = JSON.parse(jsonStr);
 
-
+            // DEBUG: Log all SSE events for troubleshooting
+            console.warn('[SSE Event]', event.type, {
+              stepId: event.stepId,
+              substepId: event.substep?.id,
+              status: event.substep?.status || event.status
+            });
 
             // Tratamento de eventos SSE
 
