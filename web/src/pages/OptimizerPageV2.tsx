@@ -2,7 +2,6 @@
 import React, { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import "./OptimizerPageV2.css";
 import "./ControlPanel.css";
-import "./PipelineCard.css";
 import "./ModalStyles.css";
 
 import { useAuth } from "../contexts/AuthContext";
@@ -763,6 +762,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
               title: modeInfo[mode].title,
               icon: modeInfo[mode].icon,
             }}
+            activeModel={`${providerForMode}${llmModelForMode ? '/' + llmModelForMode : ''}`}
           />
 
           {/* Pipeline KPIs */}

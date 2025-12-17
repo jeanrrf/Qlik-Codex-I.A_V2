@@ -41,6 +41,8 @@ export interface PipelineContainerProps {
     title: string;
     icon?: React.ReactNode;
   };
+  /** Modelo ativo (para exibição no header) */
+  activeModel?: string;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -67,15 +69,18 @@ export const PipelineContainer: React.FC<PipelineContainerProps> = ({
   mode,
   title = '⚡ Pipeline de Otimização',
   modeInfo,
+  activeModel,
 }) => {
   const visibleStages = (progress?.stages || []).filter(
     (stage: PipelineStage) => stage.visible !== false
   );
   const stageCount = visibleStages.length;
   const currentModeInfo = modeInfo || DEFAULT_MODE_INFO[mode];
-  // Find the first stage that reports provider/model so we can show it in the header
+
+  // Determine model to display: prop > stage data
   const stageWithModel = (progress?.stages || []).find(s => s.model || s.provider);
-  const modelDisplay = stageWithModel ? `${stageWithModel.provider ? stageWithModel.provider + '/' : ''}${stageWithModel.model || ''}` : null;
+  const stageModelDisplay = stageWithModel ? `${stageWithModel.provider ? stageWithModel.provider + '/' : ''}${stageWithModel.model || ''}` : null;
+  const modelDisplay = activeModel || stageModelDisplay;
 
   return (
     <div className="pipeline-container">
