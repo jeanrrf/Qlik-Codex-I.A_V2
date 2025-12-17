@@ -475,7 +475,7 @@ async function runNvidiaFastMode(
           // Apply Zod validation for strict schema (Suggestion A)
           const { NvidiaFastSchema } = await import('../validators/llmResponseSchemas.js');
           const validation = NvidiaFastSchema.safeParse(parsed);
-          
+
           if (validation.success) {
             optimizedScript = validation.data.optimizedScript;
             if (validation.data.summary) summary = validation.data.summary;
@@ -570,6 +570,20 @@ async function runNvidiaFastMode(
         }
       } catch (alignErr) {
         logger.warn('[NVIDIA FAST] AS alignment step failed', { error: String(alignErr) });
+      }
+
+      // AUTOMATIC TRACE SEPARATORS: add visual separators to TRACE commands (Suggestion B)
+      try {
+        const { fixTraceSeparators } = await import('../lib/fixTraceSeparators.js');
+        const { fixed, changed } = fixTraceSeparators(result.optimizedScript || '');
+        if (changed) {
+          result.optimizedScript = fixed;
+          const traceNote = 'TRACE separators added automatically by server';
+          result.analysis.notes = result.analysis.notes ? `${result.analysis.notes}\n${traceNote}` : traceNote;
+          logger.info('[NVIDIA FAST] TRACE separators auto-applied to optimized script');
+        }
+      } catch (traceErr) {
+        logger.warn('[NVIDIA FAST] TRACE separators step failed', { error: String(traceErr) });
       }
 
       // Gera documento de consultoria leve para permitir visualização do código

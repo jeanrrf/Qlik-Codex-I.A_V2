@@ -149,8 +149,7 @@ export const ULTRA_EXPERT_STAGES: PipelineStage[] = [
     'Análise & Estratégia',
     STAGE_THEMES[0],
     [
-      createSubStep('DEEP_ANALYSIS', 'Análise Profunda', 'Análise estrutural e semântica do script'),
-      createSubStep('STRATEGIC_PLAN', 'Planejamento Estratégico', 'Definição de otimizações a aplicar'),
+      createSubStep('ANALYSIS_AND_PLAN', 'Análise & Planejamento', 'Análise estrutural e planejamento de otimizações'),
     ],
     'Análise do script e planejamento de otimizações'
   ),
