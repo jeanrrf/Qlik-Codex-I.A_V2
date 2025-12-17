@@ -515,6 +515,20 @@ async function runNvidiaFastMode(
         }
       };
 
+      // AUTOMATIC AS ALIGNMENT: if the model didn't vertically align AS in LOAD blocks, try to fix it conservatively
+      try {
+        const { alignAsInLoadBlocks } = await import('../lib/alignAs');
+        const { fixed, changed } = alignAsInLoadBlocks(result.optimizedScript || '');
+        if (changed) {
+          result.optimizedScript = fixed;
+          result.analysis.notes = result.analysis.notes ? [...result.analysis.notes, 'AS alignment applied automatically by server'] : ['AS alignment applied automatically by server'];
+          logger.info('[NVIDIA FAST] AS alignment auto-applied to optimized script');
+          sseEmitter.sendToCurrent({ type: 'info', message: 'AS alignment applied to optimized script' });
+        }
+      } catch (alignErr) {
+        logger.warn('[NVIDIA FAST] AS alignment step failed', { error: String(alignErr) });
+      }
+
       // Gera documento de consultoria leve para permitir visualização do código
       try {
         const consultancyDoc = await runConsultancyAgent(result, {

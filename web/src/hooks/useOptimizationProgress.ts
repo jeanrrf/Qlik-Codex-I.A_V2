@@ -791,9 +791,15 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
               // Helper para mapear tasks dinâmicas para suas parent stages
               const getStageIdForSubTask = (taskId: string): string | null => {
-                if (taskId.startsWith('CODE_GEN')) return 'CODE_GEN';
-                if (taskId.startsWith('DEEP_ANALYSIS') || taskId.startsWith('STRATEGIC_PLAN')) return 'ANALYSIS_AND_PLAN';
-                if (taskId.startsWith('FINAL_DELIVERY') || taskId.startsWith('VALIDATION')) return 'FINAL_DELIVERY';
+                const upper = taskId.toUpperCase();
+                // ANALYSIS_AND_PLAN stage
+                if (upper.includes('ANALYSIS') || upper.includes('DEEP_ANALYSIS') || upper.includes('STRATEGIC_PLAN') || upper === 'ANALYSIS_AND_PLAN') return 'ANALYSIS_AND_PLAN';
+                // CODE_GEN stage
+                if (upper.includes('CODE_GEN') || upper.includes('CODEGEN')) return 'CODE_GEN';
+                // FINAL_DELIVERY stage
+                if (upper.includes('FINAL_DELIVERY') || upper.includes('VALIDATION') || upper.includes('DELIVERY')) return 'FINAL_DELIVERY';
+                // NVIDIA_FAST stage
+                if (upper.includes('NVIDIA') || upper.includes('GPU')) return 'NVIDIA_FAST';
                 return null;
               };
 
