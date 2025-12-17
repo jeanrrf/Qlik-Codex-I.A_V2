@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 
-import { z, ZodSchema } from "zod";
+import { ZodSchema } from "zod";
 
 import { config } from "../lib/config";
 import { logger } from "../lib/logger";
@@ -9,203 +9,27 @@ import { ProviderOrchestrator, createOrchestrator } from "../lib/providerOrchest
 import { parseQlikScript, buildParserSummary } from "../lib/qlikParser";
 import { sseEmitter } from "../lib/sseEmitter";
 import { extractJsonFromText } from "../lib/structuredResponse";
+import {
+  buildMegaPrompt,
+  AnalysisAndPlanSchema,
+  CodeGenSchema,
+  FinalDeliverySchema,
+  PROMPT_VERSION
+} from "../prompts";
+import type { MegaTaskId } from "../prompts";
 import { stepTimingService } from "../services/stepTimingService";
 import type { OptimizationStepId } from "../types/optimization";
 
 import { QlikGranularOptimizer } from "./qlikGranularOptimizer";
 
-// --- SCHEMAS (Merged from megaOptimizerSchemas.ts) ---
+// Re-export schemas for backward compatibility
+export { AnalysisAndPlanSchema, CodeGenSchema, FinalDeliverySchema };
 
-export const DeepAnalysisSchema = z.object({
-  structuralScore: z.number().min(0).max(100).describe("Score de 0 a 100 da estrutura do script"),
-  complexity: z.enum(["Low", "Medium", "High", "Extreme"]).describe("Nível de complexidade geral"),
-  bottlenecks: z.array(z.object({
-    severity: z.enum(["Critical", "High", "Medium", "Low"]),
-    description: z.string(),
-    location: z.string().optional()
-  })).describe("Lista de gargalos de performance identificados"),
-  dataModelRisks: z.array(z.string()).describe("Riscos ao modelo de dados (chaves sintéticas, loops, etc)"),
-  optimizationOpportunities: z.array(z.string()).describe("Oportunidades de otimização (QVDs, Autonumber, etc)"),
-  analysisSummary: z.string().describe("Resumo executivo da análise técnica")
-});
+// Re-export MegaTaskId type
+export type { MegaTaskId };
 
-export const StrategicPlanSchema = z.object({
-  strategyName: z.string().describe("Nome da estratégia de otimização adotada"),
-  riskLevel: z.enum(["Low", "Medium", "High"]).describe("Risco geral da aplicação do plano"),
-  planSteps: z.array(z.object({
-    step: z.number(),
-    title: z.string(),
-    details: z.string(),
-    targetBottleneck: z.string().optional().describe("Qual gargalo identificado isso resolve"),
-    estimatedEffort: z.enum(["Low", "Medium", "High"])
-  })).describe("Passos sequenciais do plano de refatoração"),
-  estimatedImprovement: z.object({
-    loadTimeReduction: z.string().describe("Estimativa de redução de tempo de carga (ex: '30%')"),
-    ramUsageReduction: z.string().describe("Estimativa de redução de RAM (ex: '20%')"),
-    maintainabilityScoreAfter: z.number().min(0).max(100).describe("Score de manutenibilidade projetado")
-  })
-});
-
-export const AnalysisAndPlanSchema = z.object({
-  analysis: DeepAnalysisSchema,
-  plan: StrategicPlanSchema
-});
-
-export const CodeGenSchema = z.object({
-  optimizedScript: z.string().describe("The full, executable Qlik Load Script with optimizations applied"),
-  changesApplied: z.array(z.object({
-    category: z.enum(["performance", "readability", "cleanup", "structure", "model_integrity", "maintainability", "security", "logic"]).describe("Category of the change"),
-    area: z.string().describe("Description of what was changed"),
-    impact: z.string().describe("Impact of the change (e.g., 'High performance gain')"),
-    riskLevel: z.enum(["none", "low", "medium", "high"]).describe("Risk level of this change")
-  })).describe("List of specific changes made to the script"),
-  completenessCheck: z.boolean().describe("True if the script is complete and not truncated")
-});
-
-export const FinalDeliverySchema = z.object({
-  validation: z.object({
-    isValid: z.boolean(),
-    issuesFound: z.array(z.string()).max(4).describe("Max 4 critical issues"),
-    safetyScore: z.number()
-  }),
-  documentation: z.object({
-    title: z.string(),
-    diagramMermaid: z.string().describe("Concise Mermaid ER diagram")
-  }),
-  report: z.object({
-    executiveSummary: z.string().max(600).describe("Max 600 chars"),
-    achievedImprovements: z.array(z.string()).max(4).describe("Top 4 improvements"),
-    deploymentChecklist: z.array(z.string()).max(4).describe("Top 4 deploy steps")
-  })
-});
-
-// --- PROMPT PLAN (Merged from promptPlan.ts) ---
-
-export type MegaTaskId = "ANALYSIS_AND_PLAN" | "CODE_GEN" | "FINAL_DELIVERY";
-
-const PERSONA = `Você é o AINEX PRO OPTIMIZER (Qlik Sense), sênior.
-Objetivo: otimizar script de carga com alta performance e integridade, em PT-BR, preservando a lógica de negócio.`;
-
-const NEGATIVE_RULES = [
-  "Proibido DDL/DML SQL (CREATE/ALTER/INSERT/UPDATE/DELETE).",
-  "Não use JOIN dentro de FROM (SQL); use JOIN prefixado em LOAD.",
-  "Saída sempre texto puro JSON (sem Markdown/HTML).",
-  "Não invente funções não-Qlik (DATEDIFF, GETDATE, CASE WHEN etc.).",
-  "Sem Set Analysis '{<...>}' no script de carga.",
-  "Preserve nomes de tabelas/chaves; não drope campos-chave.",
-  "Evite SELECT */LOAD * — use campos explícitos.",
-  "Dê DROP em temporárias usadas em RESIDENT/intermediárias."
-];
-
-const TASK_TEMPLATES: Record<MegaTaskId, string> = {
-  ANALYSIS_AND_PLAN: `TAREFA: ANÁLISE + PLANO (uma única resposta JSON)
-- Audite estrutura (tabelas, joins, riscos: chave sintética, referência circular, cartesiano, LOAD *).
-- Ache gargalos de performance (JOIN sem chave, RESIDENT em cascata, WHERE ausente).
-- Crie plano priorizado (Impacto vs Esforço) com 5-8 passos máximos.
-Limites de saída: máximo 6 bottlenecks, máximo 6 oportunidades, texto total <= 2800 caracteres.
-Formato JSON (sem markdown, sem comentários):
-{
-  "analysis": {
-    "structuralScore": number,
-    "complexity": "Low"|"Medium"|"High"|"Extreme",
-    "bottlenecks": [{ "severity": "Critical"|"High"|"Medium"|"Low", "description": string, "location": string }],
-    "dataModelRisks": string[],
-    "optimizationOpportunities": string[],
-    "analysisSummary": string
-  },
-  "plan": {
-    "strategyName": string,
-    "riskLevel": "Low"|"Medium"|"High",
-    "planSteps": [{ "step": number, "title": string, "details": string, "targetBottleneck": string, "estimatedEffort": "Low"|"Medium"|"High" }],
-    "estimatedImprovement": { "loadTimeReduction": string, "ramUsageReduction": string, "maintainabilityScoreAfter": number }
-  }
-}`,
-  CODE_GEN: `TAREFA: CODE GEN (aplicar plano, preservar lógica)
-- Otimize sem mudar regras de negócio.
-- Use nomenclatura consistente; alinhar AS; remover SELECT/LOAD *; garantir DROP de temporárias.
-- Limites de saída: changesApplied no máximo 8 itens; resposta total <= 2800 caracteres; sem markdown/HTML.
-- Saída deve ser JSON (texto puro, sem markdown):
-{
-  "optimizedScript": "SCRIPT_OTIMIZADO_EM_TEXTO_PURO",
-  "changesApplied": [
-    {
-      "category": "performance" | "readability" | "cleanup" | "structure" | "model_integrity" | "maintainability" | "security" | "logic",
-      "area": "Descrição concisa da área otimizada (ex: joins, RESIDENT, QVD)",
-      "impact": "Impacto da mudança (ex: redução de tempo de carga)",
-      "riskLevel": "low"
-    }
-  ],
-  "completenessCheck": true
-}`,
-  FINAL_DELIVERY: `TAREFA: VALIDAÇÃO + DOC FINAL (JSON conciso)
-- Validar sintaxe (DDL/DML proibido).
-- Doc ER (Mermaid), checklist deploy.
-- Limites: máx 4 issues, 4 checklist items; total <= 1200 chars.
-JSON:
-{
-  "validation": { "isValid": bool, "issuesFound": string[], "safetyScore": number },
-  "documentation": { "title": string, "diagramMermaid": string },
-  "report": { "executiveSummary": string, "achievedImprovements": string[], "deploymentChecklist": string[] }
-}
-`
-};
-
-function buildNegativeSection(): string {
-  return NEGATIVE_RULES.map((r, i) => `${i + 1}. ${r}`).join("\n");
-}
-
-function buildMegaPrompt(
-  task: MegaTaskId,
-  script: string,
-  parserSummary: string,
-  history?: string,
-  ragContext?: import('../types/rag').RAGContext | null
-): string {
-  const taskTemplate = TASK_TEMPLATES[task];
-  const historyBlock = history ? `\n--- HISTÓRICO (Resumo) ---\n${history}\n` : "";
-
-  // RAG: Constrói bloco de contexto com exemplos de otimizações similares
-  let ragBlock = "";
-  if (ragContext && ragContext.examples.length > 0) {
-    const examplesText = ragContext.examples.map((ex, i) => `
-EXEMPLO ${i + 1} (Score: ${ex.rewardScore}):
-Original:
-${ex.originalSnippet.substring(0, 500)}...
-
-Otimizado:
-${ex.optimizedSnippet.substring(0, 500)}...
-
-Mudanças: ${ex.changesSummary.substring(0, 200)}`).join('\n---\n');
-
-    const patternsText = ragContext.commonPatterns.length > 0
-      ? `\nPadrões comuns: ${ragContext.commonPatterns.join(', ')}`
-      : '';
-
-    ragBlock = `\n--- CONTEXTO VIA RAG (Otimizações Similares Bem-Sucedidas) ---\nEncontradas ${ragContext.retrievalMetadata.totalResults} otimizações similares (similaridade média: ${(ragContext.retrievalMetadata.avgSimilarity * 100).toFixed(1)}%).\nUse esses exemplos como referência para aplicar padrões comprovados:\n${examplesText}${patternsText}\n`;
-  }
-
-  return `
-${PERSONA}
-
---- GUARDRAILS (NÃO VIOLAR) ---
-${buildNegativeSection()}
-
---- CONTEXTO ESTRUTURADO ---
-Parser: ${parserSummary}
-${historyBlock}${ragBlock}
---- SCRIPT ORIGINAL (compactado para economia de tokens) ---
-${script}
-
---- INSTRUÇÕES DA TAREFA ---
-${taskTemplate}
-
---- FORMATO OBRIGATÓRIO ---
-- Responder somente o JSON especificado, texto puro, sem markdown/HTML nem fences.
-- Limitar listas a no máximo 8 itens e resposta total a ~2800 caracteres.
-- Se nenhuma mudança for necessária, devolver campos coerentes indicando ausência de alterações.
-- Manter quebras de linha e indentação do script dentro do campo optimizedScript quando aplicável.
-`;
-}
+// Log prompt version on module load
+logger.info(`[QlikOptimizeAgent] Using AINEX Unified Prompt System v${PROMPT_VERSION}`);
 
 // --- AGENT LOGIC ---
 

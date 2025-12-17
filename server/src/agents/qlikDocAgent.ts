@@ -1,66 +1,32 @@
+/**
+ * 📖 QLIK DOC AGENT — Technical Documentation Generator
+ * 
+ * Uses AINEX Unified Prompt System v2.0
+ * Generates comprehensive technical documentation from Qlik scripts
+ */
+
 import { z } from "zod";
 
 import { logger } from "../lib/logger";
 import { defaultOrchestrator } from "../lib/providerOrchestrator";
+import { buildDocumentationPrompt, PROMPT_VERSION, DocumentationSchema } from "../prompts";
 import type { LLMOptions } from "../types/optimization";
 
-const DocSchema = z.object({
-  title: z.string(),
-  description: z.string(),
-  tables: z.array(z.object({
-    name: z.string(),
-    description: z.string(),
-    fields: z.array(z.string()),
-    source: z.string().optional()
-  })),
-  diagram_mermaid: z.string(),
-  reload_strategy: z.string(),
-  key_metrics: z.array(z.string())
-});
+// Re-export schema for compatibility
+export const DocSchema = DocumentationSchema;
 
 export interface QlikDocResult {
   markdown: string;
-  metadata: z.infer<typeof DocSchema>;
-}
-
-function buildDocPrompt(script: string): string {
-  return `
-AINEX QLIK DOCUMENTER — TECHNICAL DOC GENERATOR v1.0
-Projeto: QLIK CODEX I.A
-
-PAPEL
-Você é um Documentador Técnico Especialista em Qlik.
-Sua missão é analisar um script de carga e gerar uma documentação técnica completa e profissional.
-
-SAÍDA ESPERADA (JSON)
-{
-  "title": "Título Sugerido para o App/Script",
-  "description": "Descrição executiva do propósito deste script",
-  "tables": [
-    {
-      "name": "Nome da Tabela",
-      "description": "O que esta tabela armazena (Fato, Dimensão, Mapping, etc)",
-      "fields": ["Lista", "dos", "principais", "campos"],
-      "source": "Fonte de dados (QVD, SQL, Excel)"
-    }
-  ],
-  "diagram_mermaid": "Código Mermaid JS para diagrama ER (erDiagram) das tabelas principais",
-  "reload_strategy": "Recomendação de estratégia de recarga (Incremental, Full, Diária)",
-  "key_metrics": ["Lista de KPIs ou métricas que parecem ser calculadas neste script"]
-}
-
-SCRIPT PARA DOCUMENTAR:
-═══════════════════════════════════════════════════════════════════
-${script.slice(0, 30000)} 
-═══════════════════════════════════════════════════════════════════
-`.trim();
+  metadata: z.infer<typeof DocumentationSchema>;
 }
 
 export async function runQlikDocAgent(
   script: string,
   _llmOptions?: LLMOptions
 ): Promise<QlikDocResult> {
-  const prompt = buildDocPrompt(script);
+  logger.info(`[DocAgent] Starting documentation generation (Prompt v${PROMPT_VERSION})`);
+
+  const prompt = buildDocumentationPrompt(script);
 
   try {
     // Use orchestrator for robust execution
@@ -76,7 +42,7 @@ export async function runQlikDocAgent(
 
     const text = result.result;
     const parsed = JSON.parse(text);
-    const data = DocSchema.parse(parsed);
+    const data = DocumentationSchema.parse(parsed);
 
     const markdown = `
 # ${data.title}

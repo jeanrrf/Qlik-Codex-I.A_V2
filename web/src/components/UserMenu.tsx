@@ -28,7 +28,33 @@ export function UserMenu() {
     }
   }, [isOpen]);
 
-  if (!user) return null;
+  if (!user) {
+    // Guest User View
+    return (
+      <div className="user-menu">
+        <button
+          className="user-menu-trigger guest-trigger"
+          type="button"
+          onClick={() => window.location.href = "/login"} // Or use navigateTo if available, but login is usually a separate flow
+          title="Fazer Login"
+          aria-label="Fazer Login"
+        >
+          <div className="user-avatar guest-avatar">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+          </div>
+          <div className="user-info">
+            <div className="user-name">Visitante</div>
+            <div className="user-role" style={{ color: "#888" }}>
+              Entrar
+            </div>
+          </div>
+        </button>
+      </div>
+    );
+  }
 
   const getRoleBadge = (role: UserRole) => {
     switch (role) {

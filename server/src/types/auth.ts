@@ -5,7 +5,8 @@
 
 export enum UserRole {
   OWNER = "owner",  // Acesso total irrestrito (proprietário)
-  USER = "user"     // Acesso limitado (outros/terceiros)
+  USER = "user",    // Acesso limitado (outros/terceiros)
+  GUEST = "guest"   // Acesso sem login (público)
 }
 
 export interface User {
@@ -71,6 +72,9 @@ export const RolePermissions: Record<UserRole, string[]> = {
     "history:read:own", // Apenas próprio histórico
     "scripts:read:own",
     "sessions:read:own"
+  ],
+  [UserRole.GUEST]: [
+    "optimize:read"
   ]
 };
 
@@ -100,13 +104,23 @@ export const RoleUsageLimits: Record<UserRole, UsageLimits> = {
     nvidiaFastExecutionsPerDay: -1 // Ilimitado
   },
   [UserRole.USER]: {
-    optimizationsPerDay: 4, // FREE TIER: 4 otimizações/dia
-    maxScriptSizeKB: 1000,
-    maxScriptLines: 200, // FREE TIER: 200 linhas base
-    maxConcurrentSessions: 2,
+    optimizationsPerDay: 10, // FREE TIER: Aumentado para 10 otimizações/dia
+    maxScriptSizeKB: 2000,
+    maxScriptLines: 500, // FREE TIER: Aumentado para 500 linhas
+    maxConcurrentSessions: 5,
     enabledModes: ["ultra-expert", "nvidia-fast"], // Permite modo rápido NVIDIA
     canUseMultipleFiles: false, // Apenas 1 arquivo
-    ultraExpertExecutionsPerDay: 1, // 1 execução Ultra Expert POR DIA
-    nvidiaFastExecutionsPerDay: 3 // 3 execuções NVIDIA Fast POR DIA
+    ultraExpertExecutionsPerDay: 3, // Aumentado para 3 execuções Ultra Expert
+    nvidiaFastExecutionsPerDay: 10 // Aumentado para 10 execuções NVIDIA Fast
+  },
+  [UserRole.GUEST]: {
+    optimizationsPerDay: 3, // GUEST: 3 otimizações/dia
+    maxScriptSizeKB: 500,
+    maxScriptLines: 100, // GUEST: 100 linhas para teste
+    maxConcurrentSessions: 1,
+    enabledModes: ["nvidia-fast"], // Apenas modo rápido para guests
+    canUseMultipleFiles: false,
+    ultraExpertExecutionsPerDay: 0, // Sem acesso a ultra-expert
+    nvidiaFastExecutionsPerDay: 3
   }
 };

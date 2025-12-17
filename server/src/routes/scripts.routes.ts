@@ -3,7 +3,7 @@ import { Router } from "express";
 import { logger } from "../lib/logger";
 import { sseEmitter } from "../lib/sseEmitter";
 import { asyncHandler } from "../middleware/asyncHandler";
-import { requireAuth, checkUsageLimits, AuthRequest } from "../middleware/authMiddleware";
+import { requireAuth, optionalAuth, checkUsageLimits, AuthRequest } from "../middleware/authMiddleware";
 import { apiLimiter } from "../middleware/rateLimiter";
 import { scriptService } from "../services/scriptService";
 import { stepTimingService } from "../services/stepTimingService";
@@ -22,7 +22,7 @@ router.get("/optimize/stream", requireAuth, (req, res) => {
 
 router.post(
   "/optimize",
-  requireAuth,
+  optionalAuth,
   checkUsageLimits,
   apiLimiter, // Rate limiting aplicado
   asyncHandler(async (req: AuthRequest, res) => {

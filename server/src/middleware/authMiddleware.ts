@@ -282,24 +282,59 @@ export function requirePermission(permission: string) {
 }
 
 /**
+ * Middleware para garantir que existe um usuário (autenticado ou guest)
+ */
+export const ensureUserOrGuest = (req: Request, res: Response, next: NextFunction) => {
+  const authReq = req as AuthRequest;
+
+  if (!authReq.user) {
+    // Create a temporary guest user based on IP
+    const guestIp = req.ip || req.socket.remoteAddress || "unknown_guest";
+    const sanitizedIp = guestIp.replace(/[^a-zA-Z0-9]/g, "_");
+
+    authReq.user = {
+      id: `guest_${sanitizedIp}`,
+      email: "guest@anonymous",
+      name: "Guest User",
+      role: UserRole.GUEST,
+      googleId: null,
+      avatarUrl: null,
+      createdAt: new Date().toISOString(),
+      lastLogin: new Date().toISOString(),
+      isActive: true
+    };
+
+    logger.debug("[AUTH] Guest user created", {
+      guestId: authReq.user.id,
+      ip: guestIp
+    });
+  }
+
+  next();
+};
+
+/**
  * Middleware para verificar limites de uso
  */
 export const checkUsageLimits = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
   const authReq = req as AuthRequest;
+
+  // Ensure user exists (Guest fallback)
   if (!authReq.user) {
-    res.status(401).json({ error: "Authentication required" });
-    return;
+    ensureUserOrGuest(req, res, () => { });
   }
 
-  const limits = RoleUsageLimits[authReq.user.role];
+  const user = authReq.user!; // Guaranteed by ensureUserOrGuest logic above
+
+  const limits = RoleUsageLimits[user.role];
 
   logger.debug("[FREE TIER] checkUsageLimits iniciado", {
-    userId: authReq.user.id,
-    userRole: authReq.user.role,
+    userId: user.id,
+    userRole: user.role,
     limits
   });
 
-  if (authReq.user.role === UserRole.OWNER) {
+  if (user.role === UserRole.OWNER) {
     logger.debug("[FREE TIER] Owner detectado - bypass de limites");
     next();
     return;
@@ -327,7 +362,7 @@ export const checkUsageLimits = asyncHandler(async (req: Request, res: Response,
 
     if (scriptLines > limits.maxScriptLines) {
       logger.warn(`FREE TIER: Script excede ${limits.maxScriptLines} linhas (${scriptLines} linhas). Aplicando truncamento inteligente.`, {
-        userId: authReq.user.id,
+        userId: user.id,
         scriptLines,
         limit: limits.maxScriptLines
       });
@@ -356,11 +391,11 @@ export const checkUsageLimits = asyncHandler(async (req: Request, res: Response,
   }
 
   const mode: OptimizeMode = requestedMode ?? "ultra-expert";
-  const quotaCheck = await checkDailyQuota(authReq.user, mode);
+  const quotaCheck = await checkDailyQuota(user, mode);
 
   if (!quotaCheck.allowed) {
     logger.warn("[FREE TIER] Quota di?ria excedida", {
-      userId: authReq.user.id,
+      userId: user.id,
       mode,
       usedToday: quotaCheck.usedToday,
       limit: quotaCheck.limit
@@ -368,7 +403,7 @@ export const checkUsageLimits = asyncHandler(async (req: Request, res: Response,
 
     res.status(429).json({
       error: "Daily quota exceeded",
-      message: `Voc? atingiu o limite FREE TIER de ${quotaCheck.limit} otimiza??es por dia (200 linhas). Limite renova em: ${new Date(quotaCheck.resetAt).toLocaleString("pt-BR")}`,
+      message: `Voc? atingiu o limite FREE TIER de ${quotaCheck.limit} otimiza??es por dia. Limite renova em: ${new Date(quotaCheck.resetAt).toLocaleString("pt-BR")}`,
       quota: {
         used: quotaCheck.usedToday,
         limit: quotaCheck.limit,
@@ -380,7 +415,7 @@ export const checkUsageLimits = asyncHandler(async (req: Request, res: Response,
   }
 
   logger.debug("[FREE TIER] Quota OK", {
-    userId: authReq.user.id,
+    userId: user.id,
     mode,
     remaining: quotaCheck.remaining,
     limit: quotaCheck.limit

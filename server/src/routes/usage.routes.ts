@@ -7,20 +7,22 @@ import { Router } from "express";
 
 import { logger } from "../lib/logger";
 import { asyncHandler } from "../middleware/asyncHandler";
-import { requireAuth, AuthRequest } from "../middleware/authMiddleware";
+import { requireAuth, optionalAuth, ensureUserOrGuest, AuthRequest } from "../middleware/authMiddleware";
 import { checkDailyQuota, getUserUsageStats } from "../services/usageQuotaService";
 
 export const router = Router();
 
 /**
  * GET /api/usage/quota
- * Retorna quota diária atual do usuário
+ * Retorna quota diária atual do usuário (ou guest)
  */
 router.get(
   "/quota",
-  requireAuth,
+  optionalAuth,
+  ensureUserOrGuest,
   asyncHandler(async (req: AuthRequest, res) => {
     if (!req.user) {
+      // Should not happen due to ensureUserOrGuest
       res.status(401).json({ error: "Authentication required" });
       return;
     }
@@ -31,6 +33,7 @@ router.get(
 
     logger.debug("[USAGE API] Quota consultada", {
       userId: req.user.id,
+      role: req.user.role,
       ultraExpert: ultraExpertQuota,
       nvidiaFast: nvidiaFastQuota
     });

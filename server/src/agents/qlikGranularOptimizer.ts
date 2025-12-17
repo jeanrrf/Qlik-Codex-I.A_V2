@@ -2,48 +2,11 @@ import { logger } from "../lib/logger";
 import { ProviderOrchestrator, createOrchestrator } from "../lib/providerOrchestrator";
 import { parseQlikScript, buildParserSummary } from "../lib/qlikParser";
 import { sseEmitter } from "../lib/sseEmitter";
-import { OptimizationStepId, OPTIMIZATION_STEPS, StepExecutionResult, OptimizationStep } from "../types/optimization";
+import { buildGranularStepPrompt, PROMPT_VERSION } from "../prompts";
+import { OptimizationStepId, OPTIMIZATION_STEPS, StepExecutionResult } from "../types/optimization";
 
-const PERSONA = `Você é o AINEX PRO OPTIMIZER (Qlik Sense), nível sênior.
-Objetivo: otimizar script de carga com máximo desempenho, integridade do modelo e manutenibilidade, em PT-BR, preservando a lógica de negócio.`;
-
-const NEGATIVE_RULES = [
-  "Proibido DDL/DML SQL (CREATE/ALTER/INSERT/UPDATE/DELETE).",
-  "Proibido JOIN dentro de FROM (sintaxe SQL) — use prefixo JOIN em LOAD.",
-  "Não gerar código em Markdown/HTML; saída deve ser texto puro.",
-  "Não alucinar funções não-Qlik (DATEDIFF, GETDATE, CASE WHEN etc.).",
-  "Não usar Set Analysis '{<...>}' no script de carga.",
-  "Sempre preservar nomes de tabelas/chaves; não dropar campos-chave.",
-  "Evitar SELECT * / LOAD *; prefira lista explícita de campos.",
-  "Garantir DROP de tabelas temporárias usadas em RESIDENT/geração intermediária."
-];
-
-function buildNegativeSection(): string {
-  return NEGATIVE_RULES.map((r, i) => `${i + 1}. ${r}`).join("\n");
-}
-
-function buildGranularPrompt(step: OptimizationStep, script: string, parserSummary: string): string {
-  return `
-${PERSONA}
-
---- GUARDRAILS (NÃO VIOLAR) ---
-${buildNegativeSection()}
-
---- CONTEXTO ESTRUTURADO ---
-Etapa: ${step.id} | Nome: ${step.name} | Categoria: ${step.category} | Crítico: ${step.critical}
-Descrição: ${step.description}
-Parser: ${parserSummary}
-
---- SCRIPT ORIGINAL ---
-${script}
-
---- INSTRUÇÕES ---
-- Aplique SOMENTE a melhoria desta etapa, preservando lógica e resultados.
-- Não adicione comentários novos nem markdown.
-- Não alterar chaves ou nomes de tabelas a menos que a etapa exija.
-- Saída deve ser o script completo otimizado para a etapa (texto puro, sem fences). Se nenhuma mudança, retorne o original.
-`;
-}
+// Log prompt version on module load
+logger.info(`[QlikGranularOptimizer] Using AINEX Unified Prompt System v${PROMPT_VERSION}`);
 
 export interface GranularOptimizerOptions {
   signal?: AbortSignal;
@@ -127,7 +90,7 @@ export class QlikGranularOptimizer {
       throw new Error(`Passo desconhecido: ${stepId}`);
     }
 
-    logger.info(`[GranularOptimizer] Executando passo: ${stepId}`);
+    logger.info(`[GranularOptimizer] Executando passo: ${stepId} (Prompt v${PROMPT_VERSION})`);
 
     sseEmitter.sendToCurrent({
       type: "substep",
@@ -141,7 +104,15 @@ export class QlikGranularOptimizer {
     });
 
     try {
-      const prompt = buildGranularPrompt(stepDef, currentScript, this.parserSummary);
+      // Build prompt using unified system
+      const stepContext = {
+        stepId: stepDef.id,
+        stepName: stepDef.name,
+        stepDescription: stepDef.description,
+        category: stepDef.category,
+        critical: stepDef.critical
+      };
+      const prompt = buildGranularStepPrompt(currentScript, stepContext, this.parserSummary);
 
       // Executa via orquestrador
       const response = await this.orchestrator.executeWithRotation(

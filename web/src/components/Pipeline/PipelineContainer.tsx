@@ -73,16 +73,27 @@ export const PipelineContainer: React.FC<PipelineContainerProps> = ({
   );
   const stageCount = visibleStages.length;
   const currentModeInfo = modeInfo || DEFAULT_MODE_INFO[mode];
+  // Find the first stage that reports provider/model so we can show it in the header
+  const stageWithModel = (progress?.stages || []).find(s => s.model || s.provider);
+  const modelDisplay = stageWithModel ? `${stageWithModel.provider ? stageWithModel.provider + '/' : ''}${stageWithModel.model || ''}` : null;
 
   return (
     <div className="pipeline-container">
       {/* Header */}
       <div className="pipeline-header">
         <h2 className="pipeline-title">{title}</h2>
-        <span className={`pipeline-mode-badge ${mode}`}>
-          {currentModeInfo.icon}
-          <span>{currentModeInfo.title}</span>
-        </span>
+        <div className="pipeline-header-right">
+          {modelDisplay && (
+            <span className="pipeline-model" title={`Modelo: ${modelDisplay}`}>
+              🤖 <span className="model-label">Modelo:</span> <strong>{modelDisplay}</strong>
+            </span>
+          )}
+
+          <span className={`pipeline-mode-badge ${mode}`}>
+            {currentModeInfo.icon}
+            <span>{currentModeInfo.title}</span>
+          </span>
+        </div>
       </div>
 
       {/* Warnings */}

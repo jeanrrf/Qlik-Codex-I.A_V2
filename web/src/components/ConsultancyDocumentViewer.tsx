@@ -1283,7 +1283,7 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
               Exportar
             </button>
             {onClose && (
-              <button className="cd-btn ghost" onClick={onClose}>
+              <button type="button" className="cd-btn ghost" onClick={onClose} aria-label="Fechar consultoria">
                 <Icons.Close />
               </button>
             )}

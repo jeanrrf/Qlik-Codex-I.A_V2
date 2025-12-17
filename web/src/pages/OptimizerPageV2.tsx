@@ -609,39 +609,47 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
 
             {/* Ver Resultado */}
             <button
+              type="button"
               className={`action-btn-compact result ${!result ? "disabled-blur" : ""}`}
               onClick={() => result && setShowResultViewer(true)}
               disabled={!result}
               title={result ? "Ver resultado da otimização" : "Resultado será exibido após otimização"}
+              aria-label={result ? "Ver resultado da otimização" : "Resultado será exibido após otimização"}
             >
               <Icons.Eye />
             </button>
 
             {/* Baixar */}
             <button
+              type="button"
               className={`action-btn-compact download ${!result ? "disabled-blur" : ""}`}
               onClick={() => result && setDownloadModalOpen(true)}
               disabled={!result}
               title={result ? "Baixar arquivos" : "Download disponível após otimização"}
+              aria-label={result ? "Baixar arquivos" : "Download disponível após otimização"}
             >
               <Icons.Download />
             </button>
 
             {/* Restaurar última sessão */}
             <button
+              type="button"
               className={`action-btn-compact ${!snapshotAvailable ? "disabled-blur" : ""}`}
               onClick={handleRestoreSnapshot}
               disabled={!snapshotAvailable}
               title={snapshotAvailable ? "Restaurar última sessão salva localmente" : "Nenhum snapshot salvo"}
+              aria-label={snapshotAvailable ? "Restaurar última sessão salva localmente" : "Nenhum snapshot salvo"}
             >
               <Icons.Clock />
             </button>
 
             {/* Histórico */}
             <button
+              type="button"
               className="action-btn-compact history"
               onClick={() => setShowHistoryModal(true)}
               title="Histórico de Execuções"
+              aria-label="Abrir histórico de execuções"
             >
               <Icons.Clock />
             </button>
@@ -724,6 +732,12 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
                 <span className="pill live">Tempo real</span>
                 <h3>{runningStage?.name || "Pipeline em execucao"}</h3>
                 <p className="live-message">{liveStatusMessage || "Processando..."}</p>
+                {(runningStage?.provider || runningStage?.model) && (
+                  <p className="live-model">🤖 {runningStage.provider}{runningStage.provider && runningStage.model ? '/' : ''}{runningStage.model}</p>
+                )}
+                {runningStage?.tokensConsumed && (
+                  <p className="live-tokens">Tokens: {runningStage.tokensConsumed.totalTokens} (prompt {runningStage.tokensConsumed.promptTokens} / completion {runningStage.tokensConsumed.completionTokens})</p>
+                )}
               </div>
               <div className="live-status-right">
                 <div className="live-progress-bar">
@@ -772,24 +786,30 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
                 <div className="result-inline-actions">
                   {!isNvidiaMode && consultancyDoc && (
                     <button
+                      type="button"
                       className="action-btn-compact"
                       onClick={() => setShowConsultancy(true)}
                       title="Ver auditoria/consultoria"
+                      aria-label="Ver auditoria/consultoria"
                     >
                       <Icons.Document />
                     </button>
                   )}
                   <button
+                    type="button"
                     className="action-btn-compact"
                     onClick={() => setShowResultViewer(true)}
                     title="Ver detalhado lado a lado"
+                    aria-label="Ver detalhado lado a lado"
                   >
                     <Icons.Eye />
                   </button>
                   <button
+                    type="button"
                     className="action-btn-compact"
                     onClick={() => setDownloadModalOpen(true)}
                     title="Baixar ZIP"
+                    aria-label="Baixar ZIP"
                   >
                     <Icons.Download />
                   </button>

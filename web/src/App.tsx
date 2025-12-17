@@ -119,12 +119,13 @@ const AppContent: React.FC = () => {
     );
   }
 
-  // Redirecionar para login se não autenticado
-  if (!isAuthenticated) {
-    return <LoginPage />;
-  }
+  // GUEST ACCESS: Não bloqueia mais se não autenticado.
+  // O usuário pode navegar como guest.
+  // if (!isAuthenticated) {
+  //   return <LoginPage />;
+  // }
 
-  // Usuário autenticado - mostrar aplicação normal
+  // Usuário autenticado ou Guest - mostrar aplicação normal
   return (
     <NavigationProvider
       navigateTo={navigateTo}
@@ -137,7 +138,8 @@ const AppContent: React.FC = () => {
       </ViewContainer>
 
       <ViewContainer active={view === "profile"}>
-        <ProfilePage />
+        {/* Profile requer autenticação real */}
+        {isAuthenticated ? <ProfilePage /> : <LoginPage />}
       </ViewContainer>
 
       <ViewContainer active={view === "optimizer"}>
@@ -145,7 +147,8 @@ const AppContent: React.FC = () => {
       </ViewContainer>
 
       <ViewContainer active={view === "analytics"}>
-        <AnalyticsDashboard />
+        {/* Analytics requer autenticação real */}
+        {isAuthenticated ? <AnalyticsDashboard /> : <LoginPage />}
       </ViewContainer>
     </NavigationProvider>
   );

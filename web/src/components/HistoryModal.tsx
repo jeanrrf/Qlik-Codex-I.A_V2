@@ -29,7 +29,7 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, history })
             <span className="modal-icon">clock</span>
             <h2>Histórico de Execuções</h2>
           </div>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <button className="close-btn" onClick={onClose} aria-label="Fechar histórico">×</button>
         </div>
         <div className="modal-body">
           {history.length === 0 ? (

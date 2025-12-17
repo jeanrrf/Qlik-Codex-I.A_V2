@@ -17,6 +17,7 @@ import {
   SmartTruncationResult
 } from "../lib/scriptAnalyzer";
 import { sseEmitter } from "../lib/sseEmitter";
+import { buildNvidiaFastPrompt, PROMPT_VERSION } from "../prompts";
 import type { ConsultancyDocument } from "../types/consultancy";
 import type { LLMOptions } from "../types/optimization";
 import type { DeterministicValidationSnapshot, OptimizeMode, OptimizeResult } from "../types/qlik";
@@ -396,25 +397,9 @@ async function runNvidiaFastMode(
   logger.info("[NVIDIA FAST] Script compactado para prompt", compaction.stats);
   const scriptForPrompt = compaction.compacted;
 
-  // Prompt direto: pede script otimizado + resumo + mudanças em JSON
-  const prompt = `
-Você é o QLIK CODEX I.A. Refatore o script Qlik abaixo para máxima performance e legibilidade.
-- Preserve lógica e resultados.
-- Remova SELECT *, use listas explícitas.
-- Otimize joins, reduza cargas redundantes, elimine loops desnecessários.
-- Retorne APENAS JSON no formato:
-{
-  "optimizedScript": "<script otimizado>",
-  "summary": "<resumo conciso das melhorias>",
-  "changes": [
-    { "category": "performance" | "readability" | "structure", "area": "<onde mudou>", "impact": "<impacto>" }
-  ]
-}
-sem Markdown nem explicações adicionais.
-
---- SCRIPT ORIGINAL ---
-${scriptForPrompt}
-`;
+  // Use unified prompt system
+  const prompt = buildNvidiaFastPrompt(scriptForPrompt);
+  logger.info(`[NVIDIA FAST] Using prompt v${PROMPT_VERSION}`);
 
   // Inicia rastreamento via StepTimingService
   stepTimingService.startSubStep("optimization", "nvidia_fast", "NVIDIA Fast Mode", "Otimização acelerada via NVIDIA NIM");
