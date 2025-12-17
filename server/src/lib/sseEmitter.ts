@@ -103,7 +103,7 @@ export class SSEEmitter {
     try {
       this.currentClient.write(message);
       const typeName = (data as Record<string, unknown>)['type'] as string | undefined;
-      logger.debug('[SSE] Sent to current client', { type: typeName });
+      logger.info(`[SSE] Sent to current client: ${typeName}`);
     } catch (err) {
       logger.error('[SSE] Failed to send to current client', { err });
       this.currentClient = null;

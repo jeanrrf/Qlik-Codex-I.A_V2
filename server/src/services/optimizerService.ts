@@ -295,6 +295,23 @@ async function runUltraExpertMode(
     roiExecutiveSummary: typeof megaResult.plan?.estimatedImprovement === 'string' ? megaResult.plan.estimatedImprovement : String(megaResult.plan?.estimatedImprovement ?? '')
   };
 
+  // ========== AUTO-FIXES (Suggestion B) ==========
+  try {
+    const { fixed: alignedScript, changed: asChanged } = alignAsInLoadBlocks(result.optimizedScript);
+    if (asChanged) {
+      logger.info("[AutoFix] AS alignment applied to Ultra Expert result");
+      result.optimizedScript = alignedScript;
+    }
+
+    const { fixed: traceScript, changed: traceChanged } = fixTraceSeparators(result.optimizedScript);
+    if (traceChanged) {
+      logger.info("[AutoFix] TRACE separators applied to Ultra Expert result");
+      result.optimizedScript = traceScript;
+    }
+  } catch (fixError) {
+    logger.warn("[AutoFix] Failed to apply auto-fixes to Ultra Expert result", { error: fixError });
+  }
+
   // ========== RAG: INDEXA RESULTADO PARA FUTURAS OTIMIZAÇÕES ==========
   let optimizationId: string | undefined;
 
