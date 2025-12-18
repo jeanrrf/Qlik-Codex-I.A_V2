@@ -24,6 +24,8 @@ import type { DeterministicValidationSnapshot, OptimizeMode, OptimizeResult } fr
 import type { RAGContext } from "../types/rag";
 import { validateQlikScript } from "../validators/qlikValidator";
 
+import { alignAsInLoadBlocks } from "../lib/alignAs";
+import { fixTraceSeparators } from "../lib/fixTraceSeparators";
 import { stepTimingService } from "./stepTimingService";
 import { vectorRAGService } from "./vectorRAGService";
 
@@ -576,7 +578,6 @@ async function runNvidiaFastMode(
 
       // AUTOMATIC AS ALIGNMENT: if the model didn't vertically align AS in LOAD blocks, try to fix it conservatively
       try {
-        const { alignAsInLoadBlocks } = await import('../lib/alignAs.js');
         const { fixed, changed } = alignAsInLoadBlocks(result.optimizedScript || '');
         if (changed) {
           result.optimizedScript = fixed;
@@ -591,7 +592,6 @@ async function runNvidiaFastMode(
 
       // AUTOMATIC TRACE SEPARATORS: add visual separators to TRACE commands (Suggestion B)
       try {
-        const { fixTraceSeparators } = await import('../lib/fixTraceSeparators.js');
         const { fixed, changed } = fixTraceSeparators(result.optimizedScript || '');
         if (changed) {
           result.optimizedScript = fixed;

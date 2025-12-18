@@ -18,7 +18,6 @@ export function fixTraceSeparators(script: string): { fixed: string; changed: bo
     const traceMatch = trimmed.match(/^TRACE\s+(['"])(.*?)\1\s*;/i);
 
     if (traceMatch) {
-      const quote = traceMatch[1];
       const content = traceMatch[2];
 
       // If it's a header-like trace and doesn't already have separators
