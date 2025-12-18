@@ -112,3 +112,5 @@ export function AuthCallback() {
     </div>
   );
 }
+
+export default AuthCallback;

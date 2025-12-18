@@ -261,3 +261,5 @@ Aguardo retorno!`;
     </div>
   );
 }
+
+export default ProfilePage;

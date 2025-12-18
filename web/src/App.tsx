@@ -83,9 +83,33 @@ const AppContent: React.FC = () => {
     </div>
   );
 
+  const loadingFallback = (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      minHeight: "100vh",
+      background: "#0a0a0f",
+      color: "#ffffff"
+    }}>
+      <div className="loading-spinner" style={{
+        width: "40px",
+        height: "40px",
+        border: "3px solid rgba(0, 242, 255, 0.2)",
+        borderTopColor: "#00f2ff",
+        borderRadius: "50%",
+        animation: "spin 1s linear infinite"
+      }} />
+    </div>
+  );
+
   // Se estamos na rota de callback, renderizar AuthCallback
   if (window.location.pathname === "/auth/callback") {
-    return <AuthCallback />;
+    return (
+      <Suspense fallback={loadingFallback}>
+        <AuthCallback />
+      </Suspense>
+    );
   }
 
   // Mostrar loading durante verificação de autenticação
@@ -135,25 +159,7 @@ const AppContent: React.FC = () => {
       currentView={view}
       lastView={history.length > 1 ? history[history.length - 2] : null}
     >
-      <Suspense fallback={
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "100vh",
-          background: "#0a0a0f",
-          color: "#ffffff"
-        }}>
-          <div className="loading-spinner" style={{
-            width: "40px",
-            height: "40px",
-            border: "3px solid rgba(0, 242, 255, 0.2)",
-            borderTopColor: "#00f2ff",
-            borderRadius: "50%",
-            animation: "spin 1s linear infinite"
-          }} />
-        </div>
-      }>
+      <Suspense fallback={loadingFallback}>
         <ViewContainer active={view === "landing"}>
           <LandingPage onStart={() => navigateTo("optimizer")} />
         </ViewContainer>
