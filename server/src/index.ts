@@ -10,7 +10,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 
 import { config } from "./lib/config";
-import { initDb, closeDb } from "./lib/dbAdapter";
+import { closeDb, initDb } from "./lib/dbAdapter";
 import { logger } from "./lib/logger";
 import { errorHandler } from "./middleware/errorHandler";
 import { analyticsRouter } from "./routes/analytics.routes";
@@ -67,10 +67,13 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"], // Allow inline scripts for now (adjust for stricter security)
+      scriptSrc: ["'self'"], // Removed 'unsafe-inline' for better security score
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://api.openai.com", "https://generativelanguage.googleapis.com", "https://api.anthropic.com"], // Allow external APIs
+      connectSrc: ["'self'", "https://api.openai.com", "https://generativelanguage.googleapis.com", "https://api.anthropic.com"],
+      fontSrc: ["'self'", "data:"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
     },
   },
   crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -108,7 +111,7 @@ app.use(
       return compression.filter(req, res);
     },
     threshold: 1024, // Só comprime respostas > 1KB
-    level: 6 // Nível de compressão balanceado (1-9, 6 é o padrão)
+    level: 9 // Nível de compressão máximo (Score Lighthouse)
   })
 );
 

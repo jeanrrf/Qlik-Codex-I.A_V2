@@ -160,6 +160,13 @@ CODE FORMATTING:
 - Use \\n for newlines within JSON string values
 - Maintain proper indentation (4 spaces per level)
 
+ROBUSTNESS & ACCURACY:
+- PRESERVE SEMANTICS: NEVER change the logic of the original script.
+- PRESERVE IDENTIFIERS: NEVER translate or rename fields, tables, or variables.
+- COMPAQ FORMATTING: Always apply AS Alignment and TRACE Separators.
+- ERROR HANDLING: If the script is logically broken, explain why in the technicalDetails.
+- RAG UTILIZATION: If RAG context is provided, follow the patterns seen in high-reward examples.
+
 EDGE CASES:
 - If no optimization needed: Return original script with "noChangesNeeded": true
 - If script is invalid: Return validation errors, do not attempt optimization
@@ -169,5 +176,5 @@ EDGE CASES:
 // PROMPT VERSION (for tracking and rollback)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export const PROMPT_VERSION = "2.0.0";
+export const PROMPT_VERSION = "2.1.0";
 export const PROMPT_CODENAME = "AINEX Unified";

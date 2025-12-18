@@ -8,12 +8,12 @@ import { nvidiaProvider } from '../lib/llmProviders/nvidiaProvider';
 import { logger } from '../lib/logger';
 import { getTursoDb } from '../lib/tursoDb';
 import type {
-  RAGConfig,
+  FeedbackType,
   OptimizationVectorMetadata,
+  RAGConfig,
   RAGContext,
   RAGSearchResult,
-  RAGStats,
-  FeedbackType
+  RAGStats
 } from '../types/rag';
 
 type RAGAvailability = {
@@ -34,6 +34,7 @@ type RAGAvailability = {
 class VectorRAGService {
   private ragConfig: RAGConfig;
   private initialized = false;
+  private embeddingCache = new Map<string, number[]>();
 
   constructor() {
     const provider = (config.rag?.embeddingProvider || 'google').toLowerCase();
@@ -174,6 +175,13 @@ class VectorRAGService {
    * Gera embedding do script usando o provider configurado
    */
   private async generateEmbedding(text: string): Promise<number[]> {
+    const textHash = createHash('md5').update(text).digest('hex');
+    const cached = this.embeddingCache.get(textHash);
+    if (cached) {
+      logger.debug('[RAG] Using cached embedding', { hash: textHash });
+      return cached;
+    }
+
     try {
       const startedAt = Date.now();
       let embedding: number[];
@@ -182,6 +190,14 @@ class VectorRAGService {
         embedding = await nvidiaProvider.getEmbedding(text);
       } else {
         embedding = await googleProvider.getEmbedding(text);
+      }
+
+      // Store in cache
+      this.embeddingCache.set(textHash, embedding);
+      if (this.embeddingCache.size > 500) {
+        // Simple cleanup: remove first item if cache too large
+        const firstKey = this.embeddingCache.keys().next().value;
+        if (firstKey) this.embeddingCache.delete(firstKey);
       }
 
       if (embedding.length !== this.ragConfig.embeddingDimensions) {

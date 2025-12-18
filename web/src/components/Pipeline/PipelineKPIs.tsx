@@ -1,8 +1,8 @@
 // web/src/components/Pipeline/PipelineKPIs.tsx
 import React from 'react';
-import type { PipelineProgress, PipelineStage } from '../../types/pipeline';
-import type { OptimizeResult } from '../../types/api';
 import { formatDuration } from '../../lib/formatTime';
+import type { OptimizeResult } from '../../types/api';
+import type { PipelineProgress, PipelineStage } from '../../types/pipeline';
 import './Pipeline.css';
 
 // ═══════════════════════════════════════════════════════════════
@@ -22,6 +22,8 @@ export interface PipelineKPIsProps {
 // COMPONENTE
 // ═══════════════════════════════════════════════════════════════
 
+import { Skeleton } from '../Skeleton';
+
 export const PipelineKPIs: React.FC<PipelineKPIsProps> = ({
   progress,
   result,
@@ -32,6 +34,23 @@ export const PipelineKPIs: React.FC<PipelineKPIsProps> = ({
   );
   const completedStages = visibleStages.filter(s => s.status === 'success').length;
   const totalStages = visibleStages.length;
+
+  // Se estiver carregando e não tiver resultado ainda, mostra skeletons
+  if (progress.status === 'running' && !result) {
+    return (
+      <div className="pipeline-kpis-container">
+        <div className="pipeline-kpis">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="kpi-item skeleton">
+              <Skeleton width="40px" height="24px" style={{ marginBottom: '8px' }} />
+              <Skeleton width="60px" height="12px" style={{ marginBottom: '4px' }} />
+              <Skeleton width="40px" height="16px" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   // Só mostra se tiver sucesso ou resultado
   if (progress.status !== 'success' && !result) {

@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, lazy, Suspense } from "react";
 
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { NavigationProvider } from "./contexts/NavigationContext";
-import { LoginPage } from "./pages/LoginPage";
-import { AuthCallback } from "./pages/AuthCallback";
-import LandingPage from "./pages/LandingPage";
-import OptimizerPageV2 from "./pages/OptimizerPageV2";
-import { ProfilePage } from "./pages/ProfilePage";
-import AnalyticsDashboard from "./pages/Analytics/AnalyticsDashboard";
 import { useEssentialMetrics } from "./hooks/useEssentialMetrics";
+
+// Lazy loading pages for better performance
+const LandingPage = lazy(() => import("./pages/LandingPage"));
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const AuthCallback = lazy(() => import("./pages/AuthCallback"));
+const OptimizerPageV2 = lazy(() => import("./pages/OptimizerPageV2"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const AnalyticsDashboard = lazy(() => import("./pages/Analytics/AnalyticsDashboard"));
 
 type View = "landing" | "optimizer" | "profile" | "analytics";
 
@@ -133,23 +135,43 @@ const AppContent: React.FC = () => {
       currentView={view}
       lastView={history.length > 1 ? history[history.length - 2] : null}
     >
-      <ViewContainer active={view === "landing"}>
-        <LandingPage onStart={() => navigateTo("optimizer")} />
-      </ViewContainer>
+      <Suspense fallback={
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "100vh",
+          background: "#0a0a0f",
+          color: "#ffffff"
+        }}>
+          <div className="loading-spinner" style={{
+            width: "40px",
+            height: "40px",
+            border: "3px solid rgba(0, 242, 255, 0.2)",
+            borderTopColor: "#00f2ff",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite"
+          }} />
+        </div>
+      }>
+        <ViewContainer active={view === "landing"}>
+          <LandingPage onStart={() => navigateTo("optimizer")} />
+        </ViewContainer>
 
-      <ViewContainer active={view === "profile"}>
-        {/* Profile requer autenticação real */}
-        {isAuthenticated ? <ProfilePage /> : <LoginPage />}
-      </ViewContainer>
+        <ViewContainer active={view === "profile"}>
+          {/* Profile requer autenticação real */}
+          {isAuthenticated ? <ProfilePage /> : <LoginPage />}
+        </ViewContainer>
 
-      <ViewContainer active={view === "optimizer"}>
-        <OptimizerPageV2 />
-      </ViewContainer>
+        <ViewContainer active={view === "optimizer"}>
+          <OptimizerPageV2 />
+        </ViewContainer>
 
-      <ViewContainer active={view === "analytics"}>
-        {/* Analytics requer autenticação real */}
-        {isAuthenticated ? <AnalyticsDashboard /> : <LoginPage />}
-      </ViewContainer>
+        <ViewContainer active={view === "analytics"}>
+          {/* Analytics requer autenticação real */}
+          {isAuthenticated ? <AnalyticsDashboard /> : <LoginPage />}
+        </ViewContainer>
+      </Suspense>
     </NavigationProvider>
   );
 };

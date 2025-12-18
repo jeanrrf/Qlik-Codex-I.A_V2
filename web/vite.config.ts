@@ -1,9 +1,43 @@
-import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { visualizer } from "rollup-plugin-visualizer";
+import { defineConfig } from "vite";
+import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    visualizer({
+      open: false,
+      gzipSize: true,
+      brotliSize: true,
+      filename: "bundle-stats.html",
+    }),
+    VitePWA({
+      registerType: "autoUpdate",
+      includeAssets: ["favicon.ico", "robots.txt", "apple-touch-icon.png"],
+      manifest: {
+        name: "Qlik Codex I.A",
+        short_name: "QlikCodex",
+        description: "Inteligência Artificial para Otimização de Scripts Qlik",
+        theme_color: "#0a0a0f",
+        background_color: "#0a0a0f",
+        display: "standalone",
+        icons: [
+          {
+            src: "favicon.png",
+            sizes: "192x192",
+            type: "image/png",
+          },
+          {
+            src: "favicon.png",
+            sizes: "512x512",
+            type: "image/png",
+          },
+        ],
+      },
+    }),
+  ],
   base: "/",
   server: {
     port: 5173,
