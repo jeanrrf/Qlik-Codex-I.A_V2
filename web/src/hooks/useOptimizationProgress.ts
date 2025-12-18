@@ -498,11 +498,39 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
 
       if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
 
-        const errorText = await response.text();
+        try {
+          const errorData = await response.json();
+          if (errorData?.message) {
+            errorMessage = errorData.message;
+          } else if (errorData?.error) {
+            errorMessage = errorData.error;
+          }
 
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+          // Add helpful context for common errors
+          if (response.status === 403) {
+            if (errorData?.requiresAuth) {
+              errorMessage = `🔒 ${errorMessage}\n\nDica: Faça login ou use o modo NVIDIA Fast para visitantes.`;
+            } else {
+              errorMessage = `🔒 Acesso negado: ${errorMessage}`;
+            }
+          } else if (response.status === 429) {
+            errorMessage = `⏱️ ${errorMessage}`;
+          }
+        } catch {
+          // If JSON parsing fails, try plain text
+          try {
+            const errorText = await response.text();
+            if (errorText) {
+              errorMessage = errorText;
+            }
+          } catch {
+            // Keep default error message
+          }
+        }
 
+        throw new Error(errorMessage);
       }
 
 

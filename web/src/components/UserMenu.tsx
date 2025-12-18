@@ -28,6 +28,18 @@ export function UserMenu() {
     }
   }, [isOpen]);
 
+  const handleGuestLogin = async () => {
+    try {
+      const { getGoogleAuthUrl } = await import('../api/authClient');
+      const authUrl = await getGoogleAuthUrl();
+      window.location.href = authUrl;
+    } catch (err) {
+      console.error('Failed to get auth URL:', err);
+      // Fallback to login page
+      navigateTo('login');
+    }
+  };
+
   if (!user) {
     // Guest User View
     return (
@@ -35,20 +47,30 @@ export function UserMenu() {
         <button
           className="user-menu-trigger guest-trigger"
           type="button"
-          onClick={() => window.location.href = "/login"} // Or use navigateTo if available, but login is usually a separate flow
-          title="Fazer Login"
+          onClick={handleGuestLogin}
+          title="Fazer Login com Google para acessar Ultra-Expert e mais recursos"
           aria-label="Fazer Login"
+          style={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            transition: 'all 0.2s ease',
+            border: 'none',
+            cursor: 'pointer'
+          }}
         >
-          <div className="user-avatar guest-avatar">
+          <div className="user-avatar guest-avatar" style={{ background: 'rgba(255,255,255,0.2)' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+              <polyline points="10 17 15 12 10 7" />
+              <line x1="15" y1="12" x2="3" y2="12" />
             </svg>
           </div>
           <div className="user-info">
-            <div className="user-name">Visitante</div>
-            <div className="user-role" style={{ color: "#888" }}>
-              Entrar
+            <div className="user-name" style={{ fontWeight: 600 }}>🔓 Entrar</div>
+            <div className="user-role" style={{ color: "rgba(255,255,255,0.9)", fontSize: '0.75rem' }}>
+              Desbloquear recursos
             </div>
           </div>
         </button>

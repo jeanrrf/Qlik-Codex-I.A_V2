@@ -712,6 +712,75 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
 
         {/* Main Area */}
         <main className="opt-main">
+          {/* Guest Mode Warning for Ultra-Expert */}
+          {!user && mode === "ultra-expert" && (
+            <div className="error-alert" style={{
+              background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)',
+              border: '2px solid #667eea',
+              color: '#2d3748',
+              padding: '16px 20px',
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px'
+            }}>
+              <span style={{ fontSize: '2rem' }}>🔐</span>
+              <div className="error-text" style={{ flex: 1 }}>
+                <strong style={{ fontSize: '1.1rem', color: '#667eea' }}>Modo Ultra-Expert Requer Login</strong>
+                <p style={{ margin: '8px 0 0 0', lineHeight: '1.5' }}>
+                  Faça login com Google para desbloquear <strong>Ultra-Expert</strong>,
+                  mais quotas diárias e recursos avançados.
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap' }}>
+                <button
+                  onClick={async () => {
+                    try {
+                      const { getGoogleAuthUrl } = await import('../api/authClient');
+                      const authUrl = await getGoogleAuthUrl();
+                      window.location.href = authUrl;
+                    } catch (err) {
+                      console.error('Failed to get auth URL:', err);
+                    }
+                  }}
+                  style={{
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '10px 20px',
+                    borderRadius: '8px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'transform 0.2s ease',
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                  onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                  aria-label="Fazer Login com Google"
+                >
+                  🔓 Fazer Login
+                </button>
+                <button
+                  className="error-close"
+                  onClick={() => setMode("nvidia-fast")}
+                  aria-label="Mudar para NVIDIA Fast"
+                  style={{
+                    background: '#e2e8f0',
+                    color: '#4a5568',
+                    border: 'none',
+                    padding: '10px 16px',
+                    borderRadius: '8px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  Usar NVIDIA Fast
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Error Alert */}
           {error && (
             <div className="error-alert">

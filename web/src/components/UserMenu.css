@@ -19,6 +19,25 @@
 .user-menu-trigger:hover {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(0, 242, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Guest Trigger Specific Styles */
+.guest-trigger {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.guest-trigger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  border-color: transparent !important;
+}
+
+.guest-avatar {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
 }
 
 .user-avatar {

@@ -328,9 +328,12 @@ export const checkUsageLimits = asyncHandler(async (req: Request, res: Response,
 
   const limits = RoleUsageLimits[user.role];
 
-  logger.debug("[FREE TIER] checkUsageLimits iniciado", {
+  logger.info("[FREE TIER] checkUsageLimits iniciado", {
     userId: user.id,
     userRole: user.role,
+    isGuest: user.role === UserRole.GUEST,
+    hasAuthToken: !!extractToken(req),
+    requestedMode: req.body.mode,
     limits
   });
 
@@ -343,10 +346,19 @@ export const checkUsageLimits = asyncHandler(async (req: Request, res: Response,
   const requestedMode = req.body.mode as OptimizeMode | undefined;
 
   if (requestedMode && limits.enabledModes && !limits.enabledModes.includes(requestedMode)) {
+    logger.warn("[FREE TIER] Mode not allowed for role", {
+      userId: user.id,
+      userRole: user.role,
+      requestedMode,
+      allowedModes: limits.enabledModes
+    });
+
     res.status(403).json({
       error: "Access denied",
-      message: `Your role does not have access to mode: ${requestedMode}`,
-      allowedModes: limits.enabledModes
+      message: `Your role (${user.role}) does not have access to mode: ${requestedMode}. ${user.role === UserRole.GUEST ? "Please login to use ultra-expert mode." : ""}`,
+      allowedModes: limits.enabledModes,
+      currentRole: user.role,
+      requiresAuth: user.role === UserRole.GUEST
     });
     return;
   }
