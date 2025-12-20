@@ -661,16 +661,6 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
         </div>
       </header>
 
-      {/* Anúncio Adsterra - TOPO DA PÁGINA (usuários não logados) */}
-      {!user && (
-        <div className="adsterra-top-container">
-          <AdsterraAd
-            format="banner"
-            title="🎯 Apoie o Qlik Codex I.A"
-          />
-        </div>
-      )}
-
       {/* FREE TIER WARNING BANNER */}
       {!isOwner && willBeTruncated && showFreeTierWarning && (
         <div className="free-tier-warning-banner">
@@ -854,100 +844,111 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
 
           {/* Resultado inline */}
           {hasResult && result && (
-            <section className="result-inline-card">
-              <div className="result-inline-header">
-                <div>
-                  <h3>Resultado da Otimização</h3>
-                  <p className="result-mode-label">
-                    {modeInfo[mode].title}
-                    {isNvidiaMode ? " · apenas código otimizado" : " · código + análise"}
-                  </p>
-                </div>
-                <div className="result-inline-actions">
-                  {!isNvidiaMode && consultancyDoc && (
+            <>
+              <section className="result-inline-card">
+                <div className="result-inline-header">
+                  <div>
+                    <h3>Resultado da Otimização</h3>
+                    <p className="result-mode-label">
+                      {modeInfo[mode].title}
+                      {isNvidiaMode ? " · apenas código otimizado" : " · código + análise"}
+                    </p>
+                  </div>
+                  <div className="result-inline-actions">
+                    {!isNvidiaMode && consultancyDoc && (
+                      <button
+                        type="button"
+                        className="action-btn-compact"
+                        onClick={() => setShowConsultancy(true)}
+                        title="Ver auditoria/consultoria"
+                        aria-label="Ver auditoria/consultoria"
+                      >
+                        <Icons.Document />
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="action-btn-compact"
-                      onClick={() => setShowConsultancy(true)}
-                      title="Ver auditoria/consultoria"
-                      aria-label="Ver auditoria/consultoria"
+                      onClick={() => setShowResultViewer(true)}
+                      title="Ver detalhado lado a lado"
+                      aria-label="Ver detalhado lado a lado"
                     >
-                      <Icons.Document />
+                      <Icons.Eye />
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    className="action-btn-compact"
-                    onClick={() => setShowResultViewer(true)}
-                    title="Ver detalhado lado a lado"
-                    aria-label="Ver detalhado lado a lado"
-                  >
-                    <Icons.Eye />
-                  </button>
-                  <button
-                    type="button"
-                    className="action-btn-compact"
-                    onClick={() => setDownloadModalOpen(true)}
-                    title="Baixar ZIP"
-                    aria-label="Baixar ZIP"
-                  >
-                    <Icons.Download />
-                  </button>
-                </div>
-              </div>
-
-              {!isNvidiaMode && result.summary && (
-                <div className="result-summary-inline">
-                  <h4>Resumo</h4>
-                  <p>{result.summary}</p>
-                </div>
-              )}
-
-              {resultStats && (
-                <div className="result-metrics-grid">
-                  <div className="result-metric">
-                    <span className="metric-label">Linhas originais</span>
-                    <strong className="metric-value">{resultStats.originalLines}</strong>
-                  </div>
-                  <div className="result-metric">
-                    <span className="metric-label">Linhas otimizadas</span>
-                    <strong className="metric-value">{resultStats.optimizedLines}</strong>
-                  </div>
-                  <div className="result-metric">
-                    <span className="metric-label">Adicionadas</span>
-                    <strong className="metric-value">+{resultStats.added}</strong>
-                  </div>
-                  <div className="result-metric">
-                    <span className="metric-label">Removidas</span>
-                    <strong className="metric-value">-{resultStats.removed}</strong>
-                  </div>
-                  <div className="result-metric">
-                    <span className="metric-label">Modificadas</span>
-                    <strong className="metric-value">{resultStats.modified}</strong>
+                    <button
+                      type="button"
+                      className="action-btn-compact"
+                      onClick={() => setDownloadModalOpen(true)}
+                      title="Baixar ZIP"
+                      aria-label="Baixar ZIP"
+                    >
+                      <Icons.Download />
+                    </button>
                   </div>
                 </div>
-              )}
 
-              <div className={`result-code-panels ${isNvidiaMode ? "single" : "dual"}`}>
-                {!isNvidiaMode && (
-                  <div className="code-card">
-                    <div className="code-card-header">
-                      <span className="pill">Original</span>
-                      <span className="muted">{result.originalScript.split(/\r?\n/).length} linhas</span>
-                    </div>
-                    <pre className="code-block">{result.originalScript}</pre>
+                {!isNvidiaMode && result.summary && (
+                  <div className="result-summary-inline">
+                    <h4>Resumo</h4>
+                    <p>{result.summary}</p>
                   </div>
                 )}
 
-                <div className="code-card">
-                  <div className="code-card-header">
-                    <span className="pill primary">Otimizado</span>
-                    <span className="muted">{result.optimizedScript.split(/\r?\n/).length} linhas</span>
+                {resultStats && (
+                  <div className="result-metrics-grid">
+                    <div className="result-metric">
+                      <span className="metric-label">Linhas originais</span>
+                      <strong className="metric-value">{resultStats.originalLines}</strong>
+                    </div>
+                    <div className="result-metric">
+                      <span className="metric-label">Linhas otimizadas</span>
+                      <strong className="metric-value">{resultStats.optimizedLines}</strong>
+                    </div>
+                    <div className="result-metric">
+                      <span className="metric-label">Adicionadas</span>
+                      <strong className="metric-value">+{resultStats.added}</strong>
+                    </div>
+                    <div className="result-metric">
+                      <span className="metric-label">Removidas</span>
+                      <strong className="metric-value">-{resultStats.removed}</strong>
+                    </div>
+                    <div className="result-metric">
+                      <span className="metric-label">Modificadas</span>
+                      <strong className="metric-value">{resultStats.modified}</strong>
+                    </div>
                   </div>
-                  <pre className="code-block">{result.optimizedScript}</pre>
+                )}
+
+                <div className={`result-code-panels ${isNvidiaMode ? "single" : "dual"}`}>
+                  {!isNvidiaMode && (
+                    <div className="code-card">
+                      <div className="code-card-header">
+                        <span className="pill">Original</span>
+                        <span className="muted">{result.originalScript.split(/\r?\n/).length} linhas</span>
+                      </div>
+                      <pre className="code-block">{result.originalScript}</pre>
+                    </div>
+                  )}
+
+                  <div className="code-card">
+                    <div className="code-card-header">
+                      <span className="pill primary">Otimizado</span>
+                      <span className="muted">{result.optimizedScript.split(/\r?\n/).length} linhas</span>
+                    </div>
+                    <pre className="code-block">{result.optimizedScript}</pre>
+                  </div>
                 </div>
-              </div>
-            </section>
+              </section>
+
+              {!user && (
+                <div className="adsterra-inline-container">
+                  <AdsterraAd
+                    format="banner"
+                    title="🎯 Apoie o Qlik Codex I.A"
+                  />
+                </div>
+              )}
+            </>
           )}
         </main>
       </div>
