@@ -196,6 +196,19 @@
   letter-spacing: 1px;
 }
 
+/* --- ADSTERRA AD TOP CONTAINER --- */
+.adsterra-top-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem 0;
+  background: linear-gradient(180deg, rgba(3, 5, 8, 0.95) 0%, rgba(10, 15, 20, 0.92) 100%);
+  border-bottom: 1px solid rgba(0, 242, 255, 0.1);
+  position: relative;
+  z-index: 9;
+}
+
 /* --- FREE TIER / QUOTAS --- */
 .free-tier-warning-banner {
   background: rgba(255, 165, 0, 0.1);

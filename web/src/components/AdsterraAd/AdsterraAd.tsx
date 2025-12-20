@@ -20,6 +20,7 @@ export const AdsterraAd: React.FC<AdsterraAdProps> = ({
   const adContainerRef = useRef<HTMLDivElement>(null);
   const scriptLoadedRef = useRef(false);
   const [isClosed, setIsClosed] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Evitar carregar múltiplas vezes
@@ -38,7 +39,7 @@ export const AdsterraAd: React.FC<AdsterraAdProps> = ({
       'params': {}
     };
 
-    // Definir atOptions globalmente
+    // Definir atOptions globalmente ANTES de carregar o script
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).atOptions = atOptions;
 
@@ -47,7 +48,23 @@ export const AdsterraAd: React.FC<AdsterraAdProps> = ({
     invokeScript.type = 'text/javascript';
     invokeScript.src = `https://www.highperformanceformat.com/${atOptions.key}/invoke.js`;
     invokeScript.async = true;
+    invokeScript.defer = true;
     invokeScript.setAttribute('data-cfasync', 'false');
+    
+    // Listeners de carregamento
+    invokeScript.onload = () => {
+      setIsLoading(false);
+    };
+    
+    invokeScript.onerror = () => {
+      setIsLoading(false);
+      console.warn('Adsterra: Falha ao carregar anúncio');
+    };
+    
+    // Timeout de segurança (5 segundos)
+    const loadTimeout = setTimeout(() => {
+      setIsLoading(false);
+    }, 5000);
 
     // Adicionar script ao container
     const container = adContainerRef.current;
@@ -55,6 +72,7 @@ export const AdsterraAd: React.FC<AdsterraAdProps> = ({
 
     // Cleanup quando componente for desmontado
     return () => {
+      clearTimeout(loadTimeout);
       if (container) {
         // Limpar conteúdo do container
         container.innerHTML = '';

@@ -661,6 +661,16 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
         </div>
       </header>
 
+      {/* Anúncio Adsterra - TOPO DA PÁGINA (usuários não logados) */}
+      {!user && (
+        <div className="adsterra-top-container">
+          <AdsterraAd
+            format="banner"
+            title="🎯 Apoie o Qlik Codex I.A"
+          />
+        </div>
+      )}
+
       {/* FREE TIER WARNING BANNER */}
       {!isOwner && willBeTruncated && showFreeTierWarning && (
         <div className="free-tier-warning-banner">
@@ -675,16 +685,6 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
           <button className="warning-dismiss" onClick={() => setShowFreeTierWarning(false)} title="Entendi" aria-label="Dispensar aviso de limite de linhas">
 
           </button>
-        </div>
-      )}
-
-      {/* Anúncio Adsterra no Topo - APENAS para usuários NÃO logados */}
-      {!user && (
-        <div style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '0.5rem 0' }}>
-          <AdsterraAd
-            format="banner"
-            title="🎯 Apoie o Qlik Codex I.A"
-          />
         </div>
       )}
 
