@@ -184,6 +184,7 @@ REQUIREMENTS:
 - DO NOT generate partial code snippets or incomplete statements
 - DO NOT omit keywords like LOAD, SELECT, FROM, WHERE, etc.
 - If you cannot complete a section safely, keep the original code for that section
+- DO NOT remove any subroutines (SUB/END SUB) or mapping tables unless explicitly instructed
 
 CODE STANDARDS:
 - Consistent naming conventions
@@ -204,6 +205,7 @@ WHAT TO PRESERVE:
 - All table names exactly as provided
 - Business logic and calculations
 - Data transformations and mappings
+- All subroutines (SUB/END SUB) and mapping tables
 
 **COMMON MISTAKES TO AVOID:**
 ❌ WRONG (incomplete):
@@ -384,12 +386,14 @@ PRESERVE:
 - All business logic
 - All field and table names exactly
 - All calculations and transformations
+- All subroutines (SUB/END SUB) and mapping tables
 
 CRITICAL: COMPLETENESS REQUIREMENT
 - The optimizedScript MUST be a complete, runnable Qlik script
 - EVERY field list MUST be preceded by LOAD keyword or SQL SELECT
 - EVERY LOAD statement MUST have a data source (FROM, RESIDENT, INLINE, AUTOGENERATE, or SQL SELECT)
 - DO NOT remove function parentheses or leave incomplete expressions
+- DO NOT remove any subroutines (SUB/END SUB) or mapping tables
 - If you cannot safely optimize a section, keep the original code for that section
 
 OUTPUT FORMAT (JSON only, no markdown):

@@ -1,8 +1,13 @@
 ﻿import type { ErrorRequestHandler } from "express";
+import { ZodError } from "zod";
 
 import { logger } from "../lib/logger";
 
 function extractErrorMessage(error: unknown): string {
+  if (error instanceof ZodError) {
+    return error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+  }
+
   if (error instanceof Error) {
     return error.message;
   }
@@ -22,6 +27,30 @@ function extractErrorMessage(error: unknown): string {
 }
 
 export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
+  // Handle Zod validation errors
+  if (err instanceof ZodError) {
+    logger.warn("Erro de validação", { errors: err.errors });
+    res.status(400).json({
+      error: "Erro de validação",
+      details: extractErrorMessage(err),
+      issues: err.errors
+    });
+    return;
+  }
+
+  // Handle errors with status code (e.g. from express.json limit or custom errors)
+  const status = (err as any).status || (err as any).statusCode || 500;
+
+  // If it's a client error (4xx), log as warning and return the error message
+  if (typeof status === 'number' && status >= 400 && status < 500) {
+    logger.warn(`Erro cliente ${status}`, { error: extractErrorMessage(err) });
+    res.status(status).json({
+      error: extractErrorMessage(err),
+      details: (err as any).type || undefined
+    });
+    return;
+  }
+
   logger.error("Erro interno no servidor", { err });
 
   res.status(500).json({
