@@ -66,6 +66,87 @@ function isComment(line: string): boolean {
   return /^\s*(\/\/|REM\b|\/\*)/i.test(line);
 }
 
+/**
+ * Detecta código incompleto: campos sem LOAD/SELECT keywords
+ * Esse é um dos bugs mais comuns quando LLMs geram código Qlik
+ */
+function detectIncompleteStatements(script: string): string[] {
+  const lines = script.split(/\r?\n/);
+  const errors: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+
+    // Skip empty lines and comments
+    if (!line || isComment(line)) continue;
+
+    // Detecta linhas que parecem ser listas de campos sem LOAD/SELECT
+    // Padrão: "    CampoA," ou "    CampoA AS Alias," sem LOAD antes
+    // IMPORTANTE: Só detecta se tiver vírgula OU múltiplas linhas de campos (indentados)
+    if (/^\s{2,}\w+.*,\s*$/i.test(line) || /^\s{2,}\w+\s+AS\s+\w+,?\s*$/i.test(line)) {
+      // Verificar se há LOAD/SELECT nas 5 linhas anteriores
+      let hasKeyword = false;
+      const lookBackStart = Math.max(0, i - 5);
+
+      for (let j = i - 1; j >= lookBackStart; j--) {
+        const prevLine = lines[j].trim();
+        if (!prevLine || isComment(prevLine)) continue;
+
+        if (/^(LOAD|SQL\s+SELECT|SELECT)\b/i.test(prevLine)) {
+          hasKeyword = true;
+          break;
+        }
+
+        // Se encontrou outra declaração, não é parte de um LOAD
+        if (/^(FROM|WHERE|DROP|LET|SET|TRACE|STORE|MAPPING|SUB|FOR|NEXT|CALL|LEFT\s+JOIN|INNER\s+JOIN|JOIN)\b/i.test(prevLine)) {
+          break;
+        }
+      }
+
+      if (!hasKeyword) {
+        // Verificar se FROM está próximo (indicando lista de campos órfã)
+        const nextLines = lines.slice(i, Math.min(i + 10, lines.length)).join('\n');
+        if (/\bFROM\b/i.test(nextLines)) {
+          errors.push(`Linha ${i + 1}: CRÍTICO - Lista de campos sem palavra-chave LOAD ou SELECT. Código incompleto detectado: "${line.substring(0, 60)}${line.length > 60 ? '...' : ''}"`);
+        }
+      }
+    }
+
+    // Detecta FROM sem LOAD/SELECT antes (indicador mais forte de código incompleto)
+    if (/^FROM\b/i.test(line) && !/:$/.test(lines[Math.max(0, i - 1)]?.trim() || '')) {
+      // Verificar se há LOAD/SELECT nas 20 linhas anteriores (pode ter muitos campos)
+      let hasLoadOrSelect = false;
+      const lookBackStart = Math.max(0, i - 20);
+
+      for (let j = i - 1; j >= lookBackStart; j--) {
+        const prevLine = lines[j].trim();
+        if (!prevLine || isComment(prevLine)) continue;
+
+        if (/^(LOAD|SQL\s+SELECT|SELECT)\b/i.test(prevLine)) {
+          hasLoadOrSelect = true;
+          break;
+        }
+
+        // Se encontrou outra declaração estrutural, parar
+        if (/^(DROP|LET|SET|STORE|SUB|FOR|NEXT|CALL)\b/i.test(prevLine)) {
+          break;
+        }
+
+        // Se encontrou TRACE, continuar procurando (pode ter TRACE entre LOAD e FROM)
+        if (/^TRACE\b/i.test(prevLine)) {
+          continue;
+        }
+      }
+
+      if (!hasLoadOrSelect) {
+        errors.push(`Linha ${i + 1}: CRÍTICO - FROM encontrado sem LOAD ou SELECT correspondente. Código incompleto gerado pelo LLM.`);
+      }
+    }
+  }
+
+  return errors;
+}
+
 export interface ValidationResult {
   safe: boolean;
   warnings: string[];
@@ -76,6 +157,12 @@ export function validateQlikScript(script: string): ValidationResult {
   const warnings: string[] = [];
   let insideSqlBlock = false;
   let precedingLoadDepth = 0; // Track nested Preceding LOADs
+
+  // CRITICAL: Check for incomplete statements first (most common LLM bug)
+  const incompleteErrors = detectIncompleteStatements(script);
+  if (incompleteErrors.length > 0) {
+    warnings.push(...incompleteErrors);
+  }
 
   const getNextCodeLineIndex = (start: number): number => {
     for (let i = start + 1; i < lines.length; i++) {
@@ -185,16 +272,14 @@ export function validateQlikScript(script: string): ValidationResult {
             const nextLine = lines[nextIdx].trim();
             // Allow LOAD, SQL SELECT, SELECT
             if (!/^(LOAD|SQL|SELECT)\b/i.test(nextLine)) {
-              // Relaxed check: Preceding LOAD might be valid if it's just a transformation
-              // warnings.push(`Linha ${index + 1}: Preceding LOAD suspeito (não seguido de LOAD/SELECT).`);
+              warnings.push(`Linha ${index + 1}: Preceding LOAD suspeito (não seguido de LOAD/SELECT).`);
             }
             // Check for nested Preceding LOADs (depth > 2 is complex)
             if (precedingLoadDepth > 2) {
-              // Relaxed check: Deep nesting is complex but valid
-              // warnings.push(`Linha ${index + 1}: Preceding LOAD aninhado (profundidade ${precedingLoadDepth}). Complexidade alta - considere simplificar.`);
+              warnings.push(`Linha ${index + 1}: Preceding LOAD aninhado (profundidade ${precedingLoadDepth}). Complexidade alta - considere simplificar.`);
             }
           } else {
-            // warnings.push(`Linha ${index + 1}: Preceding LOAD suspeito (fim de arquivo).`);
+            warnings.push(`Linha ${index + 1}: Preceding LOAD suspeito (fim de arquivo).`);
           }
         } else {
           precedingLoadDepth = 0; // Reset on source found

@@ -40,6 +40,7 @@ import { ScriptAnalysisCard } from "../components/ScriptAnalysisCard";
 import { ScriptInputCard } from "../components/ScriptInputCard";
 import { analyzeScriptComplexity } from "../lib/scriptAnalysis";
 import { loadLatestSnapshot, saveSnapshot } from "../lib/indexedStorage";
+import { AdsterraAd } from "../components/AdsterraAd";
 
 type OptimizerPageProps = Record<string, never>;
 
@@ -674,6 +675,16 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
           <button className="warning-dismiss" onClick={() => setShowFreeTierWarning(false)} title="Entendi" aria-label="Dispensar aviso de limite de linhas">
 
           </button>
+        </div>
+      )}
+
+      {/* Anúncio Adsterra no Topo - APENAS para usuários NÃO logados */}
+      {!user && (
+        <div style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '0.5rem 0' }}>
+          <AdsterraAd
+            format="banner"
+            title="🎯 Apoie o Qlik Codex I.A"
+          />
         </div>
       )}
 

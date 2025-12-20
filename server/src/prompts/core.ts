@@ -30,9 +30,11 @@ export const GUARDRAILS = [
   "FORBIDDEN: Set Analysis '{<...>}' syntax in load scripts — this is for charts only",
   "FORBIDDEN: SELECT * or LOAD * — always use explicit field lists for performance and clarity",
   "FORBIDDEN: Inventing or hallucinating Qlik functions that don't exist",
+  "FORBIDDEN: Incomplete code - field lists without LOAD/SELECT keywords, statements without data sources",
   "REQUIRED: Preserve ALL identifiers exactly as provided (table names, field names, variables, keys)",
   "REQUIRED: DROP temporary tables after RESIDENT or intermediate generation to free memory",
   "REQUIRED: Use proper Qlik syntax for dates, numbers, and string functions",
+  "REQUIRED: Generate COMPLETE, syntactically valid Qlik code - every LOAD must have fields and source",
   "CRITICAL: NEVER translate, rename, or modify ANY identifier regardless of its language (Portuguese, Spanish, etc.)"
 ] as const;
 

@@ -177,6 +177,14 @@ REQUIREMENTS:
    - AS Alignment: Vertically align all AS keywords in each LOAD block
    - TRACE Separators: Add block separators between logical sections
 
+**CRITICAL: COMPLETENESS REQUIREMENT**
+- The optimizedScript MUST be a complete, runnable Qlik script
+- EVERY field list MUST be preceded by LOAD keyword or SQL SELECT
+- EVERY LOAD statement MUST have a data source (FROM, RESIDENT, INLINE, AUTOGENERATE, or SQL SELECT)
+- DO NOT generate partial code snippets or incomplete statements
+- DO NOT omit keywords like LOAD, SELECT, FROM, WHERE, etc.
+- If you cannot complete a section safely, keep the original code for that section
+
 CODE STANDARDS:
 - Consistent naming conventions
 - Explicit field lists (never LOAD *)
@@ -196,6 +204,41 @@ WHAT TO PRESERVE:
 - All table names exactly as provided
 - Business logic and calculations
 - Data transformations and mappings
+
+**COMMON MISTAKES TO AVOID:**
+❌ WRONG (incomplete):
+    C7_FILIAL,
+    C7_NUM,
+    C7_PRODUTO AS CodProduto
+FROM SC7010;
+
+✅ CORRECT (complete):
+LOAD
+    C7_FILIAL,
+    C7_NUM,
+    C7_PRODUTO AS CodProduto
+FROM
+    SC7010;
+
+❌ WRONG (missing SELECT):
+    B1_COD    AS CodProduto,
+    B1_DESC   AS DescProduto
+FROM SB1010;
+
+✅ CORRECT:
+SQL SELECT
+    B1_COD    AS CodProduto,
+    B1_DESC   AS DescProduto
+FROM
+    SB1010;
+
+OR:
+
+LOAD
+    B1_COD    AS CodProduto,
+    B1_DESC   AS DescProduto
+FROM
+    [lib://SB1010.qvd] (qvd);
 
 OUTPUT LIMITS:
 - Maximum 8 changes in changesApplied array
