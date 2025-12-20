@@ -50,17 +50,17 @@ export const AdsterraAd: React.FC<AdsterraAdProps> = ({
     invokeScript.async = true;
     invokeScript.defer = true;
     invokeScript.setAttribute('data-cfasync', 'false');
-    
+
     // Listeners de carregamento
     invokeScript.onload = () => {
       setIsLoading(false);
     };
-    
+
     invokeScript.onerror = () => {
       setIsLoading(false);
       console.warn('Adsterra: Falha ao carregar anúncio');
     };
-    
+
     // Timeout de segurança (5 segundos)
     const loadTimeout = setTimeout(() => {
       setIsLoading(false);
@@ -109,8 +109,9 @@ export const AdsterraAd: React.FC<AdsterraAdProps> = ({
 
       <div
         ref={adContainerRef}
-        className={`adsterra-ad-container adsterra-ad-${format}`}
+        className={`adsterra-ad-container adsterra-ad-${format} ${isLoading ? 'loading' : 'loaded'}`}
         aria-label="Anúncio"
+        aria-busy={isLoading}
       />
 
       <div className="adsterra-ad-disclaimer">
