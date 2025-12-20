@@ -148,7 +148,7 @@ def deploy_sequence(
 
     print(f"[GIT] Pull origin/{branch}")
     pull_proc = subprocess.run(
-        ["git", "pull", "origin", branch], capture_output=True, text=Truey
+        ["git", "pull", "origin", branch], capture_output=True, text=True
     )
     if pull_proc.returncode != 0:
         print(
