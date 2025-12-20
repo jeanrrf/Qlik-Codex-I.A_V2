@@ -13,6 +13,7 @@ import {
   buildGuardrailsSection,
   DESIGN_PATTERNS_SECTION,
   OUTPUT_RULES,
+  OUTPUT_RULES_CODE,
   PROMPT_VERSION
 } from "./core";
 import { TASK_TEMPLATES, TaskId } from "./templates";
@@ -141,6 +142,19 @@ function buildTaskSection(taskId: TaskId): string {
   return template;
 }
 
+function buildOutputRules(taskId: TaskId): string {
+  if (taskId === "GRANULAR_STEP") {
+    return "";
+  }
+
+  const codeTasks = ["CODE_GEN", "NVIDIA_FAST", "FORMAT_ONLY"];
+  if (codeTasks.includes(taskId)) {
+    return OUTPUT_RULES_CODE;
+  }
+
+  return OUTPUT_RULES;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN PROMPT BUILDER
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -185,7 +199,10 @@ export function buildPrompt(options: PromptBuilderOptions): string {
   sections.push(buildTaskSection(taskId));
 
   // Add output rules
-  sections.push(OUTPUT_RULES);
+  const outputRules = buildOutputRules(taskId);
+  if (outputRules) {
+    sections.push(outputRules);
+  }
 
   return sections.join("\n\n");
 }

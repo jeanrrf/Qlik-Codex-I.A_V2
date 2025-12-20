@@ -147,6 +147,61 @@ function detectIncompleteStatements(script: string): string[] {
   return errors;
 }
 
+function detectUnbalancedParentheses(script: string): string[] {
+  const errors: string[] = [];
+  const lines = script.split(/\r?\n/);
+  let balance = 0;
+  let inSingle = false;
+  let inDouble = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    if (!trimmed || isComment(trimmed)) {
+      continue;
+    }
+
+    for (let j = 0; j < line.length; j++) {
+      const ch = line[j];
+      const next = line[j + 1];
+
+      if (ch === "'" && !inDouble) {
+        if (inSingle && next === "'") {
+          j++;
+          continue;
+        }
+        inSingle = !inSingle;
+        continue;
+      }
+
+      if (ch === '"' && !inSingle) {
+        inDouble = !inDouble;
+        continue;
+      }
+
+      if (inSingle || inDouble) {
+        continue;
+      }
+
+      if (ch === '(') {
+        balance++;
+      } else if (ch === ')') {
+        balance--;
+        if (balance < 0) {
+          errors.push(`Linha ${i + 1}: CRITICO - Parenteses fechando sem abertura correspondente.`);
+          balance = 0;
+        }
+      }
+    }
+  }
+
+  if (balance > 0) {
+    errors.push(`CRITICO - Parenteses abertos sem fechamento detectados (saldo ${balance}).`);
+  }
+
+  return errors;
+}
+
 export interface ValidationResult {
   safe: boolean;
   warnings: string[];
@@ -162,6 +217,11 @@ export function validateQlikScript(script: string): ValidationResult {
   const incompleteErrors = detectIncompleteStatements(script);
   if (incompleteErrors.length > 0) {
     warnings.push(...incompleteErrors);
+  }
+
+  const parenthesesErrors = detectUnbalancedParentheses(script);
+  if (parenthesesErrors.length > 0) {
+    warnings.push(...parenthesesErrors);
   }
 
   const getNextCodeLineIndex = (start: number): number => {

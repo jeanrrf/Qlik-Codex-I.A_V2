@@ -758,6 +758,30 @@ export async function optimizeScript(
     // Aplica validação determinística final
     result = applyDeterministicValidation(result);
 
+    const criticalValidationWarnings = (result.analysis.validationWarnings || [])
+      .filter((warning) => /CRITICO|CRITICAL/i.test(warning));
+
+    if (criticalValidationWarnings.length > 0) {
+      const warningPreview = criticalValidationWarnings.slice(0, 3).join(" | ");
+      const blockMessage = "ALERTA: Validacao bloqueou o script otimizado por codigo incompleto. Retornando script original.";
+
+      result.optimizedScript = result.originalScript;
+      result.diffStats = { linesAdded: 0, linesRemoved: 0, linesModified: 0 };
+      result.analysis.safeToApply = false;
+      result.analysis.breakingRisk = "high";
+      result.analysis.changes = [];
+      result.consultancyDocument = undefined;
+      result.summary = `${blockMessage}\n\n${result.summary}`;
+      result.analysis.notes = result.analysis.notes
+        ? `${result.analysis.notes}\n${blockMessage}${warningPreview ? `: ${warningPreview}` : ""}`
+        : `${blockMessage}${warningPreview ? `: ${warningPreview}` : ""}`;
+
+      sseEmitter.sendToCurrent({
+        type: "warning",
+        message: blockMessage
+      });
+    }
+
     // Calcula métricas de qualidade
     const qualityMetricsStart = Date.now();
     const originalParsed = parseQlikScript(result.originalScript);

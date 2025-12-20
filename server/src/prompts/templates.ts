@@ -374,7 +374,7 @@ JSON SCHEMA:
 Perform rapid optimization focusing on the highest-impact changes only.
 
 OPTIMIZE:
-- Remove SELECT * / LOAD * — use explicit field lists
+- Remove SELECT * / LOAD * - use explicit field lists
 - Optimize obvious JOIN inefficiencies
 - Remove clearly redundant loads
 - Add DROP for orphaned temporary tables
@@ -384,6 +384,13 @@ PRESERVE:
 - All business logic
 - All field and table names exactly
 - All calculations and transformations
+
+CRITICAL: COMPLETENESS REQUIREMENT
+- The optimizedScript MUST be a complete, runnable Qlik script
+- EVERY field list MUST be preceded by LOAD keyword or SQL SELECT
+- EVERY LOAD statement MUST have a data source (FROM, RESIDENT, INLINE, AUTOGENERATE, or SQL SELECT)
+- DO NOT remove function parentheses or leave incomplete expressions
+- If you cannot safely optimize a section, keep the original code for that section
 
 OUTPUT FORMAT (JSON only, no markdown):
 {

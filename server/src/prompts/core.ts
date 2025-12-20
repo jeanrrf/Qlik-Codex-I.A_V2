@@ -147,10 +147,41 @@ export const OUTPUT_CONFIG = {
 export const OUTPUT_RULES = `## OUTPUT REQUIREMENTS
 
 FORMAT:
-- Pure JSON only — no markdown fences (\`\`\`), no code blocks, no HTML
+- Pure JSON only - no markdown fences (\`\`\`), no code blocks, no HTML
 - No comments inside JSON
 - Arrays limited to ${OUTPUT_CONFIG.maxArrayItems} items maximum
 - Total response under ${OUTPUT_CONFIG.maxResponseChars} characters when possible
+
+LANGUAGE:
+- Explanations, summaries, descriptions: Brazilian Portuguese (PT-BR)
+- Code identifiers: Preserve EXACTLY as provided (never translate)
+- Field names in output: Keep original language from input script
+
+CODE FORMATTING:
+- Preserve line breaks inside optimizedScript field
+- Use \\n for newlines within JSON string values
+- Maintain proper indentation (4 spaces per level)
+
+ROBUSTNESS & ACCURACY:
+- PRESERVE SEMANTICS: NEVER change the logic of the original script.
+- PRESERVE IDENTIFIERS: NEVER translate or rename fields, tables, or variables.
+- COMPAQ FORMATTING: Always apply AS Alignment and TRACE Separators.
+- ERROR HANDLING: If the script is logically broken, explain why in the technicalDetails.
+- RAG UTILIZATION: If RAG context is provided, follow the patterns seen in high-reward examples.
+
+EDGE CASES:
+- If no optimization needed: Return original script with "noChangesNeeded": true
+- If script is invalid: Return validation errors, do not attempt optimization
+- If uncertain about a transformation: Prefer safety, keep original code`;
+
+export const OUTPUT_RULES_CODE = `## OUTPUT REQUIREMENTS (CODE OUTPUT)
+
+FORMAT:
+- Pure JSON only - no markdown fences (\`\`\`), no code blocks, no HTML
+- No comments inside JSON
+- Arrays limited to ${OUTPUT_CONFIG.maxArrayItems} items maximum
+- No hard character limit for optimizedScript. NEVER truncate code
+- If response is large, shorten or omit summaries/changes but keep full optimizedScript
 
 LANGUAGE:
 - Explanations, summaries, descriptions: Brazilian Portuguese (PT-BR)
