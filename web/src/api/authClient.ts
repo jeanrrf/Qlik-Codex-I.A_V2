@@ -4,6 +4,29 @@
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
 const JSON_HEADERS = { "Content-Type": "application/json" } as const;
+const AUTH_TIMEOUT_MS = 5000; // 5 seconds timeout for auth requests
+
+/**
+ * Fetch with timeout to prevent long hangs when backend is unavailable
+ */
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs: number = AUTH_TIMEOUT_MS
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 function buildHeaders(token?: string, isGet = false): Record<string, string> {
   const headers: Record<string, string> = isGet ? {} : { ...JSON_HEADERS };
@@ -95,23 +118,29 @@ export async function getGoogleAuthUrl(token?: string): Promise<string> {
  * Verifica status de autenticação
  */
 export async function checkAuthStatus(token?: string): Promise<AuthStatusResponse> {
-  const response = await fetch(resolveUrl("/auth/status"), {
-    credentials: "include",
-    headers: buildHeaders(token, true)
-  });
+  try {
+    const response = await fetchWithTimeout(resolveUrl("/auth/status"), {
+      credentials: "include",
+      headers: buildHeaders(token, true)
+    });
 
-  if (!response.ok) {
+    if (!response.ok) {
+      return { authenticated: false };
+    }
+
+    return response.json();
+  } catch (error) {
+    // Timeout or network error - return unauthenticated without blocking
+    console.warn("[AuthClient] checkAuthStatus failed:", error instanceof Error ? error.message : error);
     return { authenticated: false };
   }
-
-  return response.json();
 }
 
 /**
  * Busca dados do usuário autenticado
  */
 export async function getCurrentUser(token?: string): Promise<UserResponse> {
-  const response = await fetch(resolveUrl("/auth/me"), {
+  const response = await fetchWithTimeout(resolveUrl("/auth/me"), {
     credentials: "include",
     headers: buildHeaders(token, true)
   });

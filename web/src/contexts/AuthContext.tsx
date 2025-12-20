@@ -33,37 +33,42 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   /**
    * Função utilitária para validar sessão usando cookies HttpOnly
+   * Agora com tratamento de timeout para não bloquear a renderização
    */
   const revalidate = async () => {
-    // console.log(" [AuthContext] Revalidate: Iniciando...");
+    const startTime = Date.now();
     try {
       let storedToken: string | undefined;
       try {
         storedToken = localStorage.getItem(ACCESS_TOKEN_KEY) || undefined;
-        // console.log(" [AuthContext] Token do localStorage:", !!storedToken);
       } catch {
-        // console.warn(" [AuthContext] Erro ao acessar localStorage");
         storedToken = undefined;
       }
 
-      // console.log(" [AuthContext] Verificando status de autenticação...");
       const status = await checkAuthStatus(storedToken);
-      // console.log(" [AuthContext] Status recebido:", status);
 
       if (status.authenticated && status.user) {
-        // console.log(" [AuthContext] Usuário autenticado, buscando dados completos...");
-        const userData = await getCurrentUser(storedToken);
-        // console.log(" [AuthContext] Dados do usuário recebidos:", userData.user?.email);
-        setState({
-          user: userData.user as User,
-          isAuthenticated: true,
-          isLoading: false,
-          error: null,
-          accessToken: storedToken || "cookie"
-        });
-        // console.log(" [AuthContext] Estado atualizado - usuário autenticado");
+        try {
+          const userData = await getCurrentUser(storedToken);
+          setState({
+            user: userData.user as User,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null,
+            accessToken: storedToken || "cookie"
+          });
+        } catch (userErr) {
+          // Se falhar ao buscar dados do usuário, ainda assim libera a UI
+          console.warn("[AuthContext] Falha ao buscar dados do usuário:", userErr);
+          setState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+            error: null,
+            accessToken: null
+          });
+        }
       } else {
-        // console.log(" [AuthContext] Usuário não autenticado");
         try {
           localStorage.removeItem(ACCESS_TOKEN_KEY);
         } catch {
@@ -78,17 +83,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
         });
       }
     } catch (err) {
-      console.error(" [AuthContext] Erro na inicialização:", err);
+      const elapsed = Date.now() - startTime;
+      // Só loga erro se não for timeout (timeout é esperado quando backend offline)
+      if (elapsed < 4500) {
+        console.warn("[AuthContext] Erro na inicialização:", err);
+      }
       try {
         localStorage.removeItem(ACCESS_TOKEN_KEY);
       } catch {
         // ignore storage errors
       }
+      // Libera a UI mesmo com erro - não bloqueia renderização
       setState({
         user: null,
         isAuthenticated: false,
         isLoading: false,
-        error: "Failed to check authentication status",
+        error: null, // Não mostra erro para não assustar o usuário guest
         accessToken: null
       });
     }
