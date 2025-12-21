@@ -57,6 +57,11 @@ const corsOptions = {
   },
   credentials: true
 };
+
+// Apply CORS first
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Enable pre-flight for all routes
+
 const webBuildPath = path.resolve(__dirname, "..", "..", "web", "dist");
 const indexHtmlPath = path.join(webBuildPath, "index.html");
 
@@ -86,11 +91,11 @@ const apiLimiter = rateLimit({
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   message: "Too many requests from this IP, please try again after 15 minutes",
+  skip: (req) => req.method === 'OPTIONS', // Skip rate limiting for preflight requests
 });
 
 // Apply rate limiting to all API routes
 app.use("/api", apiLimiter);
-app.use(cors(corsOptions));
 
 // Compressão Gzip (gratuita) - reduz tamanho das respostas em 60-80%
 app.use(
