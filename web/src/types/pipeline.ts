@@ -206,6 +206,25 @@ export function getStagesForMode(mode: 'ultra-expert' | 'nvidia-fast'): Pipeline
 }
 
 /**
+ * Retorna as stages filtradas por intent
+ * - "audit": Remove CODE_GEN (apenas análise + entrega)
+ * - "refactor": Todas as stages (fluxo completo)
+ */
+export function getStagesForIntent(
+  mode: 'ultra-expert' | 'nvidia-fast',
+  intent: 'audit' | 'refactor' = 'refactor'
+): PipelineStage[] {
+  const stages = getStagesForMode(mode);
+
+  if (intent === 'audit' && mode === 'ultra-expert') {
+    // Remove CODE_GEN no modo audit
+    return stages.filter(s => s.id !== 'CODE_GEN');
+  }
+
+  return stages;
+}
+
+/**
  * Reseta todas as stages para pending
  */
 export function resetStagesToPending(stages: PipelineStage[]): PipelineStage[] {

@@ -125,8 +125,13 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
   // Sincroniza mudança de modo com o hook de progresso
   const handleModeChange = useCallback((newMode: OptimizeMode) => {
     setMode(newMode);
-    optimization.updateMode(newMode); // Atualiza as stages visíveis
-  }, [optimization]);
+    // Reseta intent para "refactor" quando muda para nvidia-fast (não suporta audit)
+    const effectiveIntent = newMode === "nvidia-fast" ? "refactor" : intent;
+    if (newMode === "nvidia-fast" && intent === "audit") {
+      setIntent("refactor");
+    }
+    optimization.updateMode(newMode, effectiveIntent); // Atualiza as stages visíveis
+  }, [optimization, intent]);
 
   const selectedLLM = useMemo(() => getLLMOptionById(llmOptionId), [llmOptionId]);
   const providerForMode = useMemo(() => mode === "nvidia-fast" ? "nvidia" as const : selectedLLM.provider, [mode, selectedLLM]);
@@ -554,7 +559,10 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
             <div className="intent-toggle-container">
               <button
                 className={`intent-toggle-btn ${intent === "audit" ? "active" : ""}`}
-                onClick={() => setIntent("audit")}
+                onClick={() => {
+                  setIntent("audit");
+                  optimization.updateIntent("audit");
+                }}
                 title="Apenas análise e diagnóstico, sem gerar código"
               >
                 <span className="intent-icon">🔍</span>
@@ -562,7 +570,10 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
               </button>
               <button
                 className={`intent-toggle-btn ${intent === "refactor" ? "active" : ""}`}
-                onClick={() => setIntent("refactor")}
+                onClick={() => {
+                  setIntent("refactor");
+                  optimization.updateIntent("refactor");
+                }}
                 title="Análise + geração de código otimizado"
               >
                 <span className="intent-icon">⚡</span>

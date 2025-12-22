@@ -12,6 +12,7 @@ import {
   PipelineProgress,
   TASK_TIMEOUT_MS,
   getStagesForMode as getStagesFromPipeline,
+  getStagesForIntent as getStagesForIntentFromPipeline,
   resetStagesToPending as resetStagesFromPipeline,
   calculateOverallProgress as calcProgressFromPipeline,
   calculateStageStatus as calcStatusFromPipeline,
@@ -44,6 +45,7 @@ interface OptimizationOptions {
 
 // Usar funções centralizadas do pipeline
 const getStagesForMode = getStagesFromPipeline;
+const getStagesForIntent = getStagesForIntentFromPipeline;
 const resetStagesToPending = resetStagesFromPipeline;
 const calculateOverallProgress = calcProgressFromPipeline;
 const calculateStageStatus = calcStatusFromPipeline;
@@ -77,7 +79,10 @@ export interface UseOptimizationProgressReturn {
 
   /** Atualiza o modo e stages correspondentes */
 
-  updateMode: (mode: OptimizeMode) => void;
+  updateMode: (mode: OptimizeMode, intent?: OptimizationIntent) => void;
+
+  /** Atualiza o intent e filtra stages (remove CODE_GEN em audit) */
+  updateIntent: (intent: OptimizationIntent) => void;
 
   /** Se está em execução */
 
@@ -311,17 +316,20 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
 
 
+  // Estado interno do intent para filtragem de stages
+  const [currentIntent, setCurrentIntent] = useState<OptimizationIntent>("refactor");
+
   // Método para atualizar o modo e stages correspondentes
 
-  const updateMode = useCallback((newMode: OptimizeMode) => {
+  const updateMode = useCallback((newMode: OptimizeMode, intent?: OptimizationIntent) => {
 
     if (isRunning) return; // Não permite mudança durante execução
 
-
+    const effectiveIntent = intent ?? currentIntent;
 
     setCurrentMode(newMode);
 
-    const newStages = getStagesForMode(newMode);
+    const newStages = getStagesForIntent(newMode, effectiveIntent);
 
     setProgress(prev => ({
 
@@ -331,9 +339,21 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
     }));
 
-  }, [isRunning]);
+  }, [isRunning, currentIntent]);
 
+  // Método para atualizar o intent e filtrar stages correspondentes
+  const updateIntent = useCallback((newIntent: OptimizationIntent) => {
+    if (isRunning) return; // Não permite mudança durante execução
 
+    setCurrentIntent(newIntent);
+
+    const newStages = getStagesForIntent(currentMode, newIntent);
+
+    setProgress(prev => ({
+      ...prev,
+      stages: resetStagesToPending(newStages)
+    }));
+  }, [isRunning, currentMode]);
 
   const startOptimization = useCallback(async (options: OptimizationOptions): Promise<OptimizeScriptApiResponse | null> => {
 
@@ -341,11 +361,13 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
     retryCountRef.current = 0;
     isRetryingRef.current = false;
 
-    // Atualiza o modo atual e seleciona as stages corretas
+    // Atualiza o modo atual e seleciona as stages corretas baseado no intent
 
     setCurrentMode(options.mode);
 
-    const stagesToUse = getStagesForMode(options.mode);
+    // Usa getStagesForIntent para filtrar CODE_GEN quando intent="audit"
+    const intent = options.intent || "refactor";
+    const stagesToUse = getStagesForIntent(options.mode, intent);
 
 
 
@@ -356,7 +378,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
     setCurrentStep(null);
 
     setError(null);
-    setLiveMessage("Inicializando pipeline...");
+    setLiveMessage(`Inicializando pipeline (${intent === 'audit' ? 'Análise' : 'Refatoração'})...`);
 
 
 
@@ -1196,6 +1218,7 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
     resetProgress: reset,
     restoreProgress,
     updateMode,
+    updateIntent,
     isRunning,
 
     // Propriedades SSE
