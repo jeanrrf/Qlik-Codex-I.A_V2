@@ -3,6 +3,9 @@
  * Validates session persistence with nullable progress_data
  */
 
+import dotenv from "dotenv";
+dotenv.config();
+
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import {
   saveActiveSession,
@@ -147,16 +150,16 @@ describe("sessionService", () => {
       const db = new DbAdapter();
 
       await expect(async () => {
+        // NOTA: coluna 'script' foi removida do schema por segurança
         await db.run(`
           INSERT INTO active_sessions (
-            id, user_id, mode, script, llm_provider, llm_model,
+            id, user_id, mode, llm_provider, llm_model,
             progress_data, status, created_at, updated_at, expires_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
           testSessionId + "-direct",
           null,
           "ultra-expert",
-          "LOAD * FROM test;",
           null,
           null,
           null, // Explicitly null - should be allowed now
