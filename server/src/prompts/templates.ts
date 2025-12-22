@@ -57,6 +57,7 @@ export const AnalysisAndPlanSchema = z.object({
 });
 
 export const CodeGenSchema = z.object({
+  reasoning: z.string().optional(), // Campo de planejamento (opcional para retrocompatibilidade)
   optimizedScript: z.string(),
   changesApplied: z.array(z.object({
     category: z.enum(["performance", "readability", "cleanup", "structure", "model_integrity", "maintainability", "security", "logic"]),
@@ -112,6 +113,7 @@ export const FormatOnlySchema = z.object({
 });
 
 export const NvidiaFastSchema = z.object({
+  reasoning: z.string().optional(), // Campo de planejamento (opcional)
   optimizedScript: z.string(),
   summary: z.string(),
   changes: z.array(z.object({
@@ -188,10 +190,16 @@ REQUIREMENTS:
 
 CODE STANDARDS:
 - Consistent naming conventions
-- Explicit field lists (never LOAD *)
 - DROP temporary tables after use
 - Proper indentation (4 spaces)
 - Keywords in UPPERCASE (LOAD, FROM, WHERE, AS, LEFT JOIN, etc.)
+
+**LOAD * / SELECT * RULE (CONDITIONAL):**
+- IF explicit field list is provided in original script → preserve it exactly
+- IF LOAD * or SELECT * exists AND you know the schema (fields are visible in context) → you MAY expand to explicit fields
+- IF LOAD * or SELECT * exists BUT schema is UNKNOWN → KEEP LOAD */SELECT * AS-IS. Do NOT invent field names.
+- NEVER delete a LOAD block just because you cannot expand LOAD *
+- When in doubt, preserve the original code
 
 WHAT TO OPTIMIZE:
 - Remove redundant loads
@@ -248,6 +256,7 @@ OUTPUT LIMITS:
 
 JSON SCHEMA:
 {
+  "reasoning": "Brief explanation of your optimization approach (2-3 sentences)",
   "optimizedScript": "FULL_OPTIMIZED_SCRIPT_WITH_DESIGN_PATTERNS",
   "changesApplied": [
     {
@@ -375,8 +384,13 @@ JSON SCHEMA:
 
 Perform rapid optimization focusing on the highest-impact changes only.
 
+**LOAD * / SELECT * RULE (CONDITIONAL):**
+- IF explicit field list exists → preserve it
+- IF LOAD */SELECT * exists AND schema is known → you MAY expand to explicit fields
+- IF LOAD */SELECT * exists BUT schema is UNKNOWN → KEEP AS-IS. Do NOT invent fields.
+- NEVER delete code just because you cannot expand LOAD *
+
 OPTIMIZE:
-- Remove SELECT * / LOAD * - use explicit field lists
 - Optimize obvious JOIN inefficiencies
 - Remove clearly redundant loads
 - Add DROP for orphaned temporary tables
@@ -398,6 +412,7 @@ CRITICAL: COMPLETENESS REQUIREMENT
 
 OUTPUT FORMAT (JSON only, no markdown):
 {
+  "reasoning": "Brief explanation of optimization approach (1-2 sentences)",
   "optimizedScript": "OPTIMIZED_SCRIPT",
   "summary": "Concise summary of improvements (PT-BR)",
   "changes": [

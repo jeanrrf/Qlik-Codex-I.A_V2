@@ -34,7 +34,9 @@ logger.info(`[QlikOptimizeAgent] Using AINEX Unified Prompt System v${PROMPT_VER
 // --- AGENT LOGIC ---
 
 // Performance constants
-const MAX_HISTORY_TOKENS = 800; // Limite de chars para resumo do histórico (aumentado para contexto)
+// CONTEXT PRESERVATION: Aumentado para evitar "Context Collapse"
+// O modelo precisa do contexto completo da análise para gerar código correto
+const MAX_HISTORY_TOKENS = 15000; // Limite de chars para contexto entre tasks (era 800!)
 const ANALYSIS_CACHE = new Map<string, { result: Record<string, unknown>; timestamp: number }>();
 const ANALYSIS_CACHE_TTL = 1800000; // 30 minutos
 const ANALYSIS_CACHE_MAX_SIZE = 50;
@@ -158,49 +160,93 @@ export class QlikOptimizeAgent {
   }
 
   /**
-   * Gera resumo compacto de um resultado de task para histórico
-   * OTIMIZAÇÃO: Evita acumulação exponencial de tokens
+   * Gera resumo RICO de um resultado de task para histórico
+   * CONTEXT PRESERVATION: Passa informação completa para próximas tasks
    */
   private summarizeTaskResult(taskName: string, result: unknown): string {
     const maxLen = MAX_HISTORY_TOKENS;
-    let summary = `[${taskName}]: `;
+    let summary = `\n=== ${taskName} RESULT ===\n`;
 
     if (taskName === "ANALYSIS_AND_PLAN") {
-      // Extrai apenas pontos críticos da análise
-      let criticalIssues: unknown[] = [];
-      let planObj = undefined as { steps?: unknown[] } | undefined;
+      // Passa análise COMPLETA em vez de resumir agressivamente
       if (typeof result === 'object' && result !== null) {
         const r = result as Record<string, unknown>;
+
+        // Análise estrutural completa
         if (r.analysis && typeof r.analysis === 'object') {
           const analysis = r.analysis as Record<string, unknown>;
-          if (Array.isArray(analysis.issues)) {
-            criticalIssues = (analysis.issues as unknown[]).slice(0, 3);
+          summary += `\n## ANALYSIS:\n`;
+          summary += `- Structural Score: ${analysis.structuralScore || 'N/A'}\n`;
+          summary += `- Complexity: ${analysis.complexity || 'N/A'}\n`;
+
+          if (Array.isArray(analysis.bottlenecks)) {
+            summary += `- Bottlenecks:\n`;
+            (analysis.bottlenecks as Array<Record<string, unknown>>).forEach((b, i) => {
+              summary += `  ${i + 1}. [${b.severity}] ${b.description} (${b.location || 'N/A'})\n`;
+            });
+          }
+
+          if (Array.isArray(analysis.optimizationOpportunities)) {
+            summary += `- Opportunities:\n`;
+            (analysis.optimizationOpportunities as string[]).forEach((o, i) => {
+              summary += `  ${i + 1}. ${o}\n`;
+            });
+          }
+
+          if (analysis.analysisSummary) {
+            summary += `- Summary: ${analysis.analysisSummary}\n`;
           }
         }
-        planObj = r.plan as { steps?: unknown[] } | undefined;
-      }
-      const topPriorities = Array.isArray(planObj?.steps)
-        ? (planObj.steps as unknown[]).slice(0, 3).map((s) => {
-          if (typeof s === 'object' && s !== null && 'action' in (s as Record<string, unknown>)) {
-            return String((s as Record<string, unknown>).action);
+
+        // Plano de otimização completo
+        if (r.plan && typeof r.plan === 'object') {
+          const plan = r.plan as Record<string, unknown>;
+          summary += `\n## OPTIMIZATION PLAN:\n`;
+          summary += `- Strategy: ${plan.strategyName || 'N/A'}\n`;
+          summary += `- Risk Level: ${plan.riskLevel || 'N/A'}\n`;
+
+          if (Array.isArray(plan.planSteps)) {
+            summary += `- Steps:\n`;
+            (plan.planSteps as Array<Record<string, unknown>>).forEach((s) => {
+              summary += `  ${s.step}. ${s.title}: ${s.details} [Effort: ${s.estimatedEffort}]\n`;
+            });
           }
-          return String(s);
-        })
-        : [];
-      summary += `Issues: ${criticalIssues.join(', ').substring(0, 150)}. Priorities: ${topPriorities.join(', ').substring(0, 150)}`;
+
+          if (plan.estimatedImprovement && typeof plan.estimatedImprovement === 'object') {
+            const est = plan.estimatedImprovement as Record<string, unknown>;
+            summary += `- Expected Improvement: Load ${est.loadTimeReduction}, RAM ${est.ramUsageReduction}\n`;
+          }
+        }
+      }
     } else if (taskName === "CODE_GEN") {
-      // Apenas confirma que script foi gerado, não inclui o script
+      // Para CODE_GEN, apenas confirma que script foi gerado
       let lineCount = 0;
       if (typeof result === 'object' && result !== null && 'optimizedScript' in (result as Record<string, unknown>)) {
         const rs = (result as Record<string, unknown>).optimizedScript;
         if (typeof rs === 'string') lineCount = rs.split('\n').length;
       }
-      summary += `Script gerado (${lineCount} linhas). Mudanças aplicadas com sucesso.`;
+      summary += `Script gerado com ${lineCount} linhas.\n`;
+
+      // Inclui reasoning se disponível
+      if (typeof result === 'object' && result !== null) {
+        const r = result as Record<string, unknown>;
+        if (r.reasoning) {
+          summary += `Reasoning: ${r.reasoning}\n`;
+        }
+        if (Array.isArray(r.changesApplied)) {
+          summary += `Changes applied: ${r.changesApplied.length}\n`;
+        }
+      }
     } else {
-      summary += "Concluído.";
+      summary += "Concluído.\n";
     }
 
-    return summary.substring(0, maxLen);
+    // Garante que não excede o limite
+    if (summary.length > maxLen) {
+      summary = summary.substring(0, maxLen - 50) + '\n... [truncated for token budget]\n';
+    }
+
+    return summary;
   }
 
   /**

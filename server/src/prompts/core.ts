@@ -28,14 +28,15 @@ export const GUARDRAILS = [
   "FORBIDDEN: Markdown, HTML, or code fences — pure JSON only",
   "FORBIDDEN: Non-Qlik functions (DATEDIFF, GETDATE, CASE WHEN, NVL, DECODE)",
   "FORBIDDEN: Set Analysis '{<...>}' in load scripts — charts only",
-  "CAUTION: SELECT */LOAD * — prefer explicit fields unless script is exploratory",
-  "FORBIDDEN: Hallucinated Qlik functions",
+  "CAUTION: LOAD */SELECT * — expand ONLY if schema is known; otherwise KEEP AS-IS",
+  "FORBIDDEN: Hallucinated Qlik functions or field names",
   "FORBIDDEN: Incomplete code — every LOAD must have keyword + fields + source",
   "REQUIRED: Preserve ALL identifiers exactly (never rename/translate)",
   "REQUIRED: DROP temp tables after RESIDENT to free RAM",
   "REQUIRED: Valid Qlik syntax for dates, numbers, strings",
   "REQUIRED: COMPLETE, runnable code — no snippets",
-  "CRITICAL: NEVER translate identifiers regardless of language"
+  "CRITICAL: NEVER translate identifiers regardless of language",
+  "CRITICAL: When schema is unknown, preserve original code instead of inventing"
 ] as const;
 
 // ═══════════════════════════════════════════════════════════════════════════════
