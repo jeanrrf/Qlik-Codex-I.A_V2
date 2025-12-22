@@ -77,7 +77,48 @@ Analyze script structure and performance. Create a prioritized plan.
     `)
     .withCustomSection(
       'output-format',
-      `## OUTPUT FORMAT\n\nReturn JSON matching AnalysisAndPlanSchema.`,
+      `## OUTPUT FORMAT
+
+Return a JSON object strictly matching this structure:
+
+\`\`\`json
+{
+  "analysis": {
+    "structuralScore": number, // 0-100
+    "complexity": "Low" | "Medium" | "High" | "Extreme",
+    "bottlenecks": [
+      {
+        "severity": "Critical" | "High" | "Medium" | "Low",
+        "description": "string",
+        "location": "string (optional)"
+      }
+    ], // Max 6 items
+    "dataModelRisks": ["string"], // Max 6 items
+    "optimizationOpportunities": ["string"], // Max 6 items
+    "analysisSummary": "string"
+  },
+  "plan": {
+    "strategyName": "string",
+    "riskLevel": "Low" | "Medium" | "High",
+    "planSteps": [
+      {
+        "step": number,
+        "title": "string",
+        "details": "string",
+        "targetBottleneck": "string (optional)",
+        "estimatedEffort": "Low" | "Medium" | "High"
+      }
+    ], // Max 8 items
+    "estimatedImprovement": {
+      "loadTimeReduction": "string",
+      "ramUsageReduction": "string",
+      "maintainabilityScoreAfter": number // 0-100
+    }
+  }
+}
+\`\`\`
+
+Ensure valid JSON syntax. No markdown code blocks outside the JSON.`,
       60
     )
     .build();
@@ -99,7 +140,31 @@ Apply optimization plan and Design Patterns. Preserve ALL logic.
     `)
     .withCustomSection(
       'output-format',
-      `## OUTPUT FORMAT\n\nReturn JSON matching CodeGenSchema.`,
+      `## OUTPUT FORMAT
+
+Return a JSON object strictly matching this structure:
+
+\`\`\`json
+{
+  "reasoning": "string (optional)",
+  "optimizedScript": "string (the full Qlik script)",
+  "changesApplied": [
+    {
+      "category": "performance" | "readability" | "cleanup" | "structure" | "model_integrity" | "maintainability" | "security" | "logic",
+      "area": "string",
+      "impact": "string",
+      "riskLevel": "none" | "low" | "medium" | "high"
+    }
+  ], // Max 8 items
+  "completenessCheck": boolean,
+  "designPatternsApplied": {
+    "asAlignmentApplied": boolean,
+    "traceSeparatorsAdded": number
+  }
+}
+\`\`\`
+
+Ensure valid JSON syntax. The 'optimizedScript' must be a single string with newlines escaped as \\n.`,
       60
     )
     .build();
@@ -123,7 +188,30 @@ Validate script and generate documentation.
     `)
     .withCustomSection(
       'output-format',
-      '## OUTPUT FORMAT\n\nReturn JSON matching FinalDeliverySchema.',
+      `## OUTPUT FORMAT
+
+Return a JSON object strictly matching this structure:
+
+\`\`\`json
+{
+  "validation": {
+    "isValid": boolean,
+    "issuesFound": ["string"], // Max 4 items
+    "safetyScore": number // 0-100
+  },
+  "documentation": {
+    "title": "string",
+    "diagramMermaid": "string (Mermaid ERD syntax)"
+  },
+  "report": {
+    "executiveSummary": "string (max 600 chars)",
+    "achievedImprovements": ["string"], // Max 4 items
+    "deploymentChecklist": ["string"] // Max 4 items
+  }
+}
+\`\`\`
+
+Ensure valid JSON syntax.`,
       60
     )
     .build();
@@ -147,7 +235,29 @@ Document tables, fields, and relationships.
     `)
     .withCustomSection(
       'output-format',
-      '## OUTPUT FORMAT\n\nReturn JSON matching DocumentationSchema.',
+      `## OUTPUT FORMAT
+
+Return a JSON object strictly matching this structure:
+
+\`\`\`json
+{
+  "title": "string",
+  "description": "string",
+  "tables": [
+    {
+      "name": "string",
+      "description": "string",
+      "fields": ["string"],
+      "source": "string (optional)"
+    }
+  ],
+  "diagram_mermaid": "string",
+  "reload_strategy": "string",
+  "key_metrics": ["string"]
+}
+\`\`\`
+
+Ensure valid JSON syntax.`,
       60
     )
     .build();
@@ -170,7 +280,22 @@ Apply Design Patterns (AS Alignment + TRACE Separators).
     `)
     .withCustomSection(
       'output-format',
-      '## OUTPUT FORMAT\n\nReturn JSON matching FormatOnlySchema.',
+      `## OUTPUT FORMAT
+
+Return a JSON object strictly matching this structure:
+
+\`\`\`json
+{
+  "formattedScript": "string",
+  "notes": ["string"],
+  "designPatternsApplied": {
+    "asAlignmentApplied": boolean,
+    "traceSeparatorsAdded": number
+  }
+}
+\`\`\`
+
+Ensure valid JSON syntax.`,
       60
     )
     .build();
@@ -189,7 +314,26 @@ Preserve all logic, headers, and TRACEs.
     `)
     .withCustomSection(
       'output-format',
-      `## OUTPUT FORMAT\n\nReturn JSON matching NvidiaFastSchema.`,
+      `## OUTPUT FORMAT
+
+Return a JSON object strictly matching this structure:
+
+\`\`\`json
+{
+  "reasoning": "string (optional)",
+  "optimizedScript": "string",
+  "summary": "string",
+  "changes": [
+    {
+      "category": "performance" | "readability" | "structure",
+      "area": "string",
+      "impact": "string"
+    }
+  ] // Max 8 items
+}
+\`\`\`
+
+Ensure valid JSON syntax.`,
       60
     )
     .build();

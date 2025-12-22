@@ -509,9 +509,23 @@ async function runNvidiaFastMode(
             logger.info('[NVIDIA FAST] Strict schema validation successful');
           } else {
             logger.warn('[NVIDIA FAST] Schema validation failed, using loose mapping', { errors: validation.error.format() });
+
+            // 1. Try camelCase string
             if (typeof parsed.optimizedScript === "string") {
               optimizedScript = parsed.optimizedScript;
             }
+            // 2. Try snake_case string
+            else if (typeof parsed.optimized_script === "string") {
+              optimizedScript = parsed.optimized_script;
+            }
+            // 3. Try nested object (common hallucination)
+            else if (typeof parsed.optimized_script === "object" && parsed.optimized_script?.code) {
+              optimizedScript = parsed.optimized_script.code;
+            }
+            else if (typeof parsed.optimizedScript === "object" && parsed.optimizedScript?.code) {
+              optimizedScript = parsed.optimizedScript.code;
+            }
+
             if (typeof parsed.summary === "string") {
               summary = parsed.summary;
             }
