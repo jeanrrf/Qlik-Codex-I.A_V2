@@ -10,7 +10,7 @@
 import { formatExamplesSection, type ExampleId } from '../components/examples';
 import { formatLimits, type TaskLimits } from '../components/limits';
 import { CORE_RULES, formatRule, type RuleId } from '../components/rules';
-import { AINEX_IDENTITY, DESIGN_PATTERNS, OUTPUT_RULES } from '../core';
+import { AINEX_IDENTITY, DESIGN_PATTERNS_SECTION, OUTPUT_RULES } from '../core';
 
 export interface TemplateSection {
   id: string;
@@ -78,7 +78,7 @@ export class TemplateBuilder {
   withDesignPatterns(): this {
     this.sections.push({
       id: 'design-patterns',
-      content: `## MANDATORY DESIGN PATTERNS\n\n${DESIGN_PATTERNS}`,
+      content: DESIGN_PATTERNS_SECTION,
       weight: 25
     });
     return this;
