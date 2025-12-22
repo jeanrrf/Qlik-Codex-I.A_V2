@@ -332,7 +332,12 @@ export const DEFAULT_ROTATION_CONFIG: ProviderRotationConfig = {
   globalTimeout: 900000, // 15 minutos total (900000ms)
 };
 
+/** Intent: "audit" para análise sem geração de código, "refactor" para otimização completa */
+export type OptimizationIntent = "audit" | "refactor";
+
 export interface LLMOptions {
   provider?: string;
   model?: string;
+  /** Intent: "audit" para análise sem código, "refactor" para otimização completa */
+  intent?: OptimizationIntent;
 }

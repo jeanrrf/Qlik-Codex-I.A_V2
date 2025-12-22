@@ -1,6 +1,6 @@
 import { runQlikDocAgent } from "../agents/qlikDocAgent";
 import { logger } from "../lib/logger";
-import type { OptimizeScriptRequestBody } from "../types/api";
+import type { OptimizeScriptRequestBody, OptimizationIntent } from "../types/api";
 import { GenerateDocPayload } from "../validators/requestSchemas";
 
 import { cacheService } from "./cacheService";
@@ -9,13 +9,14 @@ import { optimizeScript } from "./optimizerService";
 
 class ScriptService {
   async optimizeScript(payload: OptimizeScriptRequestBody, abortSignal?: AbortSignal) {
-    logger.info("Starting optimization", { mode: payload.mode });
+    logger.info("Starting optimization", { mode: payload.mode, intent: payload.intent });
 
     // ✨ FREE TIER DEBUG: Log truncamento
     logger.debug("[FREE TIER] ScriptService recebeu", {
       applySmartTruncation: payload.applySmartTruncation,
       lineLimit: payload.lineLimit,
-      scriptLines: payload.script.split(/\r?\n/).length
+      scriptLines: payload.script.split(/\r?\n/).length,
+      intent: payload.intent
     });
 
     // Verifica se já foi abortado antes de começar
@@ -28,15 +29,20 @@ class ScriptService {
       // Map 'ainex' to undefined so the llmClient will use the configured external providers.
       const provider = payload.llmProvider === "ainex" ? undefined : payload.llmProvider;
 
-      // Tenta buscar no cache primeiro
-      const cached = cacheService.get(payload.script, payload.mode, provider);
+      // Intent: "audit" para análise sem código, "refactor" para otimização completa
+      const intent: OptimizationIntent = payload.intent || "refactor";
 
-      if (cached) {
-        logger.info("Cache HIT - returning cached result", { mode: payload.mode });
-        return cached;
+      // Tenta buscar no cache primeiro (apenas para refactor)
+      if (intent === "refactor") {
+        const cached = cacheService.get(payload.script, payload.mode, provider);
+
+        if (cached) {
+          logger.info("Cache HIT - returning cached result", { mode: payload.mode });
+          return cached;
+        }
       }
 
-      logger.info("Cache MISS - executing optimization", { mode: payload.mode });
+      logger.info("Cache MISS - executing optimization", { mode: payload.mode, intent });
       const startTime = Date.now();
 
       // ✨ FREE TIER: Passar parâmetros de truncamento se aplicável
@@ -45,7 +51,8 @@ class ScriptService {
         payload.mode,
         {
           provider,
-          model: payload.llmModel
+          model: payload.llmModel,
+          intent
         },
         true, // generateConsultancy
         payload.applySmartTruncation, // Vem do middleware authMiddleware
@@ -56,16 +63,16 @@ class ScriptService {
 
       const hasValidationWarnings = result.analysis?.validationWarnings && result.analysis.validationWarnings.length > 0;
 
-      // Salva no cache apenas se passou pela validação determinística
-      if (!hasValidationWarnings) {
+      // Salva no cache apenas se passou pela validação determinística e não é audit
+      if (!hasValidationWarnings && intent === "refactor") {
         cacheService.set(payload.script, payload.mode, result, provider);
-      } else {
+      } else if (hasValidationWarnings) {
         logger.warn("Cache SKIP - validação determinística encontrou alertas, não persistindo resultado em cache", {
           warnings: result.analysis.validationWarnings?.slice(0, 3)
         });
       }
 
-      logger.info("Optimization completed", { duration: durationMs });
+      logger.info("Optimization completed", { duration: durationMs, intent });
 
       return result;
     } catch (err) {

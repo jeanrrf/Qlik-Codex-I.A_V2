@@ -488,7 +488,9 @@ export function useOptimizationProgress(): UseOptimizationProgressReturn {
 
           llmProvider: options.llmProvider,
 
-          llmModel: options.llmModel
+          llmModel: options.llmModel,
+
+          intent: options.intent || "refactor"
 
         }),
 

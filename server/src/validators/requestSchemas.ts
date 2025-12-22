@@ -14,6 +14,8 @@ export const optimizeScriptSchema = z
         "Script contém padrões potencialmente perigosos"
       ),
     mode: z.enum(["ultra-expert", "nvidia-fast"]).default("ultra-expert"),
+    /** Intent: "audit" para análise sem geração de código, "refactor" para otimização completa */
+    intent: z.enum(["audit", "refactor"]).default("refactor"),
     llmProvider: z.enum(["google", "nvidia", "ainex"]).optional(),
     llmModel: z.string().min(1).optional(),
     userId: z.string().optional(),
