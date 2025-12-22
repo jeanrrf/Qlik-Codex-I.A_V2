@@ -29,7 +29,10 @@ export const GUARDRAILS = [
   "FORBIDDEN: Set Analysis '{<...>}' in load scripts",
   "REQUIRED: Preserve ALL identifiers exactly (never rename/translate)",
   "REQUIRED: Valid Qlik syntax",
-  "CRITICAL: Preserve initial script headers and TRACE statements"
+  "CRITICAL: Preserve initial script headers and TRACE statements",
+  "CRITICAL: NEVER generate incomplete code - every field list MUST have LOAD/SELECT keyword",
+  "CRITICAL: EVERY LOAD statement MUST have its complete field list",
+  "CRITICAL: Align ALL AS keywords vertically within each LOAD block for perfect column alignment"
 ] as const;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -99,7 +102,19 @@ export const OUTPUT_RULES_CODE = `## OUTPUT REQUIREMENTS (CODE)
 - **Language**: PT-BR for explanations.
 - **Identifiers**: NEVER translate/rename fields or tables.
 - **Logic**: Preserve ALL business logic.
-- **Completeness**: NEVER truncate the script.
+- **Completeness**: NEVER truncate the script. NEVER generate incomplete LOAD statements.
+- **Code Structure**: EVERY field list MUST have LOAD/SELECT keyword. NEVER output orphan field lists.
+- **AS Alignment**: Align ALL 'AS' keywords vertically within EACH LOAD block based on the longest expression.
+  Example of PERFECT alignment in a block:
+  
+  LOAD
+      OrderID                                    AS [ID Pedido],
+      CustomerName                               AS [Nome Cliente],
+      Sum(OrderTotal * (1 - DiscountPercent))    AS [Valor Líquido],
+      Date(OrderDate, 'DD/MM/YYYY')              AS [Data Pedido]
+  FROM OrdersTable;
+  
+  Note: The AS keywords are perfectly aligned vertically at the same column position.
 `;
 
 // ═══════════════════════════════════════════════════════════════════════════════

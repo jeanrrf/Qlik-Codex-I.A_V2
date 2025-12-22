@@ -1,89 +1,107 @@
 /**
- * Simple AS alignment utility for Qlik LOAD blocks.
- * It scans for LOAD blocks and vertically aligns the "AS" keywords
- * based on the longest LHS expression in each block.
- *
- * This is intentionally conservative to avoid reformatting unrelated code.
+ * Alinha perfeitamente as colunas renomeadas com AS em blocos LOAD do Qlik.
+ * Processa CADA bloco LOAD individualmente para garantir alinhamento perfeito
+ * dos AS dentro de cada bloco, independente de outros blocos.
+ * 
+ * Corrige o bug onde múltiplos blocos LOAD não eram alinhados corretamente.
  */
 export function alignAsInLoadBlocks(script: string): { fixed: string; changed: boolean } {
   const lines = script.split(/\r?\n/);
   const outLines: string[] = [];
-  let i = 0;
   let changed = false;
+  let i = 0;
 
   while (i < lines.length) {
     const line = lines[i];
-    outLines.push(line);
 
-    // Detect a LOAD line (start of a block)
+    // Detecta início de um bloco LOAD
     if (/^\s*LOAD\b/i.test(line)) {
-      // Collect subsequent lines of the LOAD block until an empty line, a FROM/, or a line that ends with ';' that is not followed by more fields
-      const blockStart = i + 1;
-      const blockLines: { orig: string; idx: number }[] = [];
-      let j = blockStart;
+      // Adiciona a linha LOAD
+      outLines.push(line);
+      i++;
 
-      while (j < lines.length) {
-        const l = lines[j];
-        // Stop conditions: a line starting with FROM (new clause), a line that is the start of another statement (no leading spaces) or a blank line
-        if (/^\s*(FROM|JOIN|WHERE|INNER JOIN|LEFT JOIN|RIGHT JOIN|;|LET|TRACE)\b/i.test(l) || /^\S/.test(l)) {
+      // Coleta todas as linhas do bloco (campos até FROM/WHERE/JOIN/novo statement)
+      const blockLines: string[] = [];
+      let blockEndIdx = i;
+
+      while (blockEndIdx < lines.length) {
+        const l = lines[blockEndIdx];
+        const trimmed = l.trim();
+
+        // Verifica se é fim do bloco LOAD
+        // Para quando encontra: FROM, WHERE, JOIN, novo statement (não-indentado), linha vazia, ou ponto-e-vírgula sozinho
+        if (!trimmed ||
+          /^\s*(FROM|WHERE|JOIN|INNER\s+JOIN|LEFT\s+JOIN|RIGHT\s+JOIN|OUTER\s+JOIN)\b/i.test(l) ||
+          /^\s*;/.test(l) ||
+          /^(LOAD|SQL|SELECT|DROP|LET|SET|TRACE|STORE|CALL|FOR|NEXT|SUB|END\s+SUB)\b/i.test(trimmed)) {
           break;
         }
 
-        blockLines.push({ orig: l, idx: j });
-        j++;
+        blockLines.push(l);
+        blockEndIdx++;
       }
 
+      // Se encontrou linhas no bloco, processa alinhamento
       if (blockLines.length > 0) {
-        // Extract lines that contain 'AS' (case-insensitive) and look like field lines
-        const asLines = blockLines.filter(b => /\bAS\b/i.test(b.orig));
+        // Filtra apenas linhas com AS
+        const asLines = blockLines
+          .map((orig, idx) => ({ orig, idx, hasAs: /\bAS\b/i.test(orig) }))
+          .filter(item => item.hasAs);
+
         if (asLines.length > 0) {
-          // Extract left side lengths
-          const leftParts = asLines.map(b => {
-            const split = b.orig.split(/\bAS\b/i);
-            const left = split[0];
-            return left.replace(/\t/g, '    ').replace(/\s+$/g, '');
+          // Calcula o comprimento máximo da parte esquerda (antes do AS)
+          let maxLeftLength = 0;
+          const processedLines = asLines.map(item => {
+            // Split no AS (case-insensitive)
+            const parts = item.orig.split(/\bAS\b/i);
+            const leftPart = parts[0]
+              .replace(/\t/g, '    ')  // Normaliza tabs
+              .replace(/\s+$/g, '');    // Remove espaços trailing
+
+            maxLeftLength = Math.max(maxLeftLength, leftPart.length);
+
+            return {
+              ...item,
+              leftPart,
+              rightPart: parts.slice(1).join('AS').trim(),
+              leadingSpaces: item.orig.match(/^\s*/)?.[0] || ''
+            };
           });
 
-          const leftMax = Math.max(...leftParts.map(s => s.length));
+          // Reconstrói as linhas com AS alinhados
+          const alignedBlockLines = blockLines.map((orig, idx) => {
+            const processedLine = processedLines.find(p => p.idx === idx);
 
-          // Build fixed versions for the block
-          const fixedBlock = blockLines.map(b => {
-            if (/\bAS\b/i.test(b.orig)) {
-              const parts = b.orig.split(/\bAS\b/i);
-              const left = parts[0].replace(/\t/g, '    ').replace(/\s+$/g, '');
-              const right = parts.slice(1).join('AS').trim();
-              const padding = ' '.repeat(Math.max(1, leftMax - left.length + 1)); // at least one space before AS
-              const leading = b.orig.match(/^\s*/)?.[0] || '';
-              const fixedLine = `${leading}${left}${padding}AS ${right}`;
-              return fixedLine;
+            if (processedLine) {
+              // Calcula padding necessário para alinhar
+              const padding = ' '.repeat(Math.max(1, maxLeftLength - processedLine.leftPart.length + 1));
+              const alignedLine = `${processedLine.leadingSpaces}${processedLine.leftPart}${padding}AS ${processedLine.rightPart}`;
+
+              if (alignedLine !== orig) {
+                changed = true;
+              }
+
+              return alignedLine;
             }
-            return b.orig;
+
+            return orig; // Linha sem AS, mantém original
           });
 
-          // Compare and replace in outLines (we previously pushed the original LOAD line and block lines were not yet added)
-          // Remove the original placeholder lines we pushed and insert the fixed ones
-          // We need to replace the next blockLines.length lines in outLines
-          // First remove the last blockLines.length entries (they were appended in the loop)
-          for (let k = 0; k < blockLines.length; k++) {
-            outLines.pop();
-          }
-
-          fixedBlock.forEach(fl => outLines.push(fl));
-
-          if (fixedBlock.some((fl, idx) => fl !== blockLines[idx].orig)) {
-            changed = true;
-          }
-
-          // Advance i to j-1 (for loop will increment)
-          i = j - 1;
+          // Adiciona linhas alinhadas ao output
+          outLines.push(...alignedBlockLines);
         } else {
-          // No AS lines, continue
-          i = j - 1;
+          // Bloco sem AS, mantém original
+          outLines.push(...blockLines);
         }
       }
-    }
 
-    i++;
+      // Avança índice para após o bloco processado
+      i = blockEndIdx;
+    } else {
+      // Não é LOAD, adiciona linha normal
+      outLines.push(line);
+      i++;
+    }
   }
 
   return { fixed: outLines.join('\n'), changed };

@@ -137,6 +137,33 @@ Apply optimization plan and Design Patterns. Preserve ALL logic.
 ## GUIDELINES
 - **Optimize**: QVDs, JOINs, WHERE clauses.
 - **Preserve**: Headers, TRACE statements, Identifiers.
+- **CRITICAL**: Align ALL 'AS' keywords vertically within EACH LOAD block.
+- **CRITICAL**: NEVER generate incomplete LOAD statements or orphan field lists.
+
+## AS ALIGNMENT RULES (MANDATORY)
+
+For EACH LOAD block:
+1. Find the longest expression before AS
+2. Pad ALL other lines to match that length
+3. Align AS keywords at the SAME column position
+
+CORRECT EXAMPLE:
+LOAD
+    OrderID                                    AS [ID Pedido],
+    CustomerName                               AS [Nome Cliente],
+    Sum(OrderTotal * (1 - DiscountPercent))    AS [Valor Líquido],
+    Date(OrderDate, 'DD/MM/YYYY')              AS [Data Pedido]
+FROM Orders;
+
+WRONG EXAMPLE (unaligned):
+LOAD
+    OrderID AS [ID Pedido],
+    CustomerName AS [Nome Cliente],
+    Sum(OrderTotal * (1 - DiscountPercent)) AS [Valor Líquido],
+    Date(OrderDate, 'DD/MM/YYYY') AS [Data Pedido]
+FROM Orders;
+
+NOTE: EACH LOAD block is aligned INDEPENDENTLY based on its own longest expression.
     `)
     .withCustomSection(
       'output-format',
@@ -147,7 +174,7 @@ Return a JSON object strictly matching this structure:
 \`\`\`json
 {
   "reasoning": "string (optional)",
-  "optimizedScript": "string (the full Qlik script)",
+  "optimizedScript": "string (the COMPLETE Qlik script with perfect AS alignment)",
   "changesApplied": [
     {
       "category": "performance" | "readability" | "cleanup" | "structure" | "model_integrity" | "maintainability" | "security" | "logic",
@@ -164,7 +191,11 @@ Return a JSON object strictly matching this structure:
 }
 \`\`\`
 
-Ensure valid JSON syntax. The 'optimizedScript' must be a single string with newlines escaped as \\n.`,
+CRITICAL REQUIREMENTS:
+- The 'optimizedScript' MUST be COMPLETE (never truncated)
+- EVERY LOAD statement MUST have its keyword
+- ALL 'AS' keywords MUST be vertically aligned within their respective blocks
+- Ensure valid JSON syntax with newlines escaped as \\n`,
       60
     )
     .build();

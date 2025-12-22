@@ -71,6 +71,8 @@ function isComment(line: string): boolean {
 /**
  * Detecta código incompleto: campos sem LOAD/SELECT keywords
  * Esse é um dos bugs mais comuns quando LLMs geram código Qlik
+ * 
+ * MELHORADO: Reduz falsos positivos verificando contexto completo
  */
 function detectIncompleteStatements(script: string): string[] {
   const lines = script.split(/\r?\n/);
@@ -85,40 +87,46 @@ function detectIncompleteStatements(script: string): string[] {
     // Detecta linhas que parecem ser listas de campos sem LOAD/SELECT
     // Padrão: "    CampoA," ou "    CampoA AS Alias," sem LOAD antes
     // IMPORTANTE: Só detecta se tiver vírgula OU múltiplas linhas de campos (indentados)
-    if (/^\s{2,}\w+.*,\s*$/i.test(line) || /^\s{2,}\w+\s+AS\s+\w+,?\s*$/i.test(line)) {
-      // Verificar se há LOAD/SELECT nas 5 linhas anteriores
+
+    // Verifica se é uma linha de campo suspeita (indentada com vírgula ou AS)
+    const isFieldLine = /^\s{2,}[\w\[\]]+.*,\s*$/i.test(line) || /^\s{2,}[\w\[\]]+\s+AS\s+[\w\[\]]+,?\s*$/i.test(line);
+
+    if (isFieldLine) {
+      // Verificar se há LOAD/SELECT nas linhas anteriores (procura mais longe)
       let hasKeyword = false;
-      const lookBackStart = Math.max(0, i - 5);
+      const lookBackStart = Math.max(0, i - 10); // Aumentado de 5 para 10 linhas
 
       for (let j = i - 1; j >= lookBackStart; j--) {
         const prevLine = lines[j].trim();
         if (!prevLine || isComment(prevLine)) continue;
 
+        // Se encontrou LOAD ou SELECT, é válido
         if (/^(LOAD|SQL\s+SELECT|SELECT)\b/i.test(prevLine)) {
           hasKeyword = true;
           break;
         }
 
-        // Se encontrou outra declaração, não é parte de um LOAD
-        if (/^(FROM|WHERE|DROP|LET|SET|TRACE|STORE|MAPPING|SUB|FOR|NEXT|CALL|LEFT\s+JOIN|INNER\s+JOIN|JOIN)\b/i.test(prevLine)) {
+        // Se encontrou outra declaração estrutural, parar de procurar
+        if (/^(DROP\s+TABLE|LET|SET|STORE|SUB|FOR|NEXT|CALL)\b/i.test(prevLine)) {
           break;
         }
       }
 
+      // Só reporta erro se realmente não encontrou keyword E tem FROM próximo
       if (!hasKeyword) {
         // Verificar se FROM está próximo (indicando lista de campos órfã)
-        const nextLines = lines.slice(i, Math.min(i + 10, lines.length)).join('\n');
-        if (/\bFROM\b/i.test(nextLines)) {
+        const nextLines = lines.slice(i, Math.min(i + 15, lines.length)).join('\n');
+        if (/\bFROM\b/i.test(nextLines) && !/^LOAD\b/i.test(nextLines) && !/^SELECT\b/i.test(nextLines)) {
           errors.push(`Linha ${i + 1}: CRÍTICO - Lista de campos sem palavra-chave LOAD ou SELECT. Código incompleto detectado: "${line.substring(0, 60)}${line.length > 60 ? '...' : ''}"`);
         }
       }
     }
 
     // Detecta FROM sem LOAD/SELECT antes (indicador mais forte de código incompleto)
-    if (/^FROM\b/i.test(line) && !/:$/.test(lines[Math.max(0, i - 1)]?.trim() || '')) {
-      // Verificar se há LOAD/SELECT nas 20 linhas anteriores (pode ter muitos campos)
+    if (/^\s*FROM\b/i.test(line) && !/:$/.test(lines[Math.max(0, i - 1)]?.trim() || '')) {
+      // Verificar se há LOAD/SELECT nas 30 linhas anteriores (pode ter muitos campos)
       let hasLoadOrSelect = false;
-      const lookBackStart = Math.max(0, i - 20);
+      const lookBackStart = Math.max(0, i - 30); // Aumentado de 20 para 30
 
       for (let j = i - 1; j >= lookBackStart; j--) {
         const prevLine = lines[j].trim();
@@ -130,7 +138,7 @@ function detectIncompleteStatements(script: string): string[] {
         }
 
         // Se encontrou outra declaração estrutural, parar
-        if (/^(DROP|LET|SET|STORE|SUB|FOR|NEXT|CALL)\b/i.test(prevLine)) {
+        if (/^(DROP\s+TABLE|LET|SET|STORE|SUB|FOR|NEXT|CALL)\b/i.test(prevLine)) {
           break;
         }
 
