@@ -360,9 +360,13 @@ async function runUltraExpertMode(
   }
 
   // ========== GERAÇÃO DE RELATÓRIO DE CONSULTORIA ==========
-  if (_generateConsultancy) {
+  // Gera relatório APENAS no modo "audit" (análise sem código)
+  // No modo "refactor" (otimização), retorna apenas o código otimizado
+  const shouldGenerateConsultancy = _generateConsultancy && intent === "audit";
+
+  if (shouldGenerateConsultancy) {
     try {
-      logger.info("Generating consultancy document...");
+      logger.info("Generating consultancy document (audit mode)...");
       const consultancyDoc = await runConsultancyAgent(result, {
         generateTimeline: true,
         generateMarkers: true,
@@ -386,6 +390,8 @@ async function runUltraExpertMode(
         logger.warn("Fallback consultancy generation also failed", { error: fallbackErr });
       }
     }
+  } else if (intent === "refactor") {
+    logger.info("Skipping consultancy generation (refactor mode - code only)");
   }
 
   result.ragContext = ragContext;

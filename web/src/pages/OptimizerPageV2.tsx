@@ -469,17 +469,18 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
       title: "Ultra Expert",
       icon: <Icons.Zap />,
       color: "#ff2a6d",
-      risk: "Otimização Máxima",
-      description: "Otimização agressiva com todas as análises"
+      risk: "Pipeline Completo",
+      description: intent === "audit" ? "Gera relatório de consultoria" : "Gera código otimizado",
+      helper: intent === "audit" ? "📋 Modo Relatório (sem código)" : "💻 Modo Código (sem relatório)"
     },
     "nvidia-fast": {
       title: "NVIDIA Fast",
       icon: <Icons.Robot />,
       color: "#39ff14",
-      risk: "Refatoração Direta",
-      description: "Somente código otimizado direto da GPU",
-      helper: "Retorno em poucos segundos  Sem relatórios",
-      badge: "NOVO",
+      risk: "Apenas Código",
+      description: "Código otimizado rápido (sem relatório)",
+      helper: "⚡ Retorno em segundos",
+      badge: "RÁPIDO",
       accentClass: "nvidia"
     }
   };
@@ -554,7 +555,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
             })}
           </div>
 
-          {/* Intent Toggle: Audit vs Refactor */}
+          {/* Intent Toggle: Análise vs Otimizar (apenas Ultra Expert) */}
           {mode === "ultra-expert" && (
             <div className="intent-toggle-container">
               <button
@@ -563,10 +564,10 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
                   setIntent("audit");
                   optimization.updateIntent("audit");
                 }}
-                title="Apenas análise e diagnóstico, sem gerar código"
+                title="Gera RELATÓRIO de diagnóstico (sem código otimizado)"
               >
-                <span className="intent-icon">🔍</span>
-                <span className="intent-label">Audit</span>
+                <span className="intent-icon">📋</span>
+                <span className="intent-label">Relatório</span>
               </button>
               <button
                 className={`intent-toggle-btn ${intent === "refactor" ? "active" : ""}`}
@@ -574,10 +575,10 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
                   setIntent("refactor");
                   optimization.updateIntent("refactor");
                 }}
-                title="Análise + geração de código otimizado"
+                title="Gera CÓDIGO otimizado (sem relatório de consultoria)"
               >
-                <span className="intent-icon">⚡</span>
-                <span className="intent-label">Refactor</span>
+                <span className="intent-icon">💻</span>
+                <span className="intent-label">Código</span>
               </button>
             </div>
           )}

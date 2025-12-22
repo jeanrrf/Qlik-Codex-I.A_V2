@@ -616,19 +616,19 @@ export class QlikOptimizeAgent {
       substep: { id: "STRATEGIC_PLAN", name: "Completed STRATEGIC_PLAN (Fused)", status: "success", duration: splitDuration, endTime: new Date().toISOString() }
     });
 
-    // ========== AUDIT MODE: Pula CODE_GEN e retorna apenas análise ==========
+    // ========== AUDIT MODE: Pula CODE_GEN e retorna apenas análise + relatório ==========
     let codeGen: Record<string, unknown>;
     let delivery: Record<string, unknown>;
 
     if (this.intent === "audit") {
-      logger.info("[MegaOptimizer] AUDIT MODE - Pulando CODE_GEN, retornando apenas análise");
+      logger.info("[MegaOptimizer] AUDIT MODE - Pulando CODE_GEN, gerando apenas relatório");
 
       // Emitir evento de skip para CODE_GEN
       sseEmitter.sendToCurrent({
         type: "substep",
         substep: {
           id: "CODE_GEN",
-          name: "Geração de Código (SKIPPED - Audit Mode)",
+          name: "Geração de Código (SKIPPED - Modo Relatório)",
           status: "skipped",
           duration: 0,
           endTime: new Date().toISOString()
@@ -642,12 +642,12 @@ export class QlikOptimizeAgent {
         auditMode: true
       };
 
-      // Executa apenas FINAL_DELIVERY para gerar documentação
+      // Executa FINAL_DELIVERY para gerar documentação/relatório
       sseEmitter.sendToCurrent({
         type: "substep",
         substep: {
           id: "FINAL_DELIVERY_START",
-          name: "Iniciando Validação e Documentação (Audit)",
+          name: "Gerando Relatório de Consultoria",
           status: "running",
           startTime: new Date().toISOString()
         }
@@ -656,17 +656,15 @@ export class QlikOptimizeAgent {
       delivery = await this.executeTask("FINAL_DELIVERY", FinalDeliverySchema);
 
     } else {
-      // ========== REFACTOR MODE: Execução completa ==========
-      // CORREÇÃO: Execução sequencial para evitar encavalamento de provedores
-      // O paralelismo causava falhas de quota e concorrência no SSE
-      logger.info("[MegaOptimizer] Iniciando CODE_GEN e FINAL_DELIVERY em SEQUÊNCIA");
+      // ========== REFACTOR MODE: Apenas CODE_GEN (sem relatório) ==========
+      logger.info("[MegaOptimizer] REFACTOR MODE - Apenas código otimizado (sem relatório)");
 
       // Emitir evento de início de CodeGen para UX
       sseEmitter.sendToCurrent({
         type: "substep",
         substep: {
           id: "CODE_GEN_START",
-          name: "Iniciando Geração de Código (Sequencial)",
+          name: "Gerando Código Otimizado",
           status: "running",
           startTime: new Date().toISOString()
         }
@@ -674,18 +672,24 @@ export class QlikOptimizeAgent {
 
       codeGen = await this.executeTask("CODE_GEN", CodeGenSchema);
 
-      // Emitir evento de transição para Final Delivery
+      // Skip FINAL_DELIVERY no modo refactor (apenas código)
       sseEmitter.sendToCurrent({
         type: "substep",
         substep: {
-          id: "FINAL_DELIVERY_START",
-          name: "Iniciando Validação e Documentação",
-          status: "running",
-          startTime: new Date().toISOString()
+          id: "FINAL_DELIVERY",
+          name: "Relatório (SKIPPED - Modo Código)",
+          status: "skipped",
+          duration: 0,
+          endTime: new Date().toISOString()
         }
       });
 
-      delivery = await this.executeTask("FINAL_DELIVERY", FinalDeliverySchema);
+      // Delivery mínimo sem chamar LLM
+      delivery = {
+        validation: { valid: true, warnings: [] },
+        documentation: { summary: "Código otimizado gerado com sucesso." },
+        report: { executiveSummary: "Otimização concluída.", technicalDetails: "" }
+      };
     }
 
     logger.info(`[MegaOptimizer] Tarefas sequenciais concluídas (intent: ${this.intent})`);

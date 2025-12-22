@@ -207,8 +207,8 @@ export function getStagesForMode(mode: 'ultra-expert' | 'nvidia-fast'): Pipeline
 
 /**
  * Retorna as stages filtradas por intent
- * - "audit": Remove CODE_GEN (apenas análise + entrega)
- * - "refactor": Todas as stages (fluxo completo)
+ * - "audit": Remove CODE_GEN (apenas análise + relatório)
+ * - "refactor": Remove FINAL_DELIVERY (apenas código, sem relatório)
  */
 export function getStagesForIntent(
   mode: 'ultra-expert' | 'nvidia-fast',
@@ -216,9 +216,14 @@ export function getStagesForIntent(
 ): PipelineStage[] {
   const stages = getStagesForMode(mode);
 
-  if (intent === 'audit' && mode === 'ultra-expert') {
-    // Remove CODE_GEN no modo audit
-    return stages.filter(s => s.id !== 'CODE_GEN');
+  if (mode === 'ultra-expert') {
+    if (intent === 'audit') {
+      // Modo Relatório: Remove CODE_GEN (apenas análise + relatório)
+      return stages.filter(s => s.id !== 'CODE_GEN');
+    } else {
+      // Modo Código: Remove FINAL_DELIVERY (apenas código, sem relatório)
+      return stages.filter(s => s.id !== 'FINAL_DELIVERY');
+    }
   }
 
   return stages;
