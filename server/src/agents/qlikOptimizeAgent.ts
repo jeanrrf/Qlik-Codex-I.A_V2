@@ -98,9 +98,14 @@ interface MegaOptimizerResult {
   };
 }
 
+/** Intent: "audit" para análise sem geração de código, "refactor" para otimização completa */
+type OptimizationIntent = "audit" | "refactor";
+
 interface MegaOptimizerOptions {
   signal?: AbortSignal;
   ragContext?: import('../types/rag').RAGContext | null;
+  /** Intent: "audit" para análise sem código, "refactor" para otimização completa */
+  intent?: OptimizationIntent;
 }
 
 export class QlikOptimizeAgent {
@@ -120,6 +125,7 @@ export class QlikOptimizeAgent {
   private abortSignal?: AbortSignal;
   private parserSummary: string;
   private ragContext?: import('../types/rag').RAGContext | null;
+  private intent: OptimizationIntent;
 
   constructor(script: string, options?: MegaOptimizerOptions) {
     // Sanitize input script to remove any HTML tags if the user pasted formatted code
@@ -135,10 +141,11 @@ export class QlikOptimizeAgent {
     this.scriptHash = createHash('sha256').update(this.script).digest('hex').substring(0, 16);
     this.abortSignal = options?.signal;
     this.ragContext = options?.ragContext;
+    this.intent = options?.intent || "refactor"; // Default: otimização completa
     const parsed = parseQlikScript(this.script);
     this.parserSummary = buildParserSummary(parsed);
 
-    logger.info("[MegaOptimizer] Script compactado para prompt", compaction.stats);
+    logger.info("[MegaOptimizer] Script compactado para prompt", { ...compaction.stats, intent: this.intent });
 
     // Cria orquestrador com configuração otimizada para MegaOptimizer + Kimi K2
     this.orchestrator = createOrchestrator({
@@ -609,37 +616,79 @@ export class QlikOptimizeAgent {
       substep: { id: "STRATEGIC_PLAN", name: "Completed STRATEGIC_PLAN (Fused)", status: "success", duration: splitDuration, endTime: new Date().toISOString() }
     });
 
-    // CORREÇÃO: Execução sequencial para evitar encavalamento de provedores
-    // O paralelismo causava falhas de quota e concorrência no SSE
-    logger.info("[MegaOptimizer] Iniciando CODE_GEN e FINAL_DELIVERY em SEQUÊNCIA");
+    // ========== AUDIT MODE: Pula CODE_GEN e retorna apenas análise ==========
+    let codeGen: Record<string, unknown>;
+    let delivery: Record<string, unknown>;
 
-    // Emitir evento de início de CodeGen para UX
-    sseEmitter.sendToCurrent({
-      type: "substep",
-      substep: {
-        id: "CODE_GEN_START",
-        name: "Iniciando Geração de Código (Sequencial)",
-        status: "running",
-        startTime: new Date().toISOString()
-      }
-    });
+    if (this.intent === "audit") {
+      logger.info("[MegaOptimizer] AUDIT MODE - Pulando CODE_GEN, retornando apenas análise");
 
-    const codeGen = await this.executeTask("CODE_GEN", CodeGenSchema);
+      // Emitir evento de skip para CODE_GEN
+      sseEmitter.sendToCurrent({
+        type: "substep",
+        substep: {
+          id: "CODE_GEN",
+          name: "Geração de Código (SKIPPED - Audit Mode)",
+          status: "skipped",
+          duration: 0,
+          endTime: new Date().toISOString()
+        }
+      });
 
-    // Emitir evento de transição para Final Delivery
-    sseEmitter.sendToCurrent({
-      type: "substep",
-      substep: {
-        id: "FINAL_DELIVERY_START",
-        name: "Iniciando Validação e Documentação",
-        status: "running",
-        startTime: new Date().toISOString()
-      }
-    });
+      // Retorna código original sem modificações
+      codeGen = {
+        optimizedScript: this.script, // Mantém original
+        changesApplied: [],
+        auditMode: true
+      };
 
-    const delivery = await this.executeTask("FINAL_DELIVERY", FinalDeliverySchema);
+      // Executa apenas FINAL_DELIVERY para gerar documentação
+      sseEmitter.sendToCurrent({
+        type: "substep",
+        substep: {
+          id: "FINAL_DELIVERY_START",
+          name: "Iniciando Validação e Documentação (Audit)",
+          status: "running",
+          startTime: new Date().toISOString()
+        }
+      });
 
-    logger.info(`[MegaOptimizer] Tarefas sequenciais concluídas`);
+      delivery = await this.executeTask("FINAL_DELIVERY", FinalDeliverySchema);
+
+    } else {
+      // ========== REFACTOR MODE: Execução completa ==========
+      // CORREÇÃO: Execução sequencial para evitar encavalamento de provedores
+      // O paralelismo causava falhas de quota e concorrência no SSE
+      logger.info("[MegaOptimizer] Iniciando CODE_GEN e FINAL_DELIVERY em SEQUÊNCIA");
+
+      // Emitir evento de início de CodeGen para UX
+      sseEmitter.sendToCurrent({
+        type: "substep",
+        substep: {
+          id: "CODE_GEN_START",
+          name: "Iniciando Geração de Código (Sequencial)",
+          status: "running",
+          startTime: new Date().toISOString()
+        }
+      });
+
+      codeGen = await this.executeTask("CODE_GEN", CodeGenSchema);
+
+      // Emitir evento de transição para Final Delivery
+      sseEmitter.sendToCurrent({
+        type: "substep",
+        substep: {
+          id: "FINAL_DELIVERY_START",
+          name: "Iniciando Validação e Documentação",
+          status: "running",
+          startTime: new Date().toISOString()
+        }
+      });
+
+      delivery = await this.executeTask("FINAL_DELIVERY", FinalDeliverySchema);
+    }
+
+    logger.info(`[MegaOptimizer] Tarefas sequenciais concluídas (intent: ${this.intent})`);
 
     // Sanitize optimizedScript using the same method as input
     if (typeof codeGen.optimizedScript === 'string') {
@@ -654,6 +703,7 @@ export class QlikOptimizeAgent {
     const totalTokensUsed = Object.values(tokenUsage).reduce((acc, t) => acc + (t.tokensConsumed?.totalTokens || 0), 0);
     logger.info("[MegaOptimizer] EXECUTION SUMMARY", {
       mode: "ultra-expert",
+      intent: this.intent,
       scriptHash: this.scriptHash,
       scriptLines: this.script.split(/\r?\n/).length,
       totalTimeMs: totalTime,
@@ -672,14 +722,16 @@ export class QlikOptimizeAgent {
     const analysisObj = typeof analysis === 'object' && analysis !== null ? (analysis as Record<string, unknown>) : {};
     const analysisWithChanges = {
       ...analysisObj,
-      changes: changes
+      changes: changes,
+      auditMode: this.intent === "audit"
     };
 
     // Inject provider stats into report for transparency
     const reportObj = typeof delivery.report === 'object' && delivery.report !== null ? (delivery.report as Record<string, unknown>) : {};
     const reportWithStats = {
       ...reportObj,
-      providerStats: orchestratorStats.providerStats
+      providerStats: orchestratorStats.providerStats,
+      auditMode: this.intent === "audit"
     };
 
     return {

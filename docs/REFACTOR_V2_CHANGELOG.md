@@ -92,15 +92,61 @@ featureFlags: {
 
 - 7 testes incluindo trailing commas, unquoted keys, markdown embedded
 
+### 8. Frontend Modos — Audit vs Refactor (CONCLUÍDO)
+
+**Tipo Novo (`web/src/types/api.ts`):**
+
+- `OptimizationIntent = "audit" | "refactor"`
+- Adicionado campo `intent` em `OptimizeScriptRequestBody`
+
+**API Client (`web/src/api/client.ts`):**
+
+- `OptimizeOptions` agora aceita `intent`
+- Payload enviado com `intent` (default: "refactor")
+
+**Hook (`web/src/hooks/useOptimizationProgress.ts`):**
+
+- `OptimizationOptions` inclui `intent`
+- Passa `intent` no body da requisição
+
+**UI (`web/src/pages/OptimizerPageV2.tsx`):**
+
+- Estado `intent` com toggle
+- Toggle visual com ícones 🔍 (Audit) e ⚡ (Refactor)
+- Visível apenas no modo ultra-expert
+
+**CSS (`web/src/pages/OptimizerPageV2.css`):**
+
+- Estilos para `.intent-toggle-container` e `.intent-toggle-btn`
+
+**Backend — Schema (`server/src/validators/requestSchemas.ts`):**
+
+- Campo `intent` no `optimizeScriptSchema` (enum: "audit" | "refactor")
+
+**Backend — Tipos (`server/src/types/api.ts`, `server/src/types/optimization.ts`):**
+
+- `OptimizationIntent` type exportado
+- `LLMOptions.intent` adicionado
+
+**Backend — Serviços:**
+
+- `scriptService.ts`: Passa intent para `optimizerService`
+- `optimizerService.ts`: Passa intent para `QlikOptimizeAgent`
+
+**Backend — Agente (`server/src/agents/qlikOptimizeAgent.ts`):**
+
+- Recebe `intent` via `MegaOptimizerOptions`
+- Quando `intent === "audit"`:
+  - Pula `CODE_GEN` (emit status "skipped")
+  - Retorna script original sem modificações
+  - Executa apenas `FINAL_DELIVERY` para documentação
+- Quando `intent === "refactor"`: fluxo completo
+
 ---
 
 ## Etapa Pendente
 
-### 6. Frontend Modos (não executado)
-
-- Separar UI em modo Audit vs Refactor
-- Indicadores de risco e fallback visíveis
-- _Requer alterações em `web/src/pages/` e `web/src/components/`_
+_Nenhuma — Refactor V2 concluído!_
 
 ---
 
@@ -130,7 +176,7 @@ Falhas pré-existentes (não relacionadas ao refactor):
 
 ## Próximos Passos
 
-1. Implementar modo Audit vs Refactor no frontend
+1. ~~Implementar modo Audit vs Refactor no frontend~~ ✅ Concluído
 2. Adicionar métricas de observabilidade (tamanho de prompt, taxa de fallback)
 3. Testar em produção com scripts reais
 4. Remover código legacy após validação (marcar com `// @deprecated`)

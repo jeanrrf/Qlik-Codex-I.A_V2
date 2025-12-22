@@ -194,8 +194,9 @@ async function runUltraExpertMode(
     }
   }
 
-  // Instantiate the Mega Optimizer with AbortSignal support + RAG context
-  const optimizer = new QlikOptimizeAgent(script, { signal: abortSignal, ragContext });
+  // Instantiate the Mega Optimizer with AbortSignal support + RAG context + Intent
+  const intent = llmOptions?.intent || "refactor";
+  const optimizer = new QlikOptimizeAgent(script, { signal: abortSignal, ragContext, intent });
   const originalLines = script.split(/\r?\n/).length;
 
   // Run the pipeline
