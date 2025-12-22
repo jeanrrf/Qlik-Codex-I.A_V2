@@ -1,5 +1,15 @@
+import { logger } from './logger';
+
 export function extractJsonFromText(text: string): Record<string, unknown> {
-  if (!text || typeof text !== 'string') throw new Error('Empty response');
+  if (!text || typeof text !== 'string') {
+    logger.error('[structuredResponse] Empty or invalid text provided');
+    throw new Error('Empty response');
+  }
+
+  logger.debug('[structuredResponse] Attempting to extract JSON from response', {
+    textLength: text.length,
+    preview: text.substring(0, 200)
+  });
 
   // 1) Strip common fences and wrappers
   let s = text.trim();
@@ -10,8 +20,13 @@ export function extractJsonFromText(text: string): Record<string, unknown> {
 
   // 2) Try direct parse first (most common case)
   try {
-    return JSON.parse(s);
-  } catch (_e) {
+    const parsed = JSON.parse(s);
+    logger.debug('[structuredResponse] Successfully parsed JSON (direct strategy)');
+    return parsed;
+  } catch (e) {
+    logger.debug('[structuredResponse] Direct parse failed, trying advanced strategies', {
+      error: e instanceof Error ? e.message : String(e)
+    });
     // continue to extraction strategies
   }
 
@@ -43,8 +58,12 @@ export function extractJsonFromText(text: string): Record<string, unknown> {
         const candidate = s.substring(firstBrace, i + 1);
         try {
           const parsed = JSON.parse(candidate);
+          logger.debug('[structuredResponse] Successfully parsed JSON (brace-matching strategy)');
           return parsed;
-        } catch (_e) {
+        } catch (e) {
+          logger.debug('[structuredResponse] Brace-matching parse failed', {
+            error: e instanceof Error ? e.message : String(e)
+          });
           // continue to other strategies
         }
         break;
@@ -56,8 +75,13 @@ export function extractJsonFromText(text: string): Record<string, unknown> {
   // Replace common \n sequences into real newlines and try parse whole string
   const unescaped = s.replace(/\\n/g, '\n').replace(/\\"/g, '"');
   try {
-    return JSON.parse(unescaped);
-  } catch (_e) {
+    const parsed = JSON.parse(unescaped);
+    logger.debug('[structuredResponse] Successfully parsed JSON (unescaping strategy)');
+    return parsed;
+  } catch (e) {
+    logger.debug('[structuredResponse] Unescaping strategy failed', {
+      error: e instanceof Error ? e.message : String(e)
+    });
     // continue
   }
 
@@ -67,8 +91,13 @@ export function extractJsonFromText(text: string): Record<string, unknown> {
   if (first >= 0 && last > first) {
     const candidate = s.substring(first, last + 1);
     try {
-      return JSON.parse(candidate);
-    } catch (_e) {
+      const parsed = JSON.parse(candidate);
+      logger.debug('[structuredResponse] Successfully parsed JSON (first-last brace strategy)');
+      return parsed;
+    } catch (e) {
+      logger.debug('[structuredResponse] First-last brace strategy failed, trying fixes', {
+        error: e instanceof Error ? e.message : String(e)
+      });
       // continue
     }
     // Try fixing common issues in the candidate
@@ -77,8 +106,13 @@ export function extractJsonFromText(text: string): Record<string, unknown> {
       .replace(/,\s*]/g, ']')  // trailing commas in arrays
       .replace(/([,{\s])(\w[\w\d_]*)\s*:/g, '$1"$2":'); // unquoted keys
     try {
-      return JSON.parse(fixed);
-    } catch (_e) {
+      const parsed = JSON.parse(fixed);
+      logger.debug('[structuredResponse] Successfully parsed JSON (first-last brace + fixes strategy)');
+      return parsed;
+    } catch (e) {
+      logger.debug('[structuredResponse] First-last brace + fixes strategy failed', {
+        error: e instanceof Error ? e.message : String(e)
+      });
       // continue
     }
   }
@@ -88,8 +122,15 @@ export function extractJsonFromText(text: string): Record<string, unknown> {
   // Only run a conservative regex replacement
   const safeFix = s.replace(/([,{\s])(\w[\w\d_]*)\s*:/g, '$1"$2":');
   try {
-    return JSON.parse(safeFix);
+    const parsed = JSON.parse(safeFix);
+    logger.debug('[structuredResponse] Successfully parsed JSON (safe-fix strategy)');
+    return parsed;
   } catch (e) {
-    throw new Error('Unable to extract JSON from response: ' + String(e));
+    const errorMsg = e instanceof Error ? e.message : String(e);
+    logger.error('[structuredResponse] All extraction strategies failed', {
+      error: errorMsg,
+      textPreview: text.substring(0, 500)
+    });
+    throw new Error('Unable to extract JSON from response: ' + errorMsg);
   }
 }
