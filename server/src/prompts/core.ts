@@ -36,14 +36,12 @@ export const GUARDRAILS = [
 // PLANNING INSTRUCTIONS (Pensar antes de agir)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export const PLANNING_INSTRUCTIONS = `## PLANNING (Pense antes de agir)
+export const PLANNING_INSTRUCTIONS = `## PLANNING
 
-Antes de gerar código, reflita brevemente:
-1. Quais são os blocos estruturais do script (Dims, Fatos, Mappings)?
-2. Quais otimizações são seguras vs arriscadas?
-3. Se houver dúvida, manter código original.
-
-Retorne seu raciocínio no campo "reasoning" quando disponível.`;
+1. Identify script structure (Dims, Facts, Mappings).
+2. Identify safe optimizations.
+3. If unsure, keep original code.
+`;
 
 export function buildGuardrailsSection(): string {
   return `## ABSOLUTE RULES (NEVER VIOLATE)\n\n${GUARDRAILS.map((rule, i) => `${i + 1}. ${rule}`).join('\n')}`;
@@ -67,19 +65,10 @@ export const DESIGN_PATTERNS = {
   }
 } as const;
 
-export const DESIGN_PATTERNS_SECTION = `## AINEX DESIGN PATTERNS (MANDATORY)
+export const DESIGN_PATTERNS_SECTION = `## DESIGN PATTERNS
 
-### Pattern 1: AS Alignment
-Vertically align ALL 'AS' keywords within each LOAD block based on the longest field.
-
-### Pattern 2: TRACE Block Separators
-Insert visual separators between logical blocks using TRACE statements.
-IMPORTANT: Preserve any existing header TRACEs at the beginning of the script.
-
-FORMAT:
-TRACE ─────────────────────────────────────────────────;
-TRACE     [BLOCK NAME]                                 ;
-TRACE ─────────────────────────────────────────────────;
+1. **AS Alignment**: Vertically align 'AS' keywords in LOAD blocks.
+2. **TRACE Separators**: Use 'TRACE ─────────────────────────────────────────────────;' between logical blocks.
 `;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -98,38 +87,20 @@ export const OUTPUT_CONFIG = {
 
 export const OUTPUT_RULES = `## OUTPUT REQUIREMENTS
 
-FORMAT:
-- Pure JSON only (no markdown/fences)
-- No comments inside JSON
-- Arrays limited to ${OUTPUT_CONFIG.maxArrayItems} items
+- **Format**: Pure JSON (no markdown).
+- **Language**: PT-BR for explanations.
+- **Identifiers**: NEVER translate/rename fields or tables.
+- **Logic**: Preserve ALL business logic.
+`;
 
-LANGUAGE:
-- Explanations: PT-BR
-- Identifiers: Preserve EXACTLY (never translate)
+export const OUTPUT_RULES_CODE = `## OUTPUT REQUIREMENTS (CODE)
 
-ROBUSTNESS:
-- PRESERVE SEMANTICS: Do not change logic.
-- PRESERVE IDENTIFIERS: Do not rename fields/tables.
-- COMPAQ FORMATTING: Apply AS Alignment and TRACE Separators.
-- EDGE CASES: If uncertain, keep original code.`;
-
-export const OUTPUT_RULES_CODE = `## OUTPUT REQUIREMENTS (CODE OUTPUT)
-
-FORMAT:
-- Pure JSON only (no markdown/fences)
-- No comments inside JSON
-- Arrays limited to ${OUTPUT_CONFIG.maxArrayItems} items
-- NEVER truncate optimizedScript
-
-LANGUAGE:
-- Explanations: PT-BR
-- Identifiers: Preserve EXACTLY (never translate)
-
-ROBUSTNESS:
-- PRESERVE SEMANTICS: Do not change logic.
-- PRESERVE IDENTIFIERS: Do not rename fields/tables.
-- COMPAQ FORMATTING: Apply AS Alignment and TRACE Separators.
-- EDGE CASES: If uncertain, keep original code.`;
+- **Format**: Pure JSON (no markdown).
+- **Language**: PT-BR for explanations.
+- **Identifiers**: NEVER translate/rename fields or tables.
+- **Logic**: Preserve ALL business logic.
+- **Completeness**: NEVER truncate the script.
+`;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PROMPT VERSION (for tracking and rollback)

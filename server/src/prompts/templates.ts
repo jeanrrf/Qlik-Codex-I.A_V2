@@ -67,14 +67,13 @@ function buildAnalysisTemplate(): string {
     .withIdentity()
     .withContext('DEEP ANALYSIS + STRATEGIC PLAN')
     .withInstructions(`
-**TASK:**
-Analyze the script structure and performance. Identify bottlenecks and optimization opportunities.
-Create a prioritized plan (Impact vs Effort).
+## TASK
+Analyze script structure and performance. Create a prioritized plan.
 
-**PHASES:**
-1. Structural Analysis (Risks, Complexity)
-2. Performance Analysis (Bottlenecks, Opportunities)
-3. Strategic Plan (Max ${TEMPLATE_LIMITS.analysis.maxPlanSteps} steps)
+## PHASES
+1. **Structural Analysis**: Risks, Complexity.
+2. **Performance Analysis**: Bottlenecks, Opportunities.
+3. **Strategic Plan**: Max ${TEMPLATE_LIMITS.analysis.maxPlanSteps} steps.
     `)
     .withCustomSection(
       'output-format',
@@ -91,13 +90,12 @@ function buildCodeGenTemplate(): string {
   return createOptimizationTemplate('CODE_GEN', true)
     .withContext('CODE GENERATION')
     .withInstructions(`
-**TASK:**
-Apply the optimization plan and AINEX Design Patterns.
-Preserve ALL business logic, calculations, and identifiers.
+## TASK
+Apply optimization plan and Design Patterns. Preserve ALL logic.
 
-**GUIDELINES:**
-- Optimize for performance (QVDs, JOINs, WHERE clauses)
-- Preserve initial script headers and TRACE statements
+## GUIDELINES
+- **Optimize**: QVDs, JOINs, WHERE clauses.
+- **Preserve**: Headers, TRACE statements, Identifiers.
     `)
     .withCustomSection(
       'output-format',
@@ -115,13 +113,13 @@ function buildFinalDeliveryTemplate(): string {
     .withIdentity()
     .withContext('VALIDATION + DOCUMENTATION')
     .withInstructions(`
-**TASK:**
-Validate the optimized script and generate documentation.
+## TASK
+Validate script and generate documentation.
 
-**PHASES:**
-1. Validation (Syntax, Safety Score)
-2. Documentation (ER Diagram, Relationships)
-3. Deployment Report (Summary, Improvements, Checklist)
+## PHASES
+1. **Validation**: Syntax, Safety Score.
+2. **Documentation**: ER Diagram, Relationships.
+3. **Deployment**: Summary, Improvements, Checklist.
     `)
     .withCustomSection(
       'output-format',
@@ -137,19 +135,15 @@ Validate the optimized script and generate documentation.
 function buildDocumentationTemplate(): string {
   return new TemplateBuilder('DOCUMENTATION')
     .withIdentity()
-    .withContext('GENERATE DOCUMENTATION FOR QLIK SCRIPT')
+    .withContext('GENERATE DOCUMENTATION')
     .withInstructions(`
-**TASK:**
-- Analyze the provided Qlik script
-- Document all tables, fields, and relationships
-- Create Mermaid ER diagram
-- Describe reload strategy
-- List key business metrics
+## TASK
+Document tables, fields, and relationships.
 
-**OUTPUT:**
-- Max ${TEMPLATE_LIMITS.documentation.maxTables} tables
-- Max ${TEMPLATE_LIMITS.documentation.maxFieldsPerTable} fields per table
-- Max ${TEMPLATE_LIMITS.documentation.maxMetrics} key metrics
+## OUTPUT
+- Max ${TEMPLATE_LIMITS.documentation.maxTables} tables.
+- Max ${TEMPLATE_LIMITS.documentation.maxFieldsPerTable} fields per table.
+- Max ${TEMPLATE_LIMITS.documentation.maxMetrics} key metrics.
     `)
     .withCustomSection(
       'output-format',
@@ -164,16 +158,15 @@ function buildDocumentationTemplate(): string {
  */
 function buildFormatOnlyTemplate(): string {
   return createOptimizationTemplate('FORMAT_ONLY', false)
-    .withContext('APPLY DESIGN PATTERNS ONLY (No Logic Changes)')
+    .withContext('FORMATTING ONLY (No Logic Changes)')
     .withInstructions(`
-**TASK:**
-- Apply AINEX Design Patterns (AS Alignment + TRACE Separators)
-- DO NOT change business logic
-- DO NOT optimize performance
-- Only format and beautify the code
+## TASK
+Apply Design Patterns (AS Alignment + TRACE Separators).
 
-**NOTES:**
-- List any observations about the script (max ${TEMPLATE_LIMITS.formatOnly.maxNotes} notes)
+## RESTRICTIONS
+- **NO** logic changes.
+- **NO** performance optimization.
+- **ONLY** formatting.
     `)
     .withCustomSection(
       'output-format',
@@ -190,8 +183,8 @@ function buildNvidiaFastTemplate(): string {
   return createOptimizationTemplate('NVIDIA_FAST', true)
     .withContext('FAST OPTIMIZATION')
     .withInstructions(`
-**TASK:**
-Quick optimization focusing on AS Alignment and TRACE Separators.
+## TASK
+Quick optimization: AS Alignment and TRACE Separators.
 Preserve all logic, headers, and TRACEs.
     `)
     .withCustomSection(
