@@ -16,6 +16,9 @@ export interface SubStepExecution {
 
 export type OptimizeMode = "ultra-expert" | "nvidia-fast";
 
+/** Intent do usuário: audit (apenas análise) ou refactor (gerar código otimizado) */
+export type OptimizationIntent = "audit" | "refactor";
+
 export type LLMProviderName = "ainex" | "google" | "nvidia";
 
 export type BreakingRisk = "none" | "low" | "medium" | "high";
@@ -95,6 +98,7 @@ export interface OptimizeResult {
 export interface OptimizeScriptRequestBody {
   script: string;
   mode: OptimizeMode;
+  intent?: OptimizationIntent; // audit = só análise, refactor = gera código
   llmProvider?: LLMProviderName;
   llmModel?: string;
   enableRealTimeProgress?: boolean;

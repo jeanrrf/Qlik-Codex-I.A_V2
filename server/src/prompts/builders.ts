@@ -14,6 +14,7 @@ import {
   DESIGN_PATTERNS_SECTION,
   OUTPUT_RULES,
   OUTPUT_RULES_CODE,
+  PLANNING_INSTRUCTIONS,
   PROMPT_VERSION
 } from "./core";
 import { TASK_TEMPLATES, TaskId } from "./templates";
@@ -174,6 +175,11 @@ export function buildPrompt(options: PromptBuilderOptions): string {
     buildIdentitySection(),
     buildGuardrailsSection()
   ];
+
+  // Adicionar instruções de planejamento para tarefas de geração de código
+  if (["CODE_GEN", "NVIDIA_FAST", "GRANULAR_STEP"].includes(taskId)) {
+    sections.push(PLANNING_INSTRUCTIONS);
+  }
 
   // Include design patterns for code-generating tasks
   if (includeDesignPatterns && ["CODE_GEN", "FORMAT_ONLY", "NVIDIA_FAST", "GRANULAR_STEP"].includes(taskId)) {

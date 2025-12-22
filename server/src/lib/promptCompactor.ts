@@ -7,7 +7,26 @@ export interface PromptCompactionStats {
   applied: boolean;
 }
 
-export function compactScriptForPrompt(script: string, minReductionPct = 5): { compacted: string; stats: PromptCompactionStats } {
+export interface CompactionOptions {
+  preserveBlockStructure: boolean; // Mantém 1 linha em branco entre blocos
+  preserveIndentation: boolean; // Preserva indentação semântica (4 espaços)
+  maxConsecutiveBlanks: number; // Máximo de linhas em branco consecutivas
+  minReductionPct: number; // Percentual mínimo para considerar redução
+}
+
+const DEFAULT_OPTIONS: CompactionOptions = {
+  preserveBlockStructure: true,
+  preserveIndentation: true,
+  maxConsecutiveBlanks: 1,
+  minReductionPct: 5
+};
+
+export function compactScriptForPrompt(
+  script: string,
+  options: Partial<CompactionOptions> = {}
+): { compacted: string; stats: PromptCompactionStats } {
+  const opts: CompactionOptions = { ...DEFAULT_OPTIONS, ...options };
+
   const lines = script.split(/\r?\n/);
   const cleaned: string[] = [];
   let blankStreak = 0;
@@ -18,30 +37,37 @@ export function compactScriptForPrompt(script: string, minReductionPct = 5): { c
 
     if (isBlank) {
       blankStreak += 1;
-      if (blankStreak > 1) continue;
-      cleaned.push("");
+
+      if (opts.preserveBlockStructure && blankStreak <= opts.maxConsecutiveBlanks) {
+        cleaned.push("");
+      }
       continue;
     }
 
     blankStreak = 0;
-    const collapsed = line.replace(/\s{2,}/g, " ");
-    cleaned.push(collapsed);
+
+    if (opts.preserveIndentation) {
+      // Preserva indentação de 4 espaços; normaliza espaços excessivos sem colapsar blocos
+      const collapsed = line.replace(/\s{5,}/g, "    ");
+      cleaned.push(collapsed);
+    } else {
+      const collapsed = line.replace(/\s+/g, " ").trim();
+      cleaned.push(collapsed);
+    }
   }
 
-  const candidate = cleaned.join("\n");
-  const reductionPctCandidate = Math.round((1 - candidate.length / Math.max(script.length, 1)) * 100);
-  const applied = reductionPctCandidate >= minReductionPct;
-  const finalScript = applied ? candidate : script;
-  const finalReductionPct = Math.max(0, Math.round((1 - finalScript.length / Math.max(script.length, 1)) * 100));
+  const compacted = cleaned.join("\n");
+  const reductionPct = Math.max(0, Math.round((1 - compacted.length / Math.max(script.length, 1)) * 100));
+  const applied = reductionPct >= opts.minReductionPct || opts.preserveBlockStructure || opts.preserveIndentation;
 
   return {
-    compacted: finalScript,
+    compacted,
     stats: {
       originalChars: script.length,
-      compactedChars: finalScript.length,
-      reductionPct: finalReductionPct,
+      compactedChars: compacted.length,
+      reductionPct,
       originalLines: lines.length,
-      compactedLines: applied ? cleaned.length : lines.length,
+      compactedLines: cleaned.length,
       applied
     }
   };

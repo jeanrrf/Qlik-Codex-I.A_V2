@@ -4,7 +4,7 @@ import { ZodSchema } from "zod";
 
 import { config } from "../lib/config";
 import { logger } from "../lib/logger";
-import { compactScriptForPrompt } from "../lib/promptCompactor";
+import { compactScriptForPrompt, CompactionOptions } from "../lib/promptCompactor";
 import { ProviderOrchestrator, createOrchestrator } from "../lib/providerOrchestrator";
 import { parseQlikScript, buildParserSummary } from "../lib/qlikParser";
 import { sseEmitter } from "../lib/sseEmitter";
@@ -34,7 +34,7 @@ logger.info(`[QlikOptimizeAgent] Using AINEX Unified Prompt System v${PROMPT_VER
 // --- AGENT LOGIC ---
 
 // Performance constants
-const MAX_HISTORY_TOKENS = 300; // Limite de chars para resumo do histórico (encurta prompt)
+const MAX_HISTORY_TOKENS = 800; // Limite de chars para resumo do histórico (aumentado para contexto)
 const ANALYSIS_CACHE = new Map<string, { result: Record<string, unknown>; timestamp: number }>();
 const ANALYSIS_CACHE_TTL = 1800000; // 30 minutos
 const ANALYSIS_CACHE_MAX_SIZE = 50;
@@ -125,7 +125,12 @@ export class QlikOptimizeAgent {
     // Sanitize input script to remove any HTML tags if the user pasted formatted code
     // Uses a smart regex to preserve "WHERE Value < 10" but remove "<span...>"
     this.script = QlikOptimizeAgent.sanitizeScript(script);
-    const compaction = compactScriptForPrompt(this.script);
+    const compactionOpts: Partial<CompactionOptions> = {
+      preserveBlockStructure: true,
+      preserveIndentation: true,
+      maxConsecutiveBlanks: 1
+    };
+    const compaction = compactScriptForPrompt(this.script, compactionOpts);
     this.promptScript = compaction.compacted;
     this.scriptHash = createHash('sha256').update(this.script).digest('hex').substring(0, 16);
     this.abortSignal = options?.signal;

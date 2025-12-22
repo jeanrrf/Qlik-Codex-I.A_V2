@@ -14,6 +14,7 @@ import ScriptInfoModal, { ScriptInfo } from "../components/ScriptInfoModal";
 import { BrandMark } from "../components/BrandMark";
 import { getLLMOptionById, LLM_OPTIONS } from "../lib/llmOptions";
 import {
+  OptimizationIntent,
   OptimizeMode,
   OptimizeResult
 } from "../types/api";
@@ -48,6 +49,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
   // === STATE ===
   const [script, setScript] = useState<string>("");
   const [mode, setMode] = useState<OptimizeMode>("ultra-expert");
+  const [intent, setIntent] = useState<OptimizationIntent>("refactor");
   const [llmOptionId, setLlmOptionId] = useState<string>(LLM_OPTIONS[0].id);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<OptimizeResult | null>(null);
@@ -316,6 +318,7 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
       const res = await optimization.startOptimization({
         script: trimmed,
         mode,
+        intent,
         llmProvider: providerForMode,
         llmModel: llmModelForMode
       });
@@ -545,6 +548,28 @@ const OptimizerPageV2: React.FC<OptimizerPageProps> = () => {
               );
             })}
           </div>
+
+          {/* Intent Toggle: Audit vs Refactor */}
+          {mode === "ultra-expert" && (
+            <div className="intent-toggle-container">
+              <button
+                className={`intent-toggle-btn ${intent === "audit" ? "active" : ""}`}
+                onClick={() => setIntent("audit")}
+                title="Apenas análise e diagnóstico, sem gerar código"
+              >
+                <span className="intent-icon">🔍</span>
+                <span className="intent-label">Audit</span>
+              </button>
+              <button
+                className={`intent-toggle-btn ${intent === "refactor" ? "active" : ""}`}
+                onClick={() => setIntent("refactor")}
+                title="Análise + geração de código otimizado"
+              >
+                <span className="intent-icon">⚡</span>
+                <span className="intent-label">Refactor</span>
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="header-center-section">

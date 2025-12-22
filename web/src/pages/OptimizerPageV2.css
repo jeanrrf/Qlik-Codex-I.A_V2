@@ -1888,3 +1888,59 @@
   background: rgba(0, 242, 255, 0.12);
   border: 1px solid rgba(0, 242, 255, 0.3);
 }
+
+/* ===============================================
+   INTENT TOGGLE (Audit vs Refactor)
+   =============================================== */
+.intent-toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  margin-left: 12px;
+}
+
+.intent-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.intent-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.intent-toggle-btn.active {
+  background: linear-gradient(135deg, rgba(0, 242, 255, 0.15) 0%, rgba(112, 0, 255, 0.15) 100%);
+  color: #00f2ff;
+  border: 1px solid rgba(0, 242, 255, 0.3);
+  box-shadow: 0 0 12px rgba(0, 242, 255, 0.2);
+}
+
+.intent-toggle-btn.active .intent-icon {
+  transform: scale(1.1);
+}
+
+.intent-icon {
+  font-size: 1rem;
+  transition: transform 0.2s ease;
+}
+
+.intent-label {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}

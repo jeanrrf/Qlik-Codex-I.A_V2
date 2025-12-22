@@ -1,5 +1,6 @@
 import {
   LLMProviderName,
+  OptimizationIntent,
   OptimizeMode,
   OptimizeScriptApiResponse,
   OptimizeScriptRequestBody,
@@ -46,6 +47,7 @@ export function resolveApiUrl(endpoint: string): string {
 interface OptimizeOptions {
   llmProvider?: LLMProviderName;
   llmModel?: string;
+  intent?: OptimizationIntent;
 }
 
 // --- Core API Functions ---
@@ -58,6 +60,7 @@ export async function optimizeScript(
   const payload: OptimizeScriptRequestBody & { encoding?: string } = {
     script: btoa(unescape(encodeURIComponent(script))),
     mode,
+    intent: options?.intent ?? "refactor",
     llmProvider: options?.llmProvider,
     llmModel: options?.llmModel,
     encoding: "base64"

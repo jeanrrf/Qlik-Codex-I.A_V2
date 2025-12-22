@@ -140,6 +140,17 @@ export const config = {
   // Prompt token safety budget (characters/4 ≈ tokens)
   maxPromptTokens: 40000,
 
+  // Feature Flags for gradual rollout
+  featureFlags: {
+    // V2 refactor flags
+    useNewCompactor: true,           // Usar compactScriptForPrompt V2 com preserveStructure
+    usePlanningInstructions: true,   // Incluir PLANNING_INSTRUCTIONS nos prompts
+    loadStarWarningOnly: true,       // LOAD * gera aviso, não erro
+    tolerantJsonParser: true,        // Parser JSON mais tolerante em structuredResponse
+    dynamicHistoryLimit: true,       // Histórico dinâmico (800 chars vs 300)
+    // Legacy mode para rollback rápido
+    legacyMode: false                // Se true, reverte para comportamento v2.1
+  },
 
   // Optimization thresholds for LLM prompts
   optimizationThresholds: {

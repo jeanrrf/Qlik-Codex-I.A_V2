@@ -5,14 +5,38 @@ export function extractJsonFromText(text: string): Record<string, unknown> {
   let s = text.trim();
   s = s.replace(/^```(?:json)?\s*/i, '');
   s = s.replace(/\s*```$/i, '');
+  // Remove all markdown fences that might wrap the JSON
+  s = s.replace(/```json?\s*/gi, '').replace(/```\s*/gi, '');
 
-  // 2) Try to locate a JSON object by finding first { and the matching }
+  // 2) Try direct parse first (most common case)
+  try {
+    return JSON.parse(s);
+  } catch (_e) {
+    // continue to extraction strategies
+  }
+
+  // 3) Try to locate a JSON object by finding first { and the matching }
   const firstBrace = s.indexOf('{');
   if (firstBrace >= 0) {
     // Find matching closing brace by scanning and counting
     let depth = 0;
+    let inString = false;
+    let escape = false;
     for (let i = firstBrace; i < s.length; i++) {
       const ch = s[i];
+      if (escape) {
+        escape = false;
+        continue;
+      }
+      if (ch === '\\') {
+        escape = true;
+        continue;
+      }
+      if (ch === '"') {
+        inString = !inString;
+        continue;
+      }
+      if (inString) continue;
       if (ch === '{') depth++;
       else if (ch === '}') depth--;
       if (depth === 0) {
@@ -23,11 +47,12 @@ export function extractJsonFromText(text: string): Record<string, unknown> {
         } catch (_e) {
           // continue to other strategies
         }
+        break;
       }
     }
   }
 
-  // 3) If no braces or parsing failed, attempt to recover simple escaped JSON
+  // 4) If no braces or parsing failed, attempt to recover simple escaped JSON
   // Replace common \n sequences into real newlines and try parse whole string
   const unescaped = s.replace(/\\n/g, '\n').replace(/\\"/g, '"');
   try {
@@ -36,7 +61,7 @@ export function extractJsonFromText(text: string): Record<string, unknown> {
     // continue
   }
 
-  // 4) Try to extract a substring between the first { and last }
+  // 5) Try to extract a substring between the first { and last }
   const first = s.indexOf('{');
   const last = s.lastIndexOf('}');
   if (first >= 0 && last > first) {
@@ -46,9 +71,19 @@ export function extractJsonFromText(text: string): Record<string, unknown> {
     } catch (_e) {
       // continue
     }
+    // Try fixing common issues in the candidate
+    const fixed = candidate
+      .replace(/,\s*}/g, '}')  // trailing commas
+      .replace(/,\s*]/g, ']')  // trailing commas in arrays
+      .replace(/([,{\s])(\w[\w\d_]*)\s*:/g, '$1"$2":'); // unquoted keys
+    try {
+      return JSON.parse(fixed);
+    } catch (_e) {
+      // continue
+    }
   }
 
-  // 5) As a last resort, attempt to fix common issues: wrap bare keys with quotes
+  // 6) As a last resort, attempt to fix common issues: wrap bare keys with quotes
   // This is risky; do minimal transformations: convert unquoted keys like key: to "key":
   // Only run a conservative regex replacement
   const safeFix = s.replace(/([,{\s])(\w[\w\d_]*)\s*:/g, '$1"$2":');

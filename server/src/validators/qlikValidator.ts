@@ -12,6 +12,8 @@
   "PROCEDURE"
 ];
 
+// ⚠️ LEGACY: Funções alucinadas - mantido por retrocompatibilidade
+// Considerar remover em v3.0 se não houver mais falsos positivos
 const HALLUCINATED_FUNCTIONS = [
   { name: "CASE WHEN", replacement: "If() ou Pick(Match())" },
   { name: "DATEDIFF", replacement: "subtração direta ou Interval()" },

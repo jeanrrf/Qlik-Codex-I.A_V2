@@ -23,20 +23,33 @@ CODE LANGUAGE: Preserve original identifiers exactly — NEVER translate field n
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const GUARDRAILS = [
-  "FORBIDDEN: DDL/DML SQL outside SQL blocks (CREATE, ALTER, INSERT, UPDATE, DELETE, DROP TABLE in SQL context)",
-  "FORBIDDEN: JOIN inside FROM clause — use prefixed JOIN (LEFT JOIN, INNER JOIN) before LOAD statement",
-  "FORBIDDEN: Markdown, HTML, or code fences in output — pure JSON only, no ```json``` blocks",
-  "FORBIDDEN: Non-Qlik functions (DATEDIFF, GETDATE, CASE WHEN, COALESCE, ISNULL, NVL, DECODE)",
-  "FORBIDDEN: Set Analysis '{<...>}' syntax in load scripts — this is for charts only",
-  "FORBIDDEN: SELECT * or LOAD * — always use explicit field lists for performance and clarity",
-  "FORBIDDEN: Inventing or hallucinating Qlik functions that don't exist",
-  "FORBIDDEN: Incomplete code - field lists without LOAD/SELECT keywords, statements without data sources",
-  "REQUIRED: Preserve ALL identifiers exactly as provided (table names, field names, variables, keys)",
-  "REQUIRED: DROP temporary tables after RESIDENT or intermediate generation to free memory",
-  "REQUIRED: Use proper Qlik syntax for dates, numbers, and string functions",
-  "REQUIRED: Generate COMPLETE, syntactically valid Qlik code - every LOAD must have fields and source",
-  "CRITICAL: NEVER translate, rename, or modify ANY identifier regardless of its language (Portuguese, Spanish, etc.)"
+  "FORBIDDEN: DDL/DML SQL outside SQL blocks (CREATE, ALTER, INSERT, UPDATE, DELETE)",
+  "FORBIDDEN: JOIN inside FROM clause — use prefixed JOIN before LOAD",
+  "FORBIDDEN: Markdown, HTML, or code fences — pure JSON only",
+  "FORBIDDEN: Non-Qlik functions (DATEDIFF, GETDATE, CASE WHEN, NVL, DECODE)",
+  "FORBIDDEN: Set Analysis '{<...>}' in load scripts — charts only",
+  "CAUTION: SELECT */LOAD * — prefer explicit fields unless script is exploratory",
+  "FORBIDDEN: Hallucinated Qlik functions",
+  "FORBIDDEN: Incomplete code — every LOAD must have keyword + fields + source",
+  "REQUIRED: Preserve ALL identifiers exactly (never rename/translate)",
+  "REQUIRED: DROP temp tables after RESIDENT to free RAM",
+  "REQUIRED: Valid Qlik syntax for dates, numbers, strings",
+  "REQUIRED: COMPLETE, runnable code — no snippets",
+  "CRITICAL: NEVER translate identifiers regardless of language"
 ] as const;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PLANNING INSTRUCTIONS (Pensar antes de agir)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export const PLANNING_INSTRUCTIONS = `## PLANNING (Pense antes de agir)
+
+Antes de gerar código, reflita brevemente:
+1. Quais são os blocos estruturais do script (Dims, Fatos, Mappings)?
+2. Quais otimizações são seguras vs arriscadas?
+3. Se houver dúvida, manter código original.
+
+Retorne seu raciocínio no campo "reasoning" quando disponível.`;
 
 export function buildGuardrailsSection(): string {
   return `## ABSOLUTE RULES (NEVER VIOLATE)\n\n${GUARDRAILS.map((rule, i) => `${i + 1}. ${rule}`).join('\n')}`;
@@ -209,5 +222,5 @@ EDGE CASES:
 // PROMPT VERSION (for tracking and rollback)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export const PROMPT_VERSION = "2.1.0";
-export const PROMPT_CODENAME = "AINEX Unified";
+export const PROMPT_VERSION = "2.2.0";
+export const PROMPT_CODENAME = "AINEX Unified V2";
