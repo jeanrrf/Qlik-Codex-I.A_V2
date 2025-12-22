@@ -67,25 +67,18 @@ function buildAnalysisTemplate(): string {
     .withIdentity()
     .withContext('DEEP ANALYSIS + STRATEGIC PLAN')
     .withInstructions(`
-**PHASE 1 - STRUCTURAL ANALYSIS:**
-- Audit script structure: tables, joins, data model relationships
-- Identify risks: synthetic keys, circular references, cartesian products, LOAD *
-- Score structural quality (0-100)
-- Classify complexity: Low / Medium / High / Extreme
+**TASK:**
+Analyze the script structure and performance. Identify bottlenecks and optimization opportunities.
+Create a prioritized plan (Impact vs Effort).
 
-**PHASE 2 - PERFORMANCE ANALYSIS:**
-- Detect bottlenecks: JOINs without keys, cascading RESIDENTs, missing WHERE clauses
-- Identify optimization opportunities: QVD optimization, Autonumber, ApplyMap
-- Flag anti-patterns: SELECT *, redundant loads, unnecessary loops
-
-**PHASE 3 - STRATEGIC PLAN:**
-- Create prioritized plan (Impact vs Effort matrix)
-- Maximum ${TEMPLATE_LIMITS.analysis.maxPlanSteps} steps
-- Each step must target a specific bottleneck or opportunity
+**PHASES:**
+1. Structural Analysis (Risks, Complexity)
+2. Performance Analysis (Bottlenecks, Opportunities)
+3. Strategic Plan (Max ${TEMPLATE_LIMITS.analysis.maxPlanSteps} steps)
     `)
     .withCustomSection(
       'output-format',
-      `## OUTPUT FORMAT\n\nReturn JSON matching AnalysisAndPlanSchema.\nMax ${TEMPLATE_LIMITS.analysis.maxBottlenecks} bottlenecks, ${TEMPLATE_LIMITS.analysis.maxOpportunities} opportunities, ${TEMPLATE_LIMITS.analysis.maxPlanSteps} plan steps.`,
+      `## OUTPUT FORMAT\n\nReturn JSON matching AnalysisAndPlanSchema.`,
       60
     )
     .build();
@@ -96,30 +89,19 @@ function buildAnalysisTemplate(): string {
  */
 function buildCodeGenTemplate(): string {
   return createOptimizationTemplate('CODE_GEN', true)
-    .withContext('CODE GENERATION (Apply Plan + Design Patterns)')
+    .withContext('CODE GENERATION')
     .withInstructions(`
-**REQUIREMENTS:**
-1. Apply the optimization plan from previous phase
-2. Preserve ALL business logic — do not alter calculations, filters, or transformations
-3. Apply AINEX Design Patterns (see above)
+**TASK:**
+Apply the optimization plan and AINEX Design Patterns.
+Preserve ALL business logic, calculations, and identifiers.
 
-**WHAT TO OPTIMIZE:**
-- Remove redundant loads
-- Optimize JOIN sequences
-- Add WHERE clauses where beneficial
-- Convert RESIDENT cascades to more efficient patterns
-- Add QVD optimizations where applicable
-
-**WHAT TO PRESERVE:**
-- All field names exactly as provided
-- All table names exactly as provided
-- Business logic and calculations
-- Data transformations and mappings
-- All subroutines (SUB/END SUB) and mapping tables
+**GUIDELINES:**
+- Optimize for performance (QVDs, JOINs, WHERE clauses)
+- Preserve initial script headers and TRACE statements
     `)
     .withCustomSection(
       'output-format',
-      `## OUTPUT FORMAT\n\nReturn JSON matching CodeGenSchema.\nMax ${TEMPLATE_LIMITS.codeGen.maxChanges} changes in changesApplied.`,
+      `## OUTPUT FORMAT\n\nReturn JSON matching CodeGenSchema.`,
       60
     )
     .build();
@@ -131,23 +113,15 @@ function buildCodeGenTemplate(): string {
 function buildFinalDeliveryTemplate(): string {
   return new TemplateBuilder('FINAL_DELIVERY')
     .withIdentity()
-    .withContext('VALIDATION + FINAL DOCUMENTATION')
+    .withContext('VALIDATION + DOCUMENTATION')
     .withInstructions(`
-**PHASE 1 - VALIDATION:**
-- Verify syntax correctness
-- Check for forbidden patterns (DDL/DML, invalid functions)
-- Validate data model integrity
-- Calculate safety score (0-100)
+**TASK:**
+Validate the optimized script and generate documentation.
 
-**PHASE 2 - DOCUMENTATION:**
-- Generate concise title for the optimized script
-- Create Mermaid ER diagram of the data model
-- Document key relationships
-
-**PHASE 3 - DEPLOYMENT REPORT:**
-- Executive summary (max ${TEMPLATE_LIMITS.finalDelivery.maxSummaryChars} chars)
-- Top ${TEMPLATE_LIMITS.finalDelivery.maxImprovements} achieved improvements
-- Deployment checklist (max ${TEMPLATE_LIMITS.finalDelivery.maxChecklistItems} items)
+**PHASES:**
+1. Validation (Syntax, Safety Score)
+2. Documentation (ER Diagram, Relationships)
+3. Deployment Report (Summary, Improvements, Checklist)
     `)
     .withCustomSection(
       'output-format',
@@ -214,17 +188,15 @@ function buildFormatOnlyTemplate(): string {
  */
 function buildNvidiaFastTemplate(): string {
   return createOptimizationTemplate('NVIDIA_FAST', true)
-    .withContext('FAST OPTIMIZATION (Nvidia Provider)')
+    .withContext('FAST OPTIMIZATION')
     .withInstructions(`
 **TASK:**
-- Quick optimization focusing on AS Alignment and TRACE Separators
-- Preserve all logic
-- Maximum ${TEMPLATE_LIMITS.nvidiaFast.maxChanges} changes
-- Brief summary (max ${TEMPLATE_LIMITS.nvidiaFast.maxSummaryChars} chars)
+Quick optimization focusing on AS Alignment and TRACE Separators.
+Preserve all logic, headers, and TRACEs.
     `)
     .withCustomSection(
       'output-format',
-      `## OUTPUT FORMAT\n\nReturn JSON matching NvidiaFastSchema.\nMax ${TEMPLATE_LIMITS.nvidiaFast.maxChanges} changes.`,
+      `## OUTPUT FORMAT\n\nReturn JSON matching NvidiaFastSchema.`,
       60
     )
     .build();
