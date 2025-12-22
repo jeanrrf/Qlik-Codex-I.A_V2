@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 
-import { OptimizeScriptApiResponse, OptimizeMode, LLMProviderName, StepExecutionResult } from "../types/api";
+import { OptimizeScriptApiResponse, OptimizeMode, LLMProviderName, StepExecutionResult, OptimizationIntent } from "../types/api";
 
 import { SubStepExecution } from "../types/api";
 
@@ -36,6 +36,9 @@ interface OptimizationOptions {
   llmProvider?: LLMProviderName;
 
   llmModel?: string;
+
+  /** Intent: "audit" para análise sem código, "refactor" para otimização completa */
+  intent?: OptimizationIntent;
 
 }
 
