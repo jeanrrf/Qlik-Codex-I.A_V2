@@ -1,3 +1,5 @@
+import { config } from './config';
+
 type LogLevel = "debug" | "info" | "warn" | "error";
 
 const LEVEL_PRIORITY: Record<LogLevel, number> = {
@@ -8,8 +10,7 @@ const LEVEL_PRIORITY: Record<LogLevel, number> = {
 };
 
 // Default mais silencioso: WARN. Para ver info/debug, defina LOG_LEVEL=info ou LOG_LEVEL=debug.
-const envLevel = (process.env.LOG_LEVEL || "warn").toLowerCase() as LogLevel;
-const CURRENT_LEVEL: LogLevel = envLevel in LEVEL_PRIORITY ? envLevel : "info";
+const CURRENT_LEVEL: LogLevel = config.logging.level in LEVEL_PRIORITY ? config.logging.level : "info";
 
 function shouldLog(level: LogLevel): boolean {
   return LEVEL_PRIORITY[level] >= LEVEL_PRIORITY[CURRENT_LEVEL];

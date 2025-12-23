@@ -5,6 +5,7 @@
 
 import rateLimit from 'express-rate-limit';
 
+import { config } from '../lib/config';
 import { logger } from '../lib/logger';
 
 /**
@@ -34,8 +35,7 @@ export const apiLimiter = rateLimit({
   },
   skip: (req) => {
     // Skip rate limit para IPs whitelist (opcional)
-    const whitelist = process.env.RATE_LIMIT_WHITELIST?.split(',') || [];
-    return whitelist.includes(req.ip || '');
+    return config.rateLimit.whitelist.includes(req.ip || '');
   }
 });
 

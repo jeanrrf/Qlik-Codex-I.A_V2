@@ -213,5 +213,27 @@ export const config = {
     to: process.env.EMAIL_TO || "sentinnellia@gmail.com", // Default recipient for contact forms
     // Fail fast when SMTP host is unreachable to avoid request timeouts (default: 8s)
     timeoutMs: Number(process.env.SMTP_TIMEOUT_MS) || 8000
+  },
+
+  // Rate Limiting Configuration
+  rateLimit: {
+    whitelist: process.env.RATE_LIMIT_WHITELIST?.split(',').map(ip => ip.trim()).filter(Boolean) || []
+  },
+
+  // Auth Cookie Configuration
+  auth: {
+    cookieSameSite: (() => {
+      const sameSiteEnv = process.env.AUTH_COOKIE_SAMESITE?.toLowerCase();
+      return sameSiteEnv === "none" || sameSiteEnv === "lax" || sameSiteEnv === "strict"
+        ? (sameSiteEnv as "none" | "lax" | "strict")
+        : (nodeEnv === "production" ? "none" : "lax");
+    })(),
+    cookieDomain: process.env.AUTH_COOKIE_DOMAIN || undefined,
+    cookieSecure: process.env.AUTH_COOKIE_SAMESITE?.toLowerCase() === "none" ? true : nodeEnv === "production"
+  },
+
+  // Logging Configuration
+  logging: {
+    level: (process.env.LOG_LEVEL || "warn").toLowerCase() as "debug" | "info" | "warn" | "error"
   }
 };

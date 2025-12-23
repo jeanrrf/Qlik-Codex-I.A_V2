@@ -1,6 +1,8 @@
 ﻿import React, { useState, useRef } from "react";
 
 import { requestQlikFormatterStream } from "../api/client";
+import { useSyncedScroll } from "../hooks/useSyncedScroll";
+import { copyToClipboard } from "../utils/clipboard";
 
 type FormatterSource = "ainex" | "fallback";
 
@@ -81,23 +83,18 @@ const QlikFormatterTool: React.FC<QlikFormatterToolProps> = ({ isOpen, onClose }
   };
 
   const handleCopy = async () => {
-    if (!output) {
-      return;
-    }
+    if (!output) return;
+
     try {
-      await navigator.clipboard.writeText(output);
+      await copyToClipboard(output);
+      // Silent success - user sees the copy button
     } catch {
-      // ignoring clipboard failure keeps UX simple
+      // Ignore clipboard failures for simplicity
     }
   };
 
-  const handleSyncScroll = (source: 'before' | 'after') => {
-    if (source === 'before' && beforeScrollRef.current && afterScrollRef.current) {
-      afterScrollRef.current.scrollTop = beforeScrollRef.current.scrollTop;
-    } else if (source === 'after' && afterScrollRef.current && beforeScrollRef.current) {
-      beforeScrollRef.current.scrollTop = afterScrollRef.current.scrollTop;
-    }
-  };
+  // Synchronized scroll between before/after panels
+  useSyncedScroll(beforeScrollRef, afterScrollRef);
 
   if (!isOpen) return null;
 
@@ -270,7 +267,6 @@ END IF;"
                     value={input}
                     spellCheck={false}
                     aria-label="Script antes da formatação"
-                    onScroll={() => handleSyncScroll('before')}
                   />
                 </div>
 
@@ -288,7 +284,6 @@ END IF;"
                     value={output}
                     spellCheck={false}
                     aria-label="Script após formatação"
-                    onScroll={() => handleSyncScroll('after')}
                   />
                 </div>
               </div>

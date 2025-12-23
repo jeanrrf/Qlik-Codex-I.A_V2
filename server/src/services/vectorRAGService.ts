@@ -599,8 +599,8 @@ class VectorRAGService {
         rejectedDocuments: row.rejected as number,
         pendingDocuments: row.pending as number,
         avgRewardScore: row.avg_score as number || 0,
-        avgSearchLatencyMs: 0, // TODO: calcular com métricas reais
-        cacheHitRate: 0 // TODO: implementar cache
+        avgSearchLatencyMs: 0, // Implementação futura: rastreamento de latência
+        cacheHitRate: 0 // Implementação futura: cache de embeddings
       };
     } catch (error) {
       logger.error('[RAG] Failed to get stats', { error });

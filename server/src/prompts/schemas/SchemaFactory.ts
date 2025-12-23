@@ -11,7 +11,7 @@ import { z } from 'zod';
 
 /**
  * Schema Factory - Currently imports from legacy templates
- * TODO: Refactor to use TEMPLATE_LIMITS for consistent constraints
+ * Future enhancement: Refactor to use TEMPLATE_LIMITS for consistent constraints
  */
 
 // Re-export legacy schemas for now

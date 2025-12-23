@@ -3,6 +3,12 @@ import { ZodError } from "zod";
 
 import { logger } from "../lib/logger";
 
+interface ExpressError extends Error {
+  status?: number;
+  statusCode?: number;
+  type?: string;
+}
+
 function extractErrorMessage(error: unknown): string {
   if (error instanceof ZodError) {
     return error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
@@ -39,14 +45,15 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   }
 
   // Handle errors with status code (e.g. from express.json limit or custom errors)
-  const status = (err as any).status || (err as any).statusCode || 500;
+  const expressErr = err as ExpressError;
+  const status = expressErr.status || expressErr.statusCode || 500;
 
   // If it's a client error (4xx), log as warning and return the error message
   if (typeof status === 'number' && status >= 400 && status < 500) {
     logger.warn(`Erro cliente ${status}`, { error: extractErrorMessage(err) });
     res.status(status).json({
       error: extractErrorMessage(err),
-      details: (err as any).type || undefined
+      details: expressErr.type || undefined
     });
     return;
   }

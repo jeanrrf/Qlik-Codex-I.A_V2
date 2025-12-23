@@ -11,7 +11,7 @@ const AUTH_TIMEOUT_MS = 5000; // 5 seconds timeout for auth requests
  */
 async function fetchWithTimeout(
   url: string,
-  options: RequestInit,
+  options: Record<string, unknown> & { signal?: AbortSignal },
   timeoutMs: number = AUTH_TIMEOUT_MS
 ): Promise<Response> {
   const controller = new AbortController();

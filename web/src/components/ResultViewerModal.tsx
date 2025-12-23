@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Icons } from './Icons';
 import { OptimizeResult } from '../types/api';
+import { useSyncedScroll } from '../hooks/useSyncedScroll';
 import { copyToClipboard } from '../lib/clipboard';
 import { highlightQlikCode } from '../lib/qlikSyntaxHighlighter';
 import OptimizationFeedback from './OptimizationFeedback';
@@ -23,22 +24,14 @@ export const ResultViewerModal: React.FC<ResultViewerModalProps> = ({ result, on
 
   const originalScrollRef = useRef<HTMLDivElement | null>(null);
   const optimizedScrollRef = useRef<HTMLDivElement | null>(null);
-  const isSyncingScrollRef = useRef(false);
 
   const isNvidiaResult = result.analysis?.mode === "nvidia-fast";
 
-  const handleSyncScroll = (source: "original" | "optimized") => (e: React.UIEvent<HTMLDivElement>) => {
-    if (!isScrollLocked || isSyncingScrollRef.current) return;
-    const target = e.currentTarget;
-    const otherRef = source === "original" ? optimizedScrollRef.current : originalScrollRef.current;
-    if (!otherRef) return;
-    isSyncingScrollRef.current = true;
-    otherRef.scrollTop = target.scrollTop;
-    otherRef.scrollLeft = target.scrollLeft;
-    requestAnimationFrame(() => {
-      isSyncingScrollRef.current = false;
-    });
-  };
+  // Synchronized scroll when lock is enabled
+  useSyncedScroll(
+    isScrollLocked ? originalScrollRef : { current: null },
+    isScrollLocked ? optimizedScrollRef : { current: null }
+  );
 
   const handleCopy = async (kind: "original" | "optimized", text: string, buttonEl?: HTMLButtonElement | null) => {
     const success = await copyToClipboard(text);
@@ -133,7 +126,6 @@ export const ResultViewerModal: React.FC<ResultViewerModalProps> = ({ result, on
                 <div
                   className="code-content-wrapper"
                   ref={originalScrollRef}
-                  onScroll={handleSyncScroll("original")}
                 >
                   {/* Tabelas de código são somente leitura, regra de label não se aplica */}
                   {/* eslint-disable jsx-a11y/control-has-associated-label */}
@@ -171,7 +163,6 @@ export const ResultViewerModal: React.FC<ResultViewerModalProps> = ({ result, on
               <div
                 className="code-content-wrapper"
                 ref={optimizedScrollRef}
-                onScroll={handleSyncScroll("optimized")}
               >
                 <table className="code-table">
                   <tbody>

@@ -5,6 +5,7 @@
 
 import { Router, Request, Response, CookieOptions } from "express";
 
+import { config } from "../lib/config";
 import { logger } from "../lib/logger";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { requireAuth, optionalAuth, AuthRequest, requireRole } from "../middleware/authMiddleware";
@@ -22,27 +23,11 @@ import { UserRole } from "../types/auth";
 const router = Router();
 
 function getAuthCookieOptions(expiresInSeconds: number): CookieOptions {
-  const isProduction = process.env.NODE_ENV === "production";
-
-  // Cross-site frontends need SameSite=None + Secure for cookies to flow with fetch credentials
-  const sameSiteEnv = process.env.AUTH_COOKIE_SAMESITE?.toLowerCase();
-  const sameSite: CookieOptions["sameSite"] =
-    sameSiteEnv === "none" || sameSiteEnv === "lax" || sameSiteEnv === "strict"
-      ? (sameSiteEnv as CookieOptions["sameSite"])
-      : isProduction
-        ? "none"
-        : "lax";
-
-  // Allow overriding cookie domain when frontend/backends live on different hosts
-  const domain = process.env.AUTH_COOKIE_DOMAIN || undefined;
-
-  const secure = sameSite === "none" ? true : isProduction;
-
   return {
     httpOnly: true,
-    secure,
-    sameSite,
-    domain,
+    secure: config.auth.cookieSecure,
+    sameSite: config.auth.cookieSameSite,
+    domain: config.auth.cookieDomain,
     maxAge: expiresInSeconds * 1000
   };
 }
@@ -57,7 +42,7 @@ router.get(
     try {
       const authUrl = getGoogleAuthUrl();
       logger.info("[AUTH] Google OAuth URL gerada", {
-        redirectUri: process.env.GOOGLE_REDIRECT_URI || "http://localhost:3000/api/auth/google/callback"
+        redirectUri: config.googleRedirectUri
       });
       res.json({ authUrl });
     } catch (err) {

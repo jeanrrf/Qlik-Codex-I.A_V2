@@ -4,6 +4,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSyncedScroll } from '../hooks/useSyncedScroll';
 import { copyToClipboard } from "../lib/clipboard";
 import type { ConsultancyDocument } from '../types/consultancy';
 import { highlightQlikCode } from '../lib/qlikSyntaxHighlighter';
@@ -238,37 +239,8 @@ const ConsultancyDocumentViewer: React.FC<ConsultancyDocumentViewerProps> = ({
     }
   }, [availableTabs, activeTab]);
 
-  useEffect(() => {
-    const left = originalCodeRef.current;
-    const right = optimizedCodeRef.current;
-    if (!left || !right) {
-      return;
-    }
-
-    let syncing = false;
-    const syncScroll = (source: HTMLElement, target: HTMLElement) => {
-      if (syncing) {
-        return;
-      }
-      syncing = true;
-      target.scrollTop = source.scrollTop;
-      target.scrollLeft = source.scrollLeft;
-      requestAnimationFrame(() => {
-        syncing = false;
-      });
-    };
-
-    const handleLeftScroll = () => syncScroll(left, right);
-    const handleRightScroll = () => syncScroll(right, left);
-
-    left.addEventListener('scroll', handleLeftScroll);
-    right.addEventListener('scroll', handleRightScroll);
-
-    return () => {
-      left.removeEventListener('scroll', handleLeftScroll);
-      right.removeEventListener('scroll', handleRightScroll);
-    };
-  }, [doc.codeComparison.originalCode, doc.codeComparison.optimizedCode]);
+  // Synchronized scroll between original/optimized code panels
+  useSyncedScroll(originalCodeRef, optimizedCodeRef);
 
   const copyTextToClipboard = async (text: string, context: string) => {
     const fallbackCopy = () => {

@@ -1,6 +1,8 @@
 import { CompactAuditReport, calculateDiffStats, runConsultancyAgent } from "../agents/qlikConsultancyAgent";
 import { QlikOptimizeAgent } from "../agents/qlikOptimizeAgent";
+import { alignAsInLoadBlocks } from "../lib/alignAs";
 import { config } from "../lib/config";
+import { fixTraceSeparators } from "../lib/fixTraceSeparators";
 import { nvidiaProvider } from "../lib/llmProviders/nvidiaProvider";
 import { logger } from "../lib/logger";
 import { compactScriptForPrompt } from "../lib/promptCompactor";
@@ -24,8 +26,6 @@ import type { DeterministicValidationSnapshot, OptimizeMode, OptimizeResult } fr
 import type { RAGContext } from "../types/rag";
 import { validateQlikScript } from "../validators/qlikValidator";
 
-import { alignAsInLoadBlocks } from "../lib/alignAs";
-import { fixTraceSeparators } from "../lib/fixTraceSeparators";
 import { stepTimingService } from "./stepTimingService";
 import { vectorRAGService } from "./vectorRAGService";
 
@@ -474,7 +474,7 @@ async function runNvidiaFastMode(
       let changes: Array<Record<string, unknown>> = [];
 
       try {
-        let parsed: any = undefined;
+        let parsed: Record<string, unknown> | undefined = undefined;
         try {
           const mod = await import('../lib/structuredResponse.js');
           if (mod && typeof mod.extractJsonFromText === 'function') {
@@ -505,7 +505,7 @@ async function runNvidiaFastMode(
           if (validation.success) {
             optimizedScript = validation.data.optimizedScript;
             if (validation.data.summary) summary = validation.data.summary;
-            if (validation.data.changes) changes = validation.data.changes as any;
+            if (validation.data.changes) changes = validation.data.changes as Array<Record<string, unknown>>;
             logger.info('[NVIDIA FAST] Strict schema validation successful');
           } else {
             logger.warn('[NVIDIA FAST] Schema validation failed, using loose mapping', { errors: validation.error.format() });
@@ -516,21 +516,21 @@ async function runNvidiaFastMode(
             }
             // 2. Try snake_case string
             else if (typeof parsed.optimized_script === "string") {
-              optimizedScript = parsed.optimized_script;
+              optimizedScript = parsed.optimized_script as string;
             }
             // 3. Try nested object (common hallucination)
-            else if (typeof parsed.optimized_script === "object" && parsed.optimized_script?.code) {
-              optimizedScript = parsed.optimized_script.code;
+            else if (typeof parsed.optimized_script === "object" && parsed.optimized_script && 'code' in parsed.optimized_script) {
+              optimizedScript = (parsed.optimized_script as { code: string }).code;
             }
-            else if (typeof parsed.optimizedScript === "object" && parsed.optimizedScript?.code) {
-              optimizedScript = parsed.optimizedScript.code;
+            else if (typeof parsed.optimizedScript === "object" && parsed.optimizedScript && 'code' in parsed.optimizedScript) {
+              optimizedScript = (parsed.optimizedScript as { code: string }).code;
             }
 
             if (typeof parsed.summary === "string") {
-              summary = parsed.summary;
+              summary = parsed.summary as string;
             }
             if (Array.isArray(parsed.changes)) {
-              changes = parsed.changes;
+              changes = parsed.changes as Array<Record<string, unknown>>;
             }
           }
         }

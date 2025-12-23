@@ -1,4 +1,6 @@
-﻿const PROHIBITED_SQL = [
+﻿import { logger } from "../lib/logger";
+
+const PROHIBITED_SQL = [
   "CREATE",
   "ALTER",
   "INSERT",
@@ -89,7 +91,7 @@ function detectIncompleteStatements(script: string): string[] {
     // IMPORTANTE: Só detecta se tiver vírgula OU múltiplas linhas de campos (indentados)
 
     // Verifica se é uma linha de campo suspeita (indentada com vírgula ou AS)
-    const isFieldLine = /^\s{2,}[\w\[\]]+.*,\s*$/i.test(line) || /^\s{2,}[\w\[\]]+\s+AS\s+[\w\[\]]+,?\s*$/i.test(line);
+    const isFieldLine = /^\s{2,}[\w[\]]+.*,\s*$/i.test(line) || /^\s{2,}[\w[\]]+\s+AS\s+[\w[\]]+,?\s*$/i.test(line);
 
     if (isFieldLine) {
       // Verificar se há LOAD/SELECT nas linhas anteriores (procura mais longe)
@@ -429,9 +431,10 @@ export function validateQlikScript(script: string): ValidationResult {
 
   if (warnings.length > 0) {
     // Debug output to help CI while fixing validator behaviour
-    // (will be removed once tests are green)
-
-    console.warn('validateQlikScript warnings:', warnings.slice(0, 5), '...');
+    logger.warn('[Validator] Script warnings detected', {
+      count: warnings.length,
+      sample: warnings.slice(0, 3)
+    });
   }
 
   return {

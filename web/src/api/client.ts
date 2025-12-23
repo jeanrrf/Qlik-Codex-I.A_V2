@@ -75,7 +75,6 @@ export async function optimizeScript(
 
   if (!resp.ok) {
     let message = "Falha ao otimizar script.";
-    let requiresAuth = false;
 
     try {
       const errJson = await resp.json();
@@ -87,7 +86,6 @@ export async function optimizeScript(
 
       // Check if it's an auth issue
       if (resp.status === 403 && errJson?.requiresAuth) {
-        requiresAuth = true;
         message = `🔒 ${message}`;
       } else if (resp.status === 429) {
         message = `⏱️ ${message}`;

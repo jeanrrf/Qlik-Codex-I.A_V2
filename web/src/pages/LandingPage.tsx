@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { apiClient } from "../api/client";
+import { copyToClipboard } from "../utils/clipboard";
 
 import { BrandMark } from "../components/BrandMark";
 import QlikFormatterTool from "../components/QlikFormatterTool";
@@ -161,21 +162,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
   const WHATSAPP_URL =
     "https://api.whatsapp.com/send?phone=5548991937304&text=Quero%20conhecer%20o%20Qlik%20Codex%20IA";
   const contactCopyPayload = `Email: ${CONTACT_EMAIL}\nWhatsApp: ${WHATSAPP_NUMBER}`;
-
-  const copyToClipboard = async (text: string) => {
-    if (navigator.clipboard?.writeText) {
-      return navigator.clipboard.writeText(text);
-    }
-
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    textarea.style.position = "fixed";
-    textarea.style.top = "-9999px";
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand("copy");
-    document.body.removeChild(textarea);
-  };
 
   const showCopyFeedback = (message: string, variant: CopyFeedback["variant"]) => {
     if (copyTimeout.current) {

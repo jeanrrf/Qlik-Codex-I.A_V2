@@ -10,6 +10,8 @@
  * ✓ Foco em: Issues Críticos + Métricas Reais + Top Recomendações
  */
 
+import { v4 as uuidv4 } from 'uuid';
+
 import { formatDuration } from '../lib/formatTime';
 import { logger } from '../lib/logger';
 import {
@@ -25,15 +27,6 @@ import {
   ExecutiveSummary
 } from '../types/consultancy';
 import { OptimizeResult } from '../types/qlik';
-
-// Simple UUID generator
-function generateId(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
 
 // Análise inteligente do script
 interface ScriptAnalysis {
@@ -579,7 +572,6 @@ export async function runConsultancyAgent(
   options: ConsultancyOptions = {}
 ): Promise<ConsultancyDocument> {
   const startTime = Date.now();
-  const docId = generateId();
 
   const {
     generateTimeline = true,
@@ -588,6 +580,7 @@ export async function runConsultancyAgent(
     // includeCodeComparison = true,
   } = options;
 
+  const docId = uuidv4();
   logger.info('Iniciando geração de documento de consultoria v2.1 (optimized)', { docId });
 
   // Análise inteligente dos scripts
@@ -849,7 +842,7 @@ export async function generateCompactAuditReport(
   realMetrics: RealMetrics // RealMetrics from metricsCalculator
 ): Promise<CompactAuditReport> {
   const startTime = Date.now();
-  const docId = generateId();
+  const docId = uuidv4();
 
   logger.info('Gerando COMPACT AUDIT REPORT v3.0', { docId });
 

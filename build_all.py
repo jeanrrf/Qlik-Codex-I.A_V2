@@ -1,4 +1,3 @@
-
 import argparse
 import os
 import platform
@@ -107,24 +106,17 @@ def deploy_sequence(
 
     print_step("5/5 Deploy & ship")
 
+    # Removida interação: assumimos 'y' e mensagem genérica quando necessário
     if not auto:
-        print("Deseja realizar commit + push para producao? (y/n)")
-        choice = input("> ").strip().lower()
-        if choice != "y":
-            print("[INFO] Deploy skipped by user.")
-            return
+        print("[INFO] Modo interativo desabilitado: assumindo 'y' para deploy e usando descrição genérica.")
     else:
-        print("[AUTO] Deploy automatico habilitado")
+        print("[AUTO] Deploy automático habilitado")
 
     branch = get_current_branch()
     print(f"\n[GIT] Branch detectada: {branch}")
 
-    msg = commit_msg
-    if not auto:
-        print(f"Digite a mensagem do commit (Enter para '{msg}'):")
-        input_msg = input("> ").strip()
-        if input_msg:
-            msg = input_msg
+    msg = commit_msg or "chore: production build (auto)"
+    print(f"[GIT] Usando mensagem de commit: '{msg}'")
 
     print("\n[GIT] Adicionando arquivos...")
     run_command("git add .")
@@ -138,10 +130,10 @@ def deploy_sequence(
 
     if not staged_files:
         if allow_empty_commit:
-            print("[GIT] Nenhuma alteracao staged -- criando commit vazio.")
+            print("[GIT] Nenhuma alteração staged -- criando commit vazio.")
             run_command(f'git commit --allow-empty -m "{msg}"')
         else:
-            print("[GIT] Nenhuma alteracao staged -- pulando commit.")
+            print("[GIT] Nenhuma alteração staged -- pulando commit.")
     else:
         print(f"[GIT] Commitando: '{msg}'...")
         subprocess.run(["git", "commit", "-m", msg], check=False)
@@ -170,14 +162,10 @@ def deploy_sequence(
 
     print("\n[INFO] Push para Git deve disparar deploy automatico no Render.")
 
-    run_vercel = auto and not skip_vercel
-    if not auto and not skip_vercel:
-        print("\nDeseja forcar deploy na Vercel via CLI? (y/n)")
-        vercel_choice = input("> ").strip().lower()
-        run_vercel = vercel_choice == "y"
-
+    # Assumir 'y' para forçar deploy na Vercel quando não for explicitamente pulado
+    run_vercel = not skip_vercel
     if run_vercel:
-        print("[VERCEL] Iniciando deploy de producao...")
+        print("[VERCEL] Iniciando deploy de produção via Vercel (assumido).")
         try:
             run_command("vercel --prod")
         except Exception:  # noqa: BLE001
